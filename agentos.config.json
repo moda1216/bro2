@@ -66,6 +66,16 @@
         "includeUsage": true,
         "timeoutMs": 120000,
         "maxRetries": 2
+      },
+      "pollinations": {
+        "type": "openai",
+        "baseUrl": "https://text.pollinations.ai/openai/v1",
+        "apiKeyEnv": "POLLINATIONS_API_KEY",
+        "model": "openai",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 180000,
+        "maxRetries": 3
       }
     }
   },

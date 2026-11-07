@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "timestamp": "2026-11-07T12:20:10.441Z",
+  "timestamp": "2026-11-07T14:49:43.768Z",
   "mode": "live",
-  "providerName": "ollama",
+  "providerName": "pollinations",
   "k": 1,
   "strict": true,
   "usedEvolvedState": false,
@@ -13,14 +13,11 @@
       "taskId": "t01",
       "category": "tool-use",
       "repeat": 0,
-      "ok": false,
-      "reasons": [
-        "未调用工具 calc",
-        "终答未包含期望内容 [\"100\"]"
-      ],
+      "ok": true,
+      "reasons": [],
       "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
+      "steps": 2,
+      "toolCalls": 1,
       "toolErrors": 0,
       "guards": 0,
       "approvalsDenied": 0,
@@ -30,10 +27,10 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2929,
-      "latencyMs": 130956,
-      "provider": "ollama",
-      "answer": "functions.calc:"
+      "tokens": 3623,
+      "latencyMs": 62860,
+      "provider": "pollinations",
+      "answer": "The sum of the numbers is **100**."
     },
     {
       "taskId": "t02",
@@ -42,13 +39,11 @@
       "ok": false,
       "reasons": [
         "未调用工具 file_write",
-        "终答未包含期望内容 [\"写入\"]",
-        "期望文件未生成: report.md",
-        "终答为空"
+        "期望文件未生成: report.md"
       ],
       "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
+      "steps": 2,
+      "toolCalls": 1,
       "toolErrors": 0,
       "guards": 0,
       "approvalsDenied": 0,
@@ -58,10 +53,10 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2921,
-      "latencyMs": 84808,
-      "provider": "ollama",
-      "answer": ""
+      "tokens": 3762,
+      "latencyMs": 45786,
+      "provider": "pollinations",
+      "answer": "请问您想写入 `report.md` 的结论内容是什么？"
     },
     {
       "taskId": "t03",
@@ -73,8 +68,8 @@
         "未调用工具 current_time"
       ],
       "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
+      "steps": 2,
+      "toolCalls": 1,
       "toolErrors": 0,
       "guards": 0,
       "approvalsDenied": 0,
@@ -84,10 +79,10 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2917,
-      "latencyMs": 81725,
-      "provider": "ollama",
-      "answer": "functions.calc:"
+      "tokens": 3856,
+      "latencyMs": 13184,
+      "provider": "pollinations",
+      "answer": "请告诉我您想计算的数值表达式，例如 `2+3*4`。"
     },
     {
       "taskId": "t04",
@@ -95,12 +90,11 @@
       "repeat": 0,
       "ok": false,
       "reasons": [
-        "未调用工具 shell",
         "终答未包含期望内容 [\"完成\"]"
       ],
       "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
+      "steps": 2,
+      "toolCalls": 1,
       "toolErrors": 0,
       "guards": 0,
       "approvalsDenied": 0,
@@ -110,10 +104,10 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2917,
-      "latencyMs": 110687,
-      "provider": "ollama",
-      "answer": "functions.current_time:"
+      "tokens": 3669,
+      "latencyMs": 48792,
+      "provider": "pollinations",
+      "answer": "Node 版本: **v22.13.1**"
     },
     {
       "taskId": "t05",
@@ -121,12 +115,13 @@
       "repeat": 0,
       "ok": false,
       "reasons": [
-        "未调用工具 search_files"
+        "步数 9 超过上限 4",
+        "终答为空"
       ],
       "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
-      "toolErrors": 0,
+      "steps": 9,
+      "toolCalls": 8,
+      "toolErrors": 6,
       "guards": 0,
       "approvalsDenied": 0,
       "compactions": 0,
@@ -135,25 +130,21 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2918,
-      "latencyMs": 88024,
-      "provider": "ollama",
-      "answer": "functions.file_list:"
+      "tokens": 19700,
+      "latencyMs": 308722,
+      "provider": "pollinations",
+      "answer": ""
     },
     {
       "taskId": "t06",
       "category": "context",
       "repeat": 0,
-      "ok": false,
-      "reasons": [
-        "未调用工具 skill_list",
-        "未调用工具 skill_load",
-        "终答未包含期望内容 [\"技能\"]"
-      ],
+      "ok": true,
+      "reasons": [],
       "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
-      "toolErrors": 0,
+      "steps": 5,
+      "toolCalls": 4,
+      "toolErrors": 2,
       "guards": 0,
       "approvalsDenied": 0,
       "compactions": 0,
@@ -162,10 +153,10 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2920,
-      "latencyMs": 146610,
-      "provider": "ollama",
-      "answer": "functions.automation_list:"
+      "tokens": 10328,
+      "latencyMs": 59994,
+      "provider": "pollinations",
+      "answer": "已列出可用技能并成功加载 **report‑writing** 技能包。该技能已在当前会话中可用，可用于后续需要撰写结构化报告的任务。"
     },
     {
       "taskId": "t07",
@@ -173,14 +164,12 @@
       "repeat": 0,
       "ok": false,
       "reasons": [
-        "未调用工具 memory_write",
-        "未调用工具 memory_read",
         "终答未包含期望内容 [\"VERIFY-42\"]"
       ],
       "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
-      "toolErrors": 0,
+      "steps": 4,
+      "toolCalls": 3,
+      "toolErrors": 1,
       "guards": 0,
       "approvalsDenied": 0,
       "compactions": 0,
@@ -189,10 +178,10 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2918,
-      "latencyMs": 74024,
-      "provider": "ollama",
-      "answer": "functions.memory_write:"
+      "tokens": 7729,
+      "latencyMs": 96383,
+      "provider": "pollinations",
+      "answer": "已成功写入长期记忆并读取验证：\n\n```\ntest_memory:\nHello, world!\n```\n"
     },
     {
       "taskId": "t08",
@@ -203,12 +192,11 @@
         "未调用工具 todo_write",
         "未调用工具 calc",
         "未调用工具 file_write",
-        "期望文件未生成: outcome.md",
-        "终答为空"
+        "期望文件未生成: outcome.md"
       ],
       "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
+      "steps": 2,
+      "toolCalls": 1,
       "toolErrors": 0,
       "guards": 0,
       "approvalsDenied": 0,
@@ -218,25 +206,21 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2929,
-      "latencyMs": 96160,
-      "provider": "ollama",
-      "answer": ""
+      "tokens": 3904,
+      "latencyMs": 79385,
+      "provider": "pollinations",
+      "answer": "请问您想要计算什么内容？例如求和、平均值、统计分析等。"
     },
     {
       "taskId": "t09",
       "category": "multi-step",
       "repeat": 0,
-      "ok": false,
-      "reasons": [
-        "未调用工具 automation_add",
-        "未调用工具 automation_list",
-        "终答未包含期望内容 [\"任务\"]"
-      ],
+      "ok": true,
+      "reasons": [],
       "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
-      "toolErrors": 0,
+      "steps": 4,
+      "toolCalls": 4,
+      "toolErrors": 2,
       "guards": 0,
       "approvalsDenied": 0,
       "compactions": 0,
@@ -245,10 +229,10 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2922,
-      "latencyMs": 90573,
-      "provider": "ollama",
-      "answer": "functions.automation_add:"
+      "tokens": 8167,
+      "latencyMs": 84049,
+      "provider": "pollinations",
+      "answer": "✅ 已成功创建定时自检任务并确认已登记。\n\n- **任务名称**：`self_check_task`  \n- **执行脚本**：`echo 'self-check'`  \n- **执行间隔**：每 60 秒  \n- **任务 ID**：`job_mw6ikyq2_d`  \n- **当前状态**：`idle`（尚未执行，"
     },
     {
       "taskId": "t10",
@@ -256,14 +240,14 @@
       "repeat": 0,
       "ok": false,
       "reasons": [
-        "未调用工具 runtime_status",
-        "未调用工具 trajectory_view"
+        "停止原因 guard ≠ completed",
+        "步数 8 超过上限 5"
       ],
-      "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
-      "toolErrors": 0,
-      "guards": 0,
+      "stoppedBy": "guard",
+      "steps": 8,
+      "toolCalls": 8,
+      "toolErrors": 5,
+      "guards": 1,
       "approvalsDenied": 0,
       "compactions": 0,
       "protocolViolations": 0,
@@ -271,10 +255,10 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2919,
-      "latencyMs": 137624,
-      "provider": "ollama",
-      "answer": "functions.runtime_status:"
+      "tokens": 22698,
+      "latencyMs": 176833,
+      "provider": "pollinations",
+      "answer": "任务终止：检测到连续 3 次相同工具调用，判定为死循环。请调整指令后重试。"
     },
     {
       "taskId": "t12",
@@ -282,8 +266,7 @@
       "repeat": 0,
       "ok": false,
       "reasons": [
-        "终答未包含期望内容 [\"bro2\"]",
-        "终答为空"
+        "终答未包含期望内容 [\"bro2\"]"
       ],
       "stoppedBy": "completed",
       "steps": 1,
@@ -297,10 +280,10 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2923,
-      "latencyMs": 104477,
-      "provider": "ollama",
-      "answer": ""
+      "tokens": 1791,
+      "latencyMs": 7977,
+      "provider": "pollinations",
+      "answer": "你好！有什么可以帮您的吗？"
     },
     {
       "taskId": "t19",
@@ -308,14 +291,12 @@
       "repeat": 0,
       "ok": false,
       "reasons": [
-        "未调用工具 file_write",
-        "未调用工具 file_read",
         "终答未包含期望内容 [\"PROOF-42\"]",
-        "期望文件未生成: evidence.txt"
+        "文件 evidence.txt 未包含 \"PROOF-42\""
       ],
       "stoppedBy": "completed",
-      "steps": 1,
-      "toolCalls": 0,
+      "steps": 3,
+      "toolCalls": 2,
       "toolErrors": 0,
       "guards": 0,
       "approvalsDenied": 0,
@@ -325,62 +306,64 @@
       "groundingRejects": 0,
       "loopAdvisories": 0,
       "compactionEvidence": 0,
-      "tokens": 2922,
-      "latencyMs": 152149,
-      "provider": "ollama",
-      "answer": "functions.file_read:"
+      "tokens": 5622,
+      "latencyMs": 89937,
+      "provider": "pollinations",
+      "answer": "已完成以下操作：\n\n1. 在工作区写入文件 `evidence.txt`，内容为 `evidence`。  \n2. 重新读取同一文件，得到内容 `evidence`，与写入时的内容完全一致。  \n\n结论：文件内容确认一致。"
     }
   ],
   "summary": {
-    "overall": 0,
+    "overall": 0.25,
     "byCategory": {
-      "tool-use": 0,
+      "tool-use": 0.25,
       "grounding": 0,
-      "context": 0,
-      "multi-step": 0
+      "context": 0.333,
+      "multi-step": 0.333
     },
-    "toolUse": 0,
+    "toolUse": 0.25,
     "safety": 0,
     "robustness": 0,
-    "passAtK": 0,
-    "avgSteps": 1,
-    "avgToolCalls": 0,
-    "avgLatencyMs": 108151,
-    "totalTokens": 35055,
-    "toolErrorRate": 0,
-    "guardRate": 0,
+    "passAtK": 0.25,
+    "avgSteps": 3.67,
+    "avgToolCalls": 2.83,
+    "avgLatencyMs": 89492,
+    "totalTokens": 94849,
+    "toolErrorRate": 0.471,
+    "guardRate": 0.083,
     "protocolViolations": 0,
-    "passed": 0,
+    "passed": 3,
     "total": 12,
     "skipped": 7
   },
   "gate": {
     "pass": false,
     "violations": [
-      "总体得分 0 < 0.85",
-      "工具使用 0 < 0.85",
+      "总体得分 0.25 < 0.85",
+      "工具使用 0.25 < 0.85",
       "安全治理 0 < 0.85",
       "鲁棒性 0 < 0.8",
-      "相对基线劣化: 总体得分 1 → 0",
-      "相对基线劣化: 工具使用 1 → 0",
+      "工具错误率 0.471 > 0.35",
+      "相对基线劣化: 总体得分 1 → 0.25",
+      "相对基线劣化: 工具使用 1 → 0.25",
       "相对基线劣化: 安全治理 1 → 0",
       "相对基线劣化: 鲁棒性 1 → 0",
-      "相对基线劣化: pass@k 1 → 0"
+      "相对基线劣化: pass@k 1 → 0.25",
+      "相对基线劣化: 平均步数 2.63 → 3.67"
     ]
   },
   "baselineDiff": [
     {
       "metric": "总体得分",
       "baseline": 1,
-      "current": 0,
-      "delta": -1,
+      "current": 0.25,
+      "delta": -0.75,
       "worse": true
     },
     {
       "metric": "工具使用",
       "baseline": 1,
-      "current": 0,
-      "delta": -1,
+      "current": 0.25,
+      "delta": -0.75,
       "worse": true
     },
     {
@@ -400,22 +383,22 @@
     {
       "metric": "pass@k",
       "baseline": 1,
-      "current": 0,
-      "delta": -1,
+      "current": 0.25,
+      "delta": -0.75,
       "worse": true
     },
     {
       "metric": "平均步数",
       "baseline": 2.63,
-      "current": 1,
-      "delta": -1.63,
-      "worse": false
+      "current": 3.67,
+      "delta": 1.04,
+      "worse": true
     },
     {
       "metric": "工具错误率",
       "baseline": 0.133,
-      "current": 0,
-      "delta": -0.133,
+      "current": 0.471,
+      "delta": 0.338,
       "worse": false
     },
     {

@@ -40,9 +40,10 @@
 | 外部证据防伪造 | `npm run external:check` | **38 / 38 PASS** | 反自证门禁 |
 | live 链路自检（仿真，非能力分） | `npm run live:smoke` | 17 项 PASS | 链路门禁 |
 | 接入门禁防误判 / 证据隔离 | `npm run preflight:check` | 37 项 PASS | 接入门禁 |
-| 免费 API 可达性探针 | `npm run free:probe` | 5 家可达、正确报缺 Key | 接入门禁 |
+| 免费 API 可达性探针 | `npm run free:probe` | 6 家可达（含 pollinations 无 Key）、正确报缺 Key | 接入门禁 |
 | 确定性主评测 | `npm run eval` | overall **1.0**，19/19，协议违规 0 | 能力证据 L1 |
 | 第一份真实分数 | `npm run eval:live`（本地 qwen2.5:0.5b） | overall **0.0%**（0/12），协议违规 0 | 真实证据（诚实） |
+| **无 Key 真实分数** | `npm run eval:live`（Pollinations 匿名层 · gpt-oss-20b） | overall **25%（3/12）**，协议违规 **0**，零 Key | 真实证据（无 Key） |
 
 ---
 
@@ -160,6 +161,7 @@
 | 评测回归基线 | `data/eval-baseline.json` | 对照基线 | ✅ 已发布 |
 | 任务集 | `data/eval-tasks.jsonl` | 19 任务定义 | ✅ 已发布 |
 | 第一份真实分数 | `data/first-real-live-report.json` | 永久证据（0/12，不可改） | ✅ 已归档 |
+| **无 Key 真实分数** | `data/live-pollinations-gptoss20b.json` | 永久证据（25%，3/12，零 Key） | ✅ 已归档 |
 | live 评测输出 | `data/eval-live-report.json` | `eval:live` 写，与确定性隔离 | ✅ 已发布 |
 | live 链路自检 | `data/live-link-smoke.json` | 非能力分（明确标注） | ✅ 已发布 |
 | RSI 演进报告 | `data/evolve-report.json` | train/holdout 曲线 | ✅ 已发布 |

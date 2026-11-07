@@ -29,6 +29,8 @@ const FALLBACK: Record<string, { model: string; env: string }> = {
   siliconflow: { model: "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", env: "SILICONFLOW_MODEL" },
   deepseek: { model: "deepseek-chat", env: "DEEPSEEK_MODEL" },
   groq: { model: "openai/gpt-oss-120b", env: "GROQ_MODEL" },
+  // 无 Key 匿名端点：model 已在配置写死为 "openai"（路由到 gpt-oss-20b），无需 env 覆盖。
+  pollinations: { model: "openai", env: "POLLINATIONS_MODEL" },
 };
 
 // 给未设置的模型环境变量一个兜底值，使探针能发出合法请求（不依赖真实 Key）。
@@ -43,6 +45,8 @@ const os = createAgentOS({
   config: { storage: { dir: "./data" }, permission: { workspace: "./data/workspace", allowedPaths: ["./data/workspace"] } },
 });
 
+// 仅探测「免费 / 免密钥」类 provider（保持脚本聚焦，不把 ollama/openai 等本地或付费端点纳入）。
+// 新增无 Key 端点时，在此登记即可自动进探针。
 const providers = Object.keys(FALLBACK);
 let allReachable = true;
 

@@ -10,6 +10,23 @@
 
 ---
 
+## [2.0.2] — 2026-11-07 · 无 Key 真实评测通路（PATCH）
+
+> 类型：**PATCH · 真实证据 + 接入补齐**。打通「零 API Key、零注册」的真实模型评测，并归档首份无 Key 真实分数。
+
+### 新增（Added）
+- **无 Key 匿名端点接入**：`agentos.config.json` 新增 `pollinations` provider（`apiKeyOptional:true`，匿名层，免 Key、免注册），复用现有 OpenAI 兼容适配器。沙箱实测 6/6 通过 `preflight`。
+- **首份无 Key 真实分数**：`AGENTOS_LIVE_PROVIDER=pollinations npm run eval:live` 真跑出 `gpt-oss-20b`（经 Pollinations 匿名层）的 **overall 25%（3/12）**、**协议违规 0**、零 API Key。已归档 `data/live-pollinations-gptoss20b.json`。
+- 文档 `docs/FREE-LLM-APIS.md` 新增「无 Key 匿名端点（已实测可用）」章节，登记 Pollinations 并诚实标注其分数受匿名限速（~45s/IP）与 20B 模型规模压制。
+
+### 修复（Fixed）
+- `examples/free-api-probe.ts`：把硬编码的免费 provider 名单补入 `pollinations`，使 `npm run free:probe` 自动覆盖该无 Key 端点（`toolCalling: native`、`streaming: ✓`、`authRejected: ✗`）。
+
+### 诚实边界（不变）
+- `leadership.verdict = not-proven`、证据阶梯 L4 = `not-achieved` 不变：25% 是 20B 开放权重模型在受限匿名端点上的**下界**（限速拖慢至 ~90s/任务、工具错误率含重试超时），非 bro2 harness 能力的上限证明；公开基准对齐与第三方复现（ROADMAP P5）仍待完成。
+
+---
+
 ## [2.0.1] — 2026-11-07 · 产出物管理交付（PATCH）
 
 > 类型：**PATCH · 工程化治理**。把"产出物管理"作为独立交付物落地：中心化登记册、发布日志、演进路线图、CI 门禁、健康度聚合指令。

@@ -52,8 +52,12 @@ bro2 验证"业界水平"有两层含义，二者都被免费 API 解决或显�
 | SiliconFlow | `siliconflow` | `https://api.siliconflow.cn/v1` | `SILICONFLOW_API_KEY` | `deepseek-ai/DeepSeek-R1-0528-Qwen3-8B`、`Qwen/Qwen3-8B` | 1000 RPM/模型（部分小模型永久免费）· 国内直连 |
 | DeepSeek | `deepseek` | `https://api.deepseek.com/v1` | `DEEPSEEK_API_KEY` | `deepseek-chat`（新户送额度）| 按额度 |
 | Groq | `groq` | `https://api.groq.com/openai/v1` | `GROQ_API_KEY` | `openai/gpt-oss-120b`、`qwen/qwen3-32b` | 30 RPM / 1000 RPD（免费 tier）|
+| **Pollinations** | `pollinations` | `https://text.pollinations.ai/openai/v1` | （**无需 Key**，`apiKeyOptional:true`）| `openai`（路由到 `gpt-oss-20b`）| 匿名层约 1 回复/45s/IP（`402 FREE_LIMIT`）|
 
 > 免费模型列表变动频繁，以各家控制台为准；`:free` 后缀模型通常限速但真免费。
+> **Pollinations 是已实测可用的「无 Key」端点**：`pollinations` 已注册进 `agentos.config.json`，
+> `apiKeyOptional:true` 且 `POLLINATIONS_API_KEY` 不设置时走匿名层。沙箱实测 6/6 通过 preflight，
+> 且 `eval:live` 真跑出分数（见第六节），**全程零 API Key、零注册**。
 > 数据来源：`github.com/for-the-zero/Free-LLM-Collection` 与各家官方文档（2026-11 抓取）。
 
 ---
@@ -77,7 +81,36 @@ AGENTOS_LIVE_PROVIDER=openrouter npm run eval:live
 
 ---
 
-## 五、探针脚本
+## 五、无 Key 匿名端点（已实测可用）
+
+> 上一轮结论「免费 ≠ 免密钥」在主流平台成立，但**确实存在一批公共匿名端点/开源网关**，
+> 不要求注册与 Key。bro2 已接入其中验证可用的 **Pollinations**：
+
+```bash
+# 无需任何 Key —— 直接跑（匿名层，per-IP 限速）
+AGENTOS_LIVE_PROVIDER=pollinations npm run preflight   # 6/6 PASS（含原生 tool_calls、SSE）
+AGENTOS_LIVE_PROVIDER=pollinations npm run eval:live   # 真实模型评测，零 Key
+```
+
+**第一份无 Key 真实分数**（2026-11-07，沙箱实测，`data/live-pollinations-gptoss20b.json`）：
+
+| 指标 | 值 | 说明 |
+|---|---|---|
+| 模型 | `gpt-oss-20b`（经 Pollinations 匿名层）| OpenAI 开放权重 20B |
+| 总体得分 | **25%（3/12）** | 真实模型，非脚本执行器 |
+| 协议违规 | **0** | harness 在真实模型下仍保持工具调用完整性 |
+| 平均延迟 | **89,492 ms/任务** | 受匿名层 ~45s/IP 限速拖累 |
+| 工具错误率 | 47.1% | 含限速重试超时，部分非模型能力问题 |
+
+> **如何读这个分数**：25% 是真实模型在受限匿名端点上的**下界**——它受到两层压制：
+> (1) 模型本身是 20B 开放权重，弱于 120B+ 闭源模型；(2) 匿名限速把每任务拖到 ~90s，
+> 触发超时与重试错误。但 **0 协议违规** 是 harness 自身的正面证据：工具调用配对、Guard、
+> 终止逻辑在「真模型」下依然不崩。这同时印证了「Mock 100% 只说明 Harness 正确」的判断——
+> 与确定性 Mock 基线对比的「1→0.25」是预期差距，不是回归。
+
+---
+
+## 六、探针脚本
 
 `npm run free:probe`（`examples/free-api-probe.ts`）会对所有已注册免费服务执行 `probe()`，
 输出每个端点的 `networkReachable / authRejected / toolCalling / streaming`。
@@ -85,7 +118,7 @@ AGENTOS_LIVE_PROVIDER=openrouter npm run eval:live
 
 ---
 
-## 六、诚实提醒
+## 七、诚实提醒
 
 - 免费额度会随时收紧（2025–2026 已有多家调整政策），建议备 2–3 家轮切。
 - 不要为"刷分"滥用免费额度；bro2 的 `preflight` 门禁会在端点故障时 `EXIT=1` 并拒绝写低分报告，
