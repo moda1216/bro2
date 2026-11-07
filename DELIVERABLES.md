@@ -11,7 +11,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.0.1**（语义化，见 CHANGELOG） |
+| 版本 | **v2.0.3**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
@@ -75,6 +75,8 @@
 | Mock 提供方 | `src/models/mock.ts` | 启发式 Mock（确定性评测用） | `npm test` |
 | OpenAI 兼容适配 | `src/models/openai-compat.ts` | probe() 区分网络/认证/HTTP | `tests/ollama.test.ts` |
 | Provider 路由 | `src/models/router.ts` | 多 provider 选择 | `tests/ollama.test.ts` |
+| 透明响应缓存 | `src/models/cache.ts` | CachedProvider：相同请求零调用 + 效率统计 | `tests/cache.test.ts` |
+| 本地+远程混合 | `src/models/hybrid.ts` | HybridProvider：缓存优先 + 启发式路由 + 限流降级 | `tests/hybrid.test.ts` |
 | 接入门禁 | `src/models/preflight.ts` | 6 项就绪检查，未就绪 EXIT=1 | `tests/preflight.test.ts` |
 
 **context / tools / memory / cognition / delegation / governance / observability / benchmark / rsi / interfaces** — ✅（共 43 个源文件）
@@ -118,6 +120,7 @@
 | live 链路自检 | `examples/live-smoke.ts`（仿真） | 链路非能力分 | `npm run live:smoke` |
 | Ollama 协议仿真 | `examples/ollama-check.ts` / `ollama-bridge.ts` | 协议级实证 | `npm run ollama:check` |
 | 免费 API 探针 | `examples/free-api-probe.ts` | 5 家可达性 | `npm run free:probe` |
+| 混合推理演示 | `examples/hybrid-demo.ts` | 真实演示远程调用降低 | `npm run hybrid:demo` |
 | 演示 | `examples/demo.ts` / `_smoke.ts` | 离线完整演示 | `npm run demo` |
 
 ### 3.5 测试套件 — ✅
@@ -162,6 +165,7 @@
 | 任务集 | `data/eval-tasks.jsonl` | 19 任务定义 | ✅ 已发布 |
 | 第一份真实分数 | `data/first-real-live-report.json` | 永久证据（0/12，不可改） | ✅ 已归档 |
 | **无 Key 真实分数** | `data/live-pollinations-gptoss20b.json` | 永久证据（25%，3/12，零 Key） | ✅ 已归档 |
+| **混合推理真实证据** | `data/live-hybrid-kilo-qwen.json` | hybrid provider 评测（remoteRatio 0.33，协议违规 0） | ✅ 已归档 |
 | live 评测输出 | `data/eval-live-report.json` | `eval:live` 写，与确定性隔离 | ✅ 已发布 |
 | live 链路自检 | `data/live-link-smoke.json` | 非能力分（明确标注） | ✅ 已发布 |
 | RSI 演进报告 | `data/evolve-report.json` | train/holdout 曲线 | ✅ 已发布 |
@@ -217,12 +221,18 @@
 
 | 缺口 | 影响 | 解决路径 |
 | --- | --- | --- |
-| 仅单模型真实分数（qwen2.5:0.5b） | 无法横向对比 | ROADMAP **P0**：免费 API 跑强模型 |
+| 仅单模型真实分数（qwen2.5:0.5b / gpt-oss-20b 匿名层） | 无法横向对比 | ROADMAP **P0**：免费 API 跑强模型（无 Key 通路 `kilo`/`pollinations` 已打通） |
 | 对比式改进未接入 live RSI | 开放世界无真值迭代未闭环 | ROADMAP **P1** |
 | 经验库（EXPERIENCE.md）未沉淀 | harnessing 级递归缺失 | ROADMAP **P2** |
 | 缺 OOD 校验通道 | evolve 在 19/19 上可能过拟合 | ROADMAP **P3**（RRSI 正则） |
 | 单一全局 harness | 未进化为可继承类族 | ROADMAP **P4**（OO-Harness） |
 | 缺公开基准 L4 | 无法宣称领先 | ROADMAP **P5** |
+
+> **已交付的能力增强（v2.0.3）**：「本地 + 远程协同降调用」链路已落地——
+> `CachedProvider`（透明缓存）+ `HybridProvider`（启发式路由 + 限流降级）+
+> `hybrid` provider 配置 + `eval:live` 的 `inference` 效率指标。无 Key 端点已扩至
+> `pollinations / kilo / opencode-zen / llm7`（沙箱实测 `kilo` 支持原生 tool_calls）。
+> 详见 [ROADMAP.md](./ROADMAP.md) 的「混合推理」工作流与 `docs/FREE-LLM-APIS.md` 第六节。
 
 详细优先级、输入/产出物、验收标准见 [ROADMAP.md](./ROADMAP.md)。
 

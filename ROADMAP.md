@@ -22,14 +22,40 @@
   - `AGENTOS_LIVE_PROVIDER=<某免费API> npm run eval:live` 跑通，preflight 门禁 6/6 通过。
   - 报告字段完整、`protocolViolations` 记录真实、不出现 `verdict=proven`。
 - **依赖**：用户提供一个免费 API Key（沙箱已验证网络可达，只差 Key）。
-- **状态**：🔲 待用户供 Key 后执行（代码/配置/探针已就绪）。
+- **状态**：🟡 **部分完成**——无 Key 通路已打通（`pollinations` 实测 25% / 0 协议违规；`kilo` 实测支持原生 tool_calls），但「带强 Key 的 120B+ 模型横向对比」仍待用户供 Key。
 - **论文依据**：所有（这是验证"业界水平"的前提动作）。
 
 ```bash
-npm run free:probe                                  # 确认 5 家可达
-# 填入 KEY 后：
+npm run free:probe                                  # 确认 5 家可达（含无 Key 的 kilo / pollinations）
+# 无 Key 即跑：
+AGENTOS_LIVE_PROVIDER=kilo npm run eval:live
+# 带强 Key 后：
 AGENTOS_LIVE_PROVIDER=openrouter OPENROUTER_API_KEY=sk-... npm run eval:live
 ```
+
+---
+
+## P0.5 · 混合推理：本地 + 远程协同，降低远程调用（本轮新增）
+
+> 用户原问："本地部署的模型和远程模型 API 可以怎么配合，减少远程模型的调用次数？"
+> 这不只是省钱——它是 **远程强模型 API 反向优化 bro2** 的核心机制。
+
+- **目标**：把"本地小模型（llama.cpp，零成本零限流）"与"远程强模型（免 Key 端点/付费 API）"组合，
+  在**不牺牲任务能力**的前提下，显著减少打到远程的调用次数，同时提升在远程限流下的韧性。
+- **已交付（v2.0.3，已含单测 + 真实演示）**：
+  - `src/models/cache.ts` · `CachedProvider`：透明响应缓存，相同 `(model+messages+tools+temperature)` 命中即零调用。
+  - `src/models/hybrid.ts` · `HybridProvider`：① 缓存优先 ② 启发式路由（`cheap-to-local`：无工具/工具结果整理走本地，需推理走远程）③ 限流降级（远程 `429/5xx` 自动转本地而非失败）。
+  - `agentos.config.json` 的 `hybrid` provider（`remote=kilo`, `local=local-qwen`），及 `kilo`/`opencode-zen`/`llm7` 三个无 Key 端点。
+  - `eval:live` 报告新增 `inference` 指标：`remoteCalls / localCalls / cacheHits / remoteAvoided / remoteCallRatio`。
+  - `npm run hybrid:demo` 实测：`remoteCalls=1 / localCalls=2 / cacheHits=4 / remoteAvoided=4`，**远程占比 100%→14.3%**。
+- **下一步（待建）**：
+  - **P0.5-a 本地小模型当分类器**：用本地模型对每轮请求做"该走本地还是远程"的分类，替代启发式，提升路由精度。
+  - **P0.5-b 语义/近似缓存**：对 Near-duplicate 提示做 embedding 相似度匹配，扩展命中面（当前是精确匹配）。
+  - **P0.5-c 闭环到 RSI**：把 `remoteAvoided↑ 且分数不降` 作为对比式改进（P1）的一条真实目标，让混合推理持续自我优化。
+- **验收标准**：`npm run hybrid:demo` 与 `tests/{cache,hybrid}.test.ts` 全绿；`eval:live --provider hybrid` 报告含非空 `inference` 字段。
+- **依赖**：P0（真实远程端点作为 `remote` 一侧）。
+- **状态**：🟢 **核心链路已交付**；P0.5-a/b/c 待建。
+- **论文依据**：**HARNESS²**（Propose–Probe–Compose 的"用更便宜的执行验证改动"思想）、**Evo²**（仅改 harness 即可放大模型有效能力）。
 
 ---
 
@@ -120,13 +146,16 @@ AGENTOS_LIVE_PROVIDER=openrouter OPENROUTER_API_KEY=sk-... npm run eval:live
 P0 ──▶ P1 ──▶ P2 ──┐
         │           ├──▶ P4 ──▶ P5
         └──▶ P3 ────┘
+P0.5(混合推理) 横切 P0–P4：用本地小模型承接便宜/重复调用，降低远程开销并提升韧性
 依赖：P0(真实分数) → P1(live RSI) → P2(经验) / P3(OOD)
      P2+P3 → P4(类族) → P5(L4 升 partial)
+     P0.5-a/b/c 可独立于 P1–P4 推进（纯 harness 工程优化）
 ```
 
 | 优先级 | 工作流 | 论文 | 状态 | 是否需外部数据 |
 | --- | --- | --- | --- | --- |
-| **P0** | 免费 API 真实评测 | 全部 | 🔲 待供 Key | 需 1 个免费 Key |
+| **P0** | 免费 API 真实评测（无 Key 通路已通） | 全部 | 🟡 无 Key 已跑通；强 Key 对比待供 | 无 Key 无需；强模型对比需 1 个免费 Key |
+| **P0.5** | 混合推理：本地+远程协同降远程调用 | HARNESS²/Evo² | 🟢 核心链路已交付 | 否（本地小模型 + 无 Key 端点即可） |
 | **P1** | live RSI（对比式） | HARNESS² | 🟡 模块就绪 | 否 |
 | **P2** | 经验库 EXPERIENCE.md | HARNESS² | 🔲 待建 | 否 |
 | **P3** | RRSI 正则 + OOD 通道 | RRSI | 🔲 待建 | 否 |

@@ -53,6 +53,9 @@ bro2 验证"业界水平"有两层含义，二者都被免费 API 解决或显�
 | DeepSeek | `deepseek` | `https://api.deepseek.com/v1` | `DEEPSEEK_API_KEY` | `deepseek-chat`（新户送额度）| 按额度 |
 | Groq | `groq` | `https://api.groq.com/openai/v1` | `GROQ_API_KEY` | `openai/gpt-oss-120b`、`qwen/qwen3-32b` | 30 RPM / 1000 RPD（免费 tier）|
 | **Pollinations** | `pollinations` | `https://text.pollinations.ai/openai/v1` | （**无需 Key**，`apiKeyOptional:true`）| `openai`（路由到 `gpt-oss-20b`）| 匿名层约 1 回复/45s/IP（`402 FREE_LIMIT`）|
+| **Kilo Gateway** | `kilo` | `https://api.kilo.ai/api/gateway/v1` | （**无需 Key**，`apiKeyOptional:true`）| `kilo-auto/free`（自动路由到免费强模型，如 `beam-free`/`nemotron-3.5-super-vl`）| 约 200 请求/小时/IP；**实测支持原生 tool_calls** |
+| **OpenCode Zen** | `opencode-zen` | `https://opencode.ai/zen/v1` | （**无需 Key**，需 `x-session-id`，适配器自动生成）| `nemotron-3.5-lightning-free` 等 `-free` 模型 | 匿名免费层；沙箱 IP 可能触达免费额度上限（换 IP 即恢复）|
+| **LLM7** | `llm7` | `https://api.llm7.io/v1` | （**无需 Key**，`apiKeyOptional:true`）| `gpt-oss-120b` 等 | 免 Key 聚合端点；**免费模型子集不稳定**，仅作可达性核验 |
 
 > 免费模型列表变动频繁，以各家控制台为准；`:free` 后缀模型通常限速但真免费。
 > **Pollinations 是已实测可用的「无 Key」端点**：`pollinations` 已注册进 `agentos.config.json`，
@@ -110,7 +113,53 @@ AGENTOS_LIVE_PROVIDER=pollinations npm run eval:live   # 真实模型评测，�
 
 ---
 
-## 六、探针脚本
+## 六、本地 + 远程协同，减少远程调用（核心反向优化）
+
+无 Key 端点虽然免费，但**限流极严**（Kilo ~200 次/小时/IP、Pollinations ~1 次/45s/IP）。
+bro2 不止"能接"，还把"本地部署的小模型"和"远程强模型"组合成一个 `hybrid` provider，
+**在保持任务能力的同时，显著降低远程调用次数**——这正是"远程模型 API 反过来优化 bro2"的关键。
+
+`hybrid` 在 `agentos.config.json` 中这样定义（已内置）：
+
+```json
+"hybrid": {
+  "type": "hybrid",
+  "remote": "kilo",            // 远程强模型（免 Key 端点）
+  "local": "local-qwen",       // 本地小模型（llama.cpp，零调用成本）
+  "policy": "cheap-to-local",  // 启发式路由：便宜的调用留本地
+  "cache": true,               // 缓存优先：相同提示零调用
+  "fallback": true             // 远程限流/5xx 时降级到本地而非失败
+}
+```
+
+三层降调用机制：
+1. **缓存优先（cache-first）**：相同 `(model+messages+tools+temperature)` 的请求命中缓存，
+   零调用（无论本应走本地还是远程）。
+2. **启发式路由（cheap-to-local）**：无工具的纯生成、工具结果整理等"便宜"调用路由到本地小模型；
+   需要推理/工具选择的才走远程强模型。
+3. **限流降级（rate-limit-fallback）**：远程返回 `429 / FreeUsageLimit / 5xx` 时，自动降级到本地，
+   既保韧性，又避免对远程端点反复重试打满限额。
+
+每次评测后，`eval:live` 报告里会带 `inference` 指标，量化"省下的远程调用"：
+
+| 字段 | 含义 |
+|---|---|
+| `remoteCalls` | 真正打到远程强模型的次数 |
+| `localCalls` | 打到本地小模型的次数（含降级） |
+| `cacheHits` | 缓存命中、零调用的次数 |
+| `remoteAvoided` | 因缓存/降级而避免的远程调用总数 |
+| `remoteCallRatio` | 远程调用占比（越低越好） |
+
+实测演示（`npm run hybrid:demo`，5 次相同工具调用 + 2 次纯生成）：
+`remoteCalls=1 / localCalls=2 / cacheHits=4 / remoteAvoided=4`，**远程占比从 100% 降到 14.3%**。
+
+> 该机制与 RSI 形成闭环：对比式改进（`src/rsi/contrast.ts`）可把
+> "remoteAvoided 提升而分数不降"作为一条真实的改进目标，持续反哺 bro2。
+> 详见 `docs/ROADMAP.md` 的「混合推理」工作流，与 `src/models/{cache,hybrid}.ts`。
+
+---
+
+## 七、探针脚本
 
 `npm run free:probe`（`examples/free-api-probe.ts`）会对所有已注册免费服务执行 `probe()`，
 输出每个端点的 `networkReachable / authRejected / toolCalling / streaming`。

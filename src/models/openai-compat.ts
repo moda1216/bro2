@@ -25,6 +25,10 @@ export interface OpenAICompatOptions {
   apiKeyOptional?: boolean;
   /** 请求 stream_options.include_usage，让端点回传真实 token 统计。默认开启。 */
   includeUsage?: boolean;
+  /** 注入到每个请求（含 probe）的额外请求头。用于 OpenCode Zen 等需要 x-session-id 的无 Key 端点。 */
+  extraHeaders?: Record<string, string>;
+  /** 自动生成一个随机 UUID 并作为该请求头名发送（如 "x-session-id"），无 Key 端点据此区分匿名会话。 */
+  genSessionHeader?: string;
 }
 
 export type ToolCallingSupport = "native" | "text-json" | "unsupported" | "unknown";
@@ -132,6 +136,7 @@ export class OpenAICompatProvider implements LLMProvider {
   private readonly temperature: number;
   private readonly apiKeyOptional: boolean;
   private readonly includeUsage: boolean;
+  private readonly extraHeaders: Record<string, string>;
 
   constructor(options: OpenAICompatOptions) {
     this.name = options.name;
@@ -144,6 +149,10 @@ export class OpenAICompatProvider implements LLMProvider {
     // 本地端点（Ollama / vLLM / LM Studio）默认不认证，无需伪造 API Key
     this.apiKeyOptional = options.apiKeyOptional ?? isLocalEndpoint(this.baseUrl);
     this.includeUsage = options.includeUsage ?? true;
+    // 注入额外请求头（如 OpenCode Zen 的 x-session-id）；genSessionHeader 自动生成随机会话 ID
+    const eh = { ...(options.extraHeaders ?? {}) };
+    if (options.genSessionHeader) eh[options.genSessionHeader] = globalThis.crypto.randomUUID();
+    this.extraHeaders = eh;
   }
 
   get configured(): boolean {
@@ -163,7 +172,7 @@ export class OpenAICompatProvider implements LLMProvider {
   private headers(): Record<string, string> {
     const h: Record<string, string> = { "content-type": "application/json" };
     if (this.apiKey.length > 0) h.authorization = `Bearer ${this.apiKey}`;
-    return h;
+    return { ...this.extraHeaders, ...h };
   }
 
   async complete(req: LLMRequest): Promise<LLMResponse> {

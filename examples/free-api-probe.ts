@@ -29,8 +29,14 @@ const FALLBACK: Record<string, { model: string; env: string }> = {
   siliconflow: { model: "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", env: "SILICONFLOW_MODEL" },
   deepseek: { model: "deepseek-chat", env: "DEEPSEEK_MODEL" },
   groq: { model: "openai/gpt-oss-120b", env: "GROQ_MODEL" },
-  // 无 Key 匿名端点：model 已在配置写死为 "openai"（路由到 gpt-oss-20b），无需 env 覆盖。
+  // 无 Key 匿名端点：model 已在配置写死，无需 env 覆盖。
   pollinations: { model: "openai", env: "POLLINATIONS_MODEL" },
+  // Kilo 网关：免 Key，kilo-auto/free 自动路由到免费强模型（实测支持原生 tool_calls）。
+  kilo: { model: "kilo-auto/free", env: "KILO_MODEL" },
+  // OpenCode Zen：免 Key，需 x-session-id（适配器自动生成）；沙箱 IP 可能触达免费额度上限（换 IP 即恢复）。
+  "opencode-zen": { model: "nemotron-3.5-lightning-free", env: "OPENCODE_ZEN_MODEL" },
+  // LLM7：免 Key 聚合端点，免费模型子集不稳定，仅作可达性核验。
+  llm7: { model: "gpt-oss-120b", env: "LLM7_MODEL" },
 };
 
 // 给未设置的模型环境变量一个兜底值，使探针能发出合法请求（不依赖真实 Key）。
@@ -81,11 +87,16 @@ for (const name of providers) {
 hr("接入结论");
 line(`  全部端点网络可达：${allReachable ? "✓" : "部分受限（见上）"}`);
 line("");
-line("  下一步（拿到任意一家免费 Key 后，一条命令用真实强模型评测 bro2）：");
-line("    export OPENROUTER_API_KEY=sk-or-...     # 以 OpenRouter 为例");
-line("    export OPENROUTER_MODEL=openai/gpt-oss-120b");
-line("    AGENTOS_LIVE_PROVIDER=openrouter npm run preflight   # 先过门禁");
-line("    AGENTOS_LIVE_PROVIDER=openrouter npm run eval:live   # 拿第一份真实强模型分数");
+line("  A) 免 Key 即用的无密钥端点（pollinations / kilo / opencode-zen / llm7）：");
+line("     AGENTOS_LIVE_PROVIDER=kilo  npm run preflight   # 先过门禁（含原生 tool_calls 检测）");
+line("     AGENTOS_LIVE_PROVIDER=kilo  npm run eval:live   # 零 Key 真实评测 bro2");
+line("     AGENTOS_LIVE_PROVIDER=hybrid npm run eval:live  # 本地小模型 + 远程强模型协同（降远程调用）");
+line("");
+line("  B) 需要免费 Key 的服务（openrouter / nvidia-nim / siliconflow / deepseek / groq）：");
+line("     export OPENROUTER_API_KEY=sk-or-...     # 以 OpenRouter 为例");
+line("     export OPENROUTER_MODEL=openai/gpt-oss-120b");
+line("     AGENTOS_LIVE_PROVIDER=openrouter npm run preflight");
+line("     AGENTOS_LIVE_PROVIDER=openrouter npm run eval:live   # 用真实强模型评测 bro2");
 line("");
 line("  详见 docs/FREE-LLM-APIS.md（含各平台免费模型、速率限制与国内直连情况）。");
 

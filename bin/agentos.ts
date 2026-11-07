@@ -17,6 +17,8 @@ import { createAgentOS, AGENT_NAME } from "../src/index.ts";
 import { runCLI } from "../src/interfaces/cli.ts";
 import { startServer } from "../src/interfaces/api.ts";
 import { OpenAICompatProvider } from "../src/models/openai-compat.ts";
+import { isCompositeProvider } from "../src/models/cache.ts";
+import type { LLMProvider } from "../src/models/base.ts";
 import { runPreflight, formatPreflight } from "../src/models/preflight.ts";
 import type { PreflightResult } from "../src/models/preflight.ts";
 import { runEval, loadTasks, loadBaseline, saveReport, formatReport } from "../src/observability/eval.ts";
@@ -173,18 +175,27 @@ else if (flags.mode === "eval") {
   // live 预检门禁：端点未就绪时拒绝开跑，避免产出会被误读成「能力差」的低分报告。
   if (mode === "live" && !flags.skipPreflight) {
     const provider = os.providers.get(providerName);
-    if (!(provider instanceof OpenAICompatProvider)) {
-      process.stderr.write(`预检失败：provider "${providerName}" 不是 OpenAI 兼容端点，live 评测禁止使用 Mock。\n`);
+    if (!provider || providerName === "mock") {
+      process.stderr.write(`预检失败：provider "${providerName}" 是离线 Mock，live 评测禁止使用 Mock。\n`);
       await os.shutdown();
       process.exit(1);
     }
-    const pf = await runPreflight(provider);
-    if (!flags.json) process.stdout.write(formatPreflight(pf) + "\n");
-    if (!pf.ready) {
-      if (flags.json) process.stdout.write(JSON.stringify({ error: "preflight-blocked", preflight: pf }, null, 2) + "\n");
-      process.stderr.write("已拒绝运行 live 评测：先修复上述阻断项；确需跳过用 --skip-preflight（不建议）。\n");
-      await os.shutdown();
-      process.exit(1);
+    // 组合型 provider（hybrid / cached）委托给底层真实端点做门禁。
+    let target: LLMProvider | undefined = provider;
+    while (target && !(target instanceof OpenAICompatProvider) && isCompositeProvider(target)) {
+      target = target.underlying().find((p) => p instanceof OpenAICompatProvider) ?? target.underlying()[0];
+    }
+    if (!(target instanceof OpenAICompatProvider)) {
+      process.stderr.write(`预检跳过：provider "${providerName}" 没有可探测的 OpenAI 兼容底层端点。\n`);
+    } else {
+      const pf = await runPreflight(target);
+      if (!flags.json) process.stdout.write(formatPreflight(pf) + "\n");
+      if (!pf.ready) {
+        if (flags.json) process.stdout.write(JSON.stringify({ error: "preflight-blocked", preflight: pf }, null, 2) + "\n");
+        process.stderr.write("已拒绝运行 live 评测：先修复上述阻断项；确需跳过用 --skip-preflight（不建议）。\n");
+        await os.shutdown();
+        process.exit(1);
+      }
     }
   }
 

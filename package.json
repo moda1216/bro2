@@ -1,6 +1,6 @@
 {
   "name": "bro2",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "private": true,
   "type": "module",
   "description": "bro2 · 通用 Agent 运行时（含 RSI 有界可验证自我改进）— 零第三方依赖",
@@ -18,6 +18,7 @@
     "live:smoke": "node --experimental-strip-types --no-warnings examples/live-smoke.ts",
     "ollama:check": "node --experimental-strip-types --no-warnings examples/ollama-check.ts",
     "free:probe": "node --experimental-strip-types --no-warnings examples/free-api-probe.ts",
+    "hybrid:demo": "node --experimental-strip-types --no-warnings examples/hybrid-demo.ts",
     "evolve": "node --experimental-strip-types --no-warnings bin/agentos.ts evolve --reset",
     "evolve:dry": "node --experimental-strip-types --no-warnings bin/agentos.ts evolve --reset --dry-run",
     "rsi:check": "node --experimental-strip-types --no-warnings examples/evolve-check.ts",

@@ -76,6 +76,51 @@
         "includeUsage": true,
         "timeoutMs": 180000,
         "maxRetries": 3
+      },
+      "local-qwen": {
+        "type": "openai",
+        "baseUrl": "http://127.0.0.1:11434/v1",
+        "model": "qwen2.5:0.5b",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 120000,
+        "maxRetries": 2
+      },
+      "kilo": {
+        "type": "openai",
+        "baseUrl": "https://api.kilo.ai/api/gateway/v1",
+        "model": "kilo-auto/free",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 180000,
+        "maxRetries": 3
+      },
+      "opencode-zen": {
+        "type": "openai",
+        "baseUrl": "https://opencode.ai/zen/v1",
+        "model": "nemotron-3.5-lightning-free",
+        "apiKeyOptional": true,
+        "genSessionHeader": "x-session-id",
+        "includeUsage": true,
+        "timeoutMs": 180000,
+        "maxRetries": 2
+      },
+      "llm7": {
+        "type": "openai",
+        "baseUrl": "https://api.llm7.io/v1",
+        "model": "gpt-oss-120b",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 120000,
+        "maxRetries": 2
+      },
+      "hybrid": {
+        "type": "hybrid",
+        "remote": "kilo",
+        "local": "local-qwen",
+        "policy": "cheap-to-local",
+        "cache": true,
+        "fallback": true
       }
     }
   },

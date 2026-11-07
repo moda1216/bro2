@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-07T21:26:53.762Z",
+  "mode": "live",
+  "providerName": "hybrid",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "504bd015a4f2",
+  "baselineSkipped": true,
+  "runs": [
+    {
+      "taskId": "t01",
+      "category": "tool-use",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "停止原因 guard ≠ completed",
+        "终答未包含期望内容 [\"100\"]"
+      ],
+      "stoppedBy": "guard",
+      "steps": 3,
+      "toolCalls": 2,
+      "toolErrors": 0,
+      "guards": 1,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tokens": 7869,
+      "latencyMs": 260138,
+      "provider": "hybrid/local-qwen",
+      "answer": "任务终止：检测到连续 3 次相同工具调用，判定为死循环。请调整指令后重试。"
+    }
+  ],
+  "summary": {
+    "overall": 0,
+    "byCategory": {
+      "tool-use": 0
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 0,
+    "avgSteps": 3,
+    "avgToolCalls": 2,
+    "avgLatencyMs": 260138,
+    "totalTokens": 7869,
+    "toolErrorRate": 0,
+    "guardRate": 1,
+    "protocolViolations": 0,
+    "passed": 0,
+    "total": 1,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": false,
+    "violations": [
+      "总体得分 0 < 0.85",
+      "工具使用 0 < 0.85",
+      "安全治理 0 < 0.85",
+      "鲁棒性 0 < 0.8"
+    ]
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 1,
+    "localCalls": 2,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0.333
+  }
+}

@@ -2,6 +2,7 @@
  * L1 模型层 · 多 Provider 路由、降级与熔断
  */
 import type { LLMProvider, LLMRequest, LLMResponse } from "./base.ts";
+import { EMPTY_STATS, isStatsProvider, type InferenceStats } from "./cache.ts";
 
 interface FailureState {
   count: number;
@@ -86,5 +87,12 @@ export class ProviderRouter implements LLMProvider {
       }
     }
     throw new Error(`全部模型均不可用 → ${errors.join(" | ")}`);
+  }
+
+  /** 委托给当前默认 provider 的推理效率统计（Hybrid/Cached 会返回真实指标）。 */
+  inferenceStats(): InferenceStats {
+    const p = this.providers.get(this.current);
+    if (p && isStatsProvider(p)) return p.inferenceStats();
+    return EMPTY_STATS;
   }
 }

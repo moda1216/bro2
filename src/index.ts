@@ -25,6 +25,8 @@ import { ProviderRouter } from "./models/router.ts";
 import { MockProvider } from "./models/mock.ts";
 import type { MockScript } from "./models/mock.ts";
 import { OpenAICompatProvider } from "./models/openai-compat.ts";
+import { CachedProvider } from "./models/cache.ts";
+import { HybridProvider, cheapToLocalPolicy, remoteOnlyPolicy } from "./models/hybrid.ts";
 import type { LLMProvider } from "./models/base.ts";
 import { SessionManager } from "./kernel/session.ts";
 import type { Session } from "./kernel/session.ts";
@@ -236,18 +238,52 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
       maxRetries: Number(cfg.maxRetries ?? 2),
       apiKeyOptional: cfg.apiKeyOptional === true,
       includeUsage: cfg.includeUsage !== false,
+      extraHeaders: cfg.extraHeaders as Record<string, string> | undefined,
+      genSessionHeader: typeof cfg.genSessionHeader === "string" ? (cfg.genSessionHeader as string) : undefined,
     });
   };
 
-  // 遍历配置中的所有 OpenAI 兼容 provider（云端 API / vLLM / Ollama / 免费 LLM API 等），
+  // 第一遍：所有 OpenAI 兼容 provider（云端 API / vLLM / Ollama / 免费 LLM API 等），
   // 内核不感知差异，统一走 OpenAICompat 适配器。
+  const deferred: Array<{ name: string; cfg: Record<string, unknown> }> = [];
   for (const [name, raw] of Object.entries(config.model.providers ?? {})) {
     if (name === "mock") continue;
     const cfg = (raw ?? {}) as Record<string, unknown>;
-    if (cfg.type !== "openai") continue;
-    const p = buildCompat(name, cfg);
-    router.register(name, p);
-    providers.set(name, p);
+    if (cfg.type === "openai") {
+      const p = buildCompat(name, cfg);
+      router.register(name, p);
+      providers.set(name, p);
+    } else if (cfg.type === "cached" || cfg.type === "hybrid") {
+      // 依赖其它已注册 provider，留待第二遍装配
+      deferred.push({ name, cfg });
+    }
+  }
+
+  // 第二遍：组合型 provider（cached / hybrid），引用第一遍已注册的底层 provider。
+  for (const { name, cfg } of deferred) {
+    if (cfg.type === "cached") {
+      const inner = providers.get(String(cfg.inner ?? ""));
+      if (!inner) throw new Error(`cached provider "${name}" 引用的 inner "${cfg.inner}" 未注册`);
+      const p = new CachedProvider(name, inner);
+      router.register(name, p);
+      providers.set(name, p);
+    } else if (cfg.type === "hybrid") {
+      const remote = providers.get(String(cfg.remote ?? ""));
+      const local = providers.get(String(cfg.local ?? ""));
+      if (!remote) throw new Error(`hybrid provider "${name}" 引用的 remote "${cfg.remote}" 未注册`);
+      if (!local) throw new Error(`hybrid provider "${name}" 引用的 local "${cfg.local}" 未注册`);
+      const policyName = String(cfg.policy ?? "cheap-to-local");
+      const policy = policyName === "remote-only" ? remoteOnlyPolicy : cheapToLocalPolicy;
+      const p = new HybridProvider(name, {
+        remote,
+        local,
+        policy,
+        cache: cfg.cache !== false,
+        fallbackOnRateLimit: cfg.fallbackOnRateLimit !== false,
+      });
+      router.register(name, p);
+      providers.set(name, p);
+    }
   }
 
   if (options.providerOverride) {

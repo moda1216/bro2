@@ -21,6 +21,7 @@ import { EventType } from "../kernel/events.ts";
 import type { Event, ToolCall, ToolResult } from "../kernel/events.ts";
 import type { RunResult } from "../kernel/loop.ts";
 import { ApprovalDecision } from "../governance/approval.ts";
+import { EMPTY_STATS, type InferenceStats } from "../models/cache.ts";
 import type { RuntimeConfig } from "../kernel/runtime.ts";
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -127,6 +128,8 @@ export interface EvalReport {
   summary: EvalSummary;
   gate: { pass: boolean; violations: string[] };
   baselineDiff: Array<{ metric: string; baseline: number; current: number; delta: number; worse: boolean }>;
+  /** 推理效率：本地+远程协同下，远程调用被减少的情况（仅 hybrid/cached 提供时有意义） */
+  inference?: InferenceStats;
 }
 
 export interface EvalThresholds {
@@ -512,6 +515,8 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
   const thresholds: EvalThresholds = { ...DEFAULT_THRESHOLDS, ...(options.thresholds ?? {}) };
   const runs: EvalRunMetrics[] = [];
   let skipped = 0;
+  // 逐任务累加推理效率指标（每个任务重建 AgentOS，需手动求和）
+  let inference = EMPTY_STATS;
 
   const active = options.tasks.filter((t) => !(mode === "live" && t.deterministicOnly));
   skipped = options.tasks.length - active.length;
@@ -540,6 +545,14 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
         }
         const r = await runOne(os, task, workspace, repeat);
         runs.push(r);
+        const s = os.router.inferenceStats();
+        inference = {
+          remoteCalls: inference.remoteCalls + s.remoteCalls,
+          localCalls: inference.localCalls + s.localCalls,
+          cacheHits: inference.cacheHits + s.cacheHits,
+          remoteAvoided: inference.remoteAvoided + s.remoteAvoided,
+          remoteCallRatio: 0,
+        };
         options.onProgress?.(
           `  ${r.ok ? "✓" : "✗"} ${task.id.padEnd(8)} [${task.category.padEnd(11)}] ` +
             `${r.steps}步/${r.toolCalls}工具/${r.latencyMs}ms ${r.ok ? "" : `→ ${r.reasons.join("; ")}`}`,
@@ -570,6 +583,13 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
     summary,
     gate,
     baselineDiff,
+    inference: {
+      ...inference,
+      remoteCallRatio:
+        inference.remoteCalls + inference.localCalls + inference.cacheHits > 0
+          ? round(inference.remoteCalls / (inference.remoteCalls + inference.localCalls + inference.cacheHits), 3)
+          : 0,
+    },
   };
 }
 

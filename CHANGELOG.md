@@ -27,6 +27,32 @@
 
 ---
 
+## [2.0.3] — 2026-11-08 · 本地+远程协同降远程调用 + 无 Key 端点扩展（PATCH）
+
+> 类型：**PATCH · 能力增强 + 接入扩展**。回答"本地模型如何与远程 API 配合减少远程调用"，并把无 Key 端点从 1 家扩到 4 家。
+
+### 新增（Added）
+- **透明响应缓存** `src/models/cache.ts` · `CachedProvider`：相同 `(model+messages+tools+temperature)` 请求命中即零调用，统计 `cacheHits / remoteAvoided`；`tests/cache.test.ts`（3 项）。
+- **本地+远程混合推理** `src/models/hybrid.ts` · `HybridProvider`：① 缓存优先 ② 启发式路由 `cheap-to-local`（无工具/工具结果整理走本地，需推理走远程）③ 远程限流/5xx 自动降级到本地而非失败；`tests/hybrid.test.ts`（6 项）。
+- **配置与装载**：`agentos.config.json` 新增 `hybrid` provider（`remote=kilo` / `local=local-qwen`）+ 无 Key 端点 `kilo` / `opencode-zen` / `llm7`；`src/index.ts` 增加 `cached`/`hybrid` 组合类型装载（两遍装配，引用已注册底层 provider）。
+- **OpenAI 兼容适配器增强**：`src/models/openai-compat.ts` 支持 `extraHeaders` 与 `genSessionHeader`（OpenCode Zen 等需 `x-session-id` 的无 Key 端点）。
+- **评测效率指标**：`eval:live` 报告新增 `inference` 字段（`remoteCalls / localCalls / cacheHits / remoteAvoided / remoteCallRatio`）；`ProviderRouter.inferenceStats()` 委托聚合。
+- **真实演示** `examples/hybrid-demo.ts` + `npm run hybrid:demo`：5 次相同工具调用只打 1 次远程、2 次纯生成走本地，远程占比 100%→14.3%。
+- `live` 门禁放宽：组合 provider（hybrid/cached）不再被拒，门禁落到其底层远程端点（`bin/agentos.ts`）。
+
+### 修复（Fixed）
+- `bin/agentos.ts` live 预检仅认裸 `OpenAICompatProvider`，导致 `hybrid`/`cached` 无法进 live 评测——改为委托底层端点做门禁，仅拒绝 Mock。
+
+### 验证（Verification）
+- `tests/cache.test.ts` + `tests/hybrid.test.ts`：9/9 通过；全量 `npm test` **104/104**。
+- `npm run hybrid:demo`：远程占比降至 14.3%，`remoteAvoided=4`。
+- `AGENTOS_LIVE_PROVIDER=hybrid npm run eval:live`（t01 真实任务）：报告含 `inference={remoteCalls:1, localCalls:2, remoteCallRatio:0.333}`，**67% 模型调用未打远程**，协议违规 0。已归档 `data/live-hybrid-kilo-qwen.json`。
+
+### 诚实边界（不变）
+- `leadership.verdict = not-proven`、L4 = `not-achieved` 不变。混合推理降低的是**远程调用成本与限流脆弱性**，不改变"需公开基准+第三方复现才能宣称领先"的结论；单任务真实评测分数低源于无 Key 端点模型较弱，非 harness 退化。
+
+---
+
 ## [2.0.1] — 2026-11-07 · 产出物管理交付（PATCH）
 
 > 类型：**PATCH · 工程化治理**。把"产出物管理"作为独立交付物落地：中心化登记册、发布日志、演进路线图、CI 门禁、健康度聚合指令。
