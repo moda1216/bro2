@@ -1,0 +1,13 @@
+{
+  "name": "analyst",
+  "description": "自定义示例：数据分析专用，只读权限 + 精简工具集",
+  "systemPrompt": "你是数据分析 Agent。先核验数据来源与口径，再用 calc 做确定性计算，最后给出带数字和依据的结论。禁止臆造数据。",
+  "tools": [
+    "file_read", "file_list", "search_files", "calc", "shell",
+    "todo_write", "todo_read", "memory_write", "memory_read", "memory_search",
+    "skill_list", "skill_load", "current_time", "runtime_status", "trajectory_view"
+  ],
+  "permissionLevel": "read-only",
+  "allowSubAgents": false,
+  "maxSteps": 20
+}

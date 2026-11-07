@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "operatorWeights": {
+    "relax-loop-threshold": 1,
+    "raise-step-ceiling": 1,
+    "tune-compaction": 1,
+    "extend-tool-timeout": 1,
+    "add-reliability-guidance": 1.4,
+    "enable-args-repair": 1.2,
+    "enable-grounding": 1.2,
+    "enable-salience-compaction": 1.2,
+    "enable-advisory-loop": 0.7,
+    "enable-risk-first-parallel": 1.2
+  },
+  "editBudget": 5,
+  "maxGenerations": 10,
+  "plateauPatience": 2,
+  "maxEvalRuns": 90,
+  "maxDrift": 14,
+  "rejectedEdits": [
+    "05990223c862"
+  ]
+}

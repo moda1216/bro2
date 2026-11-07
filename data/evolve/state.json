@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "budget": {
+    "compactTokens": 36000,
+    "loopDetectionThreshold": 2,
+    "maxSteps": 30,
+    "maxConcurrentTools": 4,
+    "toolTimeoutMs": 30000
+  },
+  "policy": {
+    "loopDetection": "exact",
+    "malformedArgs": "repair",
+    "grounding": "require-evidence",
+    "compaction": "salience",
+    "parallel": "risk-first"
+  },
+  "skillOverlays": {}
+}

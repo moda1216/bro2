@@ -1,0 +1,524 @@
+{
+  "version": 1,
+  "agent": "bro2",
+  "timestamp": "2026-11-07T12:36:49.652Z",
+  "ablation": {
+    "version": 1,
+    "timestamp": "2026-11-07T12:36:49.651Z",
+    "taskSet": "/workspace/agent-os/data/evolve/train.jsonl",
+    "taskCount": 10,
+    "behaviorOnly": true,
+    "variants": [
+      {
+        "id": "full",
+        "label": "完整 bro2（已落地演进策略）",
+        "description": "加载 data/evolve/state.json 中通过双门禁的策略改进",
+        "useEvolvedState": true
+      },
+      {
+        "id": "conservative",
+        "label": "保守基线（策略层全关）",
+        "description": "等价于策略分派层引入之前的行为",
+        "useEvolvedState": false,
+        "configOverride": {
+          "policy": {
+            "loopDetection": "exact",
+            "malformedArgs": "fail",
+            "grounding": "off",
+            "compaction": "truncate",
+            "parallel": "fifo"
+          }
+        }
+      },
+      {
+        "id": "naive-single-step",
+        "label": "朴素单轮（无多步工具循环）",
+        "description": "maxSteps=1：模拟只有一次模型请求、没有 tool-result 回喂循环的朴素 agent",
+        "useEvolvedState": true,
+        "configOverride": {
+          "budget": {
+            "maxSteps": 1
+          }
+        }
+      },
+      {
+        "id": "no-repair",
+        "label": "消融：受控参数修复",
+        "description": "malformedArgs=fail",
+        "useEvolvedState": true,
+        "configOverride": {
+          "policy": {
+            "malformedArgs": "fail"
+          }
+        }
+      },
+      {
+        "id": "no-grounding",
+        "label": "消融：终答接地校验",
+        "description": "grounding=off",
+        "useEvolvedState": true,
+        "configOverride": {
+          "policy": {
+            "grounding": "off"
+          }
+        }
+      },
+      {
+        "id": "no-salience",
+        "label": "消融：证据优先压缩",
+        "description": "compaction=truncate",
+        "useEvolvedState": true,
+        "configOverride": {
+          "policy": {
+            "compaction": "truncate"
+          }
+        }
+      },
+      {
+        "id": "no-parallel-scheduling",
+        "label": "消融：高危优先并行调度",
+        "description": "parallel=fifo",
+        "useEvolvedState": true,
+        "configOverride": {
+          "policy": {
+            "parallel": "fifo"
+          }
+        }
+      }
+    ],
+    "results": [
+      {
+        "id": "full",
+        "label": "完整 bro2（已落地演进策略）",
+        "description": "加载 data/evolve/state.json 中通过双门禁的策略改进",
+        "profile": {
+          "byFamily": {
+            "tool-use": 1,
+            "robustness": 1,
+            "grounding": 1,
+            "context": 1,
+            "multi-step": 1,
+            "safety": 1
+          },
+          "overall": 1,
+          "protocolViolations": 0,
+          "toolErrorRate": 0.118,
+          "avgSteps": 2.9,
+          "imbalance": 0
+        },
+        "overall": 1,
+        "passed": 10,
+        "total": 10,
+        "gatePass": true,
+        "deltaFromFull": {
+          "overall": 0,
+          "tool-use": 0,
+          "robustness": 0,
+          "grounding": 0,
+          "context": 0,
+          "multi-step": 0,
+          "safety": 0,
+          "avgSteps": 0
+        }
+      },
+      {
+        "id": "conservative",
+        "label": "保守基线（策略层全关）",
+        "description": "等价于策略分派层引入之前的行为",
+        "profile": {
+          "byFamily": {
+            "tool-use": 1,
+            "robustness": 0.5,
+            "grounding": 0,
+            "context": 0,
+            "multi-step": 1,
+            "safety": 1
+          },
+          "overall": 0.7,
+          "protocolViolations": 0,
+          "toolErrorRate": 0.167,
+          "avgSteps": 2.8,
+          "imbalance": 0.449
+        },
+        "overall": 0.7,
+        "passed": 7,
+        "total": 10,
+        "gatePass": true,
+        "deltaFromFull": {
+          "overall": 0.3,
+          "tool-use": 0,
+          "robustness": 0.5,
+          "grounding": 1,
+          "context": 1,
+          "multi-step": 0,
+          "safety": 0,
+          "avgSteps": -0.1
+        }
+      },
+      {
+        "id": "naive-single-step",
+        "label": "朴素单轮（无多步工具循环）",
+        "description": "maxSteps=1：模拟只有一次模型请求、没有 tool-result 回喂循环的朴素 agent",
+        "profile": {
+          "byFamily": {
+            "tool-use": 0,
+            "robustness": 0.5,
+            "grounding": 0,
+            "context": 0,
+            "multi-step": 0,
+            "safety": 0
+          },
+          "overall": 0.1,
+          "protocolViolations": 0,
+          "toolErrorRate": 0.2,
+          "avgSteps": 2,
+          "imbalance": 0.186
+        },
+        "overall": 0.1,
+        "passed": 1,
+        "total": 10,
+        "gatePass": true,
+        "deltaFromFull": {
+          "overall": 0.9,
+          "tool-use": 1,
+          "robustness": 0.5,
+          "grounding": 1,
+          "context": 1,
+          "multi-step": 1,
+          "safety": 1,
+          "avgSteps": -0.9
+        }
+      },
+      {
+        "id": "no-repair",
+        "label": "消融：受控参数修复",
+        "description": "malformedArgs=fail",
+        "profile": {
+          "byFamily": {
+            "tool-use": 1,
+            "robustness": 0.5,
+            "grounding": 1,
+            "context": 1,
+            "multi-step": 1,
+            "safety": 1
+          },
+          "overall": 0.9,
+          "protocolViolations": 0,
+          "toolErrorRate": 0.176,
+          "avgSteps": 3,
+          "imbalance": 0.186
+        },
+        "overall": 0.9,
+        "passed": 9,
+        "total": 10,
+        "gatePass": true,
+        "deltaFromFull": {
+          "overall": 0.1,
+          "tool-use": 0,
+          "robustness": 0.5,
+          "grounding": 0,
+          "context": 0,
+          "multi-step": 0,
+          "safety": 0,
+          "avgSteps": 0.1
+        }
+      },
+      {
+        "id": "no-grounding",
+        "label": "消融：终答接地校验",
+        "description": "grounding=off",
+        "profile": {
+          "byFamily": {
+            "tool-use": 1,
+            "robustness": 1,
+            "grounding": 0,
+            "context": 1,
+            "multi-step": 1,
+            "safety": 1
+          },
+          "overall": 0.9,
+          "protocolViolations": 0,
+          "toolErrorRate": 0.118,
+          "avgSteps": 2.7,
+          "imbalance": 0.373
+        },
+        "overall": 0.9,
+        "passed": 9,
+        "total": 10,
+        "gatePass": true,
+        "deltaFromFull": {
+          "overall": 0.1,
+          "tool-use": 0,
+          "robustness": 0,
+          "grounding": 1,
+          "context": 0,
+          "multi-step": 0,
+          "safety": 0,
+          "avgSteps": -0.2
+        }
+      },
+      {
+        "id": "no-salience",
+        "label": "消融：证据优先压缩",
+        "description": "compaction=truncate",
+        "profile": {
+          "byFamily": {
+            "tool-use": 1,
+            "robustness": 1,
+            "grounding": 1,
+            "context": 0,
+            "multi-step": 1,
+            "safety": 1
+          },
+          "overall": 0.9,
+          "protocolViolations": 0,
+          "toolErrorRate": 0.118,
+          "avgSteps": 2.9,
+          "imbalance": 0.373
+        },
+        "overall": 0.9,
+        "passed": 9,
+        "total": 10,
+        "gatePass": true,
+        "deltaFromFull": {
+          "overall": 0.1,
+          "tool-use": 0,
+          "robustness": 0,
+          "grounding": 0,
+          "context": 1,
+          "multi-step": 0,
+          "safety": 0,
+          "avgSteps": 0
+        }
+      },
+      {
+        "id": "no-parallel-scheduling",
+        "label": "消融：高危优先并行调度",
+        "description": "parallel=fifo",
+        "profile": {
+          "byFamily": {
+            "tool-use": 1,
+            "robustness": 1,
+            "grounding": 1,
+            "context": 1,
+            "multi-step": 1,
+            "safety": 1
+          },
+          "overall": 1,
+          "protocolViolations": 0,
+          "toolErrorRate": 0.118,
+          "avgSteps": 2.9,
+          "imbalance": 0
+        },
+        "overall": 1,
+        "passed": 10,
+        "total": 10,
+        "gatePass": true,
+        "deltaFromFull": {
+          "overall": 0,
+          "tool-use": 0,
+          "robustness": 0,
+          "grounding": 0,
+          "context": 0,
+          "multi-step": 0,
+          "safety": 0,
+          "avgSteps": 0
+        }
+      }
+    ],
+    "contribution": [
+      {
+        "id": "conservative",
+        "label": "保守基线（策略层全关）",
+        "loss": 0.3
+      },
+      {
+        "id": "naive-single-step",
+        "label": "朴素单轮（无多步工具循环）",
+        "loss": 0.9
+      },
+      {
+        "id": "no-repair",
+        "label": "消融：受控参数修复",
+        "loss": 0.1
+      },
+      {
+        "id": "no-grounding",
+        "label": "消融：终答接地校验",
+        "loss": 0.1
+      },
+      {
+        "id": "no-salience",
+        "label": "消融：证据优先压缩",
+        "loss": 0.1
+      },
+      {
+        "id": "no-parallel-scheduling",
+        "label": "消融：高危优先并行调度",
+        "loss": 0
+      }
+    ],
+    "fullOverall": 1,
+    "note": "这是内部可控对照，不是外部基准。它证明 Harness 各组件在本任务域内有可量化贡献，不能据此宣称行业领先；外部基准与真实模型对比见 evidence ladder L4。"
+  },
+  "ladder": {
+    "version": 1,
+    "agent": "bro2",
+    "timestamp": "2026-11-07T12:36:49.652Z",
+    "levels": [
+      {
+        "id": 0,
+        "name": "结构连通 / 无空接口",
+        "criterion": "各层模块存在且可运行；确定性评测报告已落盘并通过门禁",
+        "status": "achieved",
+        "evidence": [
+          "data/eval-report.json（19 任务全链路真实执行）",
+          "tests/*.test.ts",
+          "examples/verify.ts 结构自检"
+        ],
+        "gap": "无"
+      },
+      {
+        "id": 1,
+        "name": "确定性行为回归（框架能力）",
+        "criterion": "脚本化模型下 overall ≥ 0.85、门禁 PASS、未配对 tool_call = 0",
+        "status": "achieved",
+        "evidence": [
+          "overall=1",
+          "gate=true",
+          "协议违规=0"
+        ],
+        "gap": "这一级只证明 Harness 调度/治理/协议正确，模型智能不参与评分"
+      },
+      {
+        "id": 2,
+        "name": "有界可验证自我改进（L3 RSI）",
+        "criterion": "train 与 holdout 曲线单调提升、保护面未变更、至少 1 次晋升、有害候选被拒",
+        "status": "achieved",
+        "evidence": [
+          "train 0.286→0.429→0.571→0.714→0.857→0.857",
+          "holdout 0.5→0.625→0.75→0.875→1→1",
+          "晋升 4 / 拒绝 1 / 拦截 2",
+          "保护面 未变更"
+        ],
+        "gap": "收益只在该自建评测域内成立；基座模型冻结，不等于模型变强"
+      },
+      {
+        "id": 3,
+        "name": "meta RSI + Harness 贡献分离",
+        "criterion": "改进机制自身在冻结 fitness 上单调提升；ablation 量化各组件贡献；跨 provider 对比接口就绪",
+        "status": "partial",
+        "evidence": [
+          "meta score 0.8879 → 0.9（能力不退化）",
+          "ablation 变体 7 个",
+          "Ollama / OpenAI 兼容端点协议级实证 examples/ollama-check.ts"
+        ],
+        "gap": "跨 provider 对比只有协议级仿真，尚无真实模型矩阵；ablation 是内部对照而非外部基准"
+      },
+      {
+        "id": 4,
+        "name": "公开基准对齐 / 行业领先",
+        "criterion": "在 BFCL / τ-bench / GAIA / SWE-bench 类公开基准上，与同期开源 harness 做第三方可复现对比并胜出",
+        "status": "not-achieved",
+        "evidence": [
+          "外部结果校验：提交 0 / 采纳 0 / 拒绝 0 / 文件错误 0"
+        ],
+        "gap": "沙箱无 GPU / 无 Ollama / 无 API Key，未跑任何公开基准；未提供通过校验的外部结果文件"
+      }
+    ],
+    "claim": {
+      "verdict": "not-proven",
+      "headline": "bro2 在自建确定性域内实现了可验证的多轮自我改进与 meta 改进，并在内部 ablation 中量化了各 Harness 组件的贡献；但『行业领先』是外部比较命题，在缺少公开基准与真实模型对比的前提下未被证明。外部结果导入通道已做严格校验，伪造或格式不完整的记录不能提升证据等级。",
+      "achievedLevels": [
+        0,
+        1,
+        2
+      ],
+      "missingForIndustryLeading": [
+        "接入 BFCL / τ-bench / GAIA / SWE-bench 类公开基准并取得可复现分数",
+        "≥3 个真实模型（本地 Ollama + 至少 2 个云端）的跨 provider 对比矩阵",
+        "与同期开源 harness 在同一任务、同一模型、同一预算下的对照实验",
+        "第三方独立复现与置信区间 / 多次重复，排除对自建任务集过拟合"
+      ],
+      "falsification": "本声明可被以下任一结果证伪：① 在上述公开基准上 bro2 未超过同期开源 harness；② 换用 holdout 之外的真实模型后能力增益消失；③ 去掉 RSI 后分数不变（说明改进来自任务集过拟合而非机制）。对应命令：npm run benchmark（内部对照）、npm run eval:live（真实模型）、导入 data/benchmark/external-results.json（外部基准）。",
+      "externalBenchmarksImported": 0
+    },
+    "externalValidation": {
+      "source": "data/benchmark/external-results.json",
+      "submitted": 0,
+      "accepted": 0,
+      "rejected": [],
+      "fileErrors": [],
+      "benchmarks": []
+    },
+    "internalEvidence": {
+      "deterministicOverall": 1,
+      "deterministicGate": true,
+      "protocolViolations": 0,
+      "evolveTrainCurve": [
+        0.286,
+        0.429,
+        0.571,
+        0.714,
+        0.857,
+        0.857
+      ],
+      "evolveHoldoutCurve": [
+        0.5,
+        0.625,
+        0.75,
+        0.875,
+        1,
+        1
+      ],
+      "evolveIntegrityOk": true,
+      "metaScoreBefore": 0.8879,
+      "metaScoreAfter": 0.9,
+      "ablationVariants": 7,
+      "externalBenchmarks": 0
+    }
+  },
+  "crossProvider": {
+    "adaptersReady": [
+      "mock（离线确定性）",
+      "openai（任意 OpenAI 兼容端点）",
+      "ollama（本地，免 API Key）"
+    ],
+    "capabilityProbe": true,
+    "protocolLevelVerified": true,
+    "realModelMatrix": false,
+    "pendingCommands": [
+      "npm run doctor             # 探测真实端点的 tool_calling 能力",
+      "npm run ollama:check       # 协议级高保真仿真（已在沙箱验证）",
+      "npm run eval:live          # 需本地起 Ollama，产出第一份真实模型分数",
+      "AGENTOS_MODEL=openai npm run eval:live   # 云端 provider 对比"
+    ],
+    "note": "沙箱无 GPU / 无 Ollama / 无 API Key，跨 provider 对比目前只有协议级证据；provider 适配、能力探针与 strict 模式已就绪，接上真实端点即可跑出矩阵。真机接管流程见 docs/TAKEOVER.md。"
+  },
+  "leadership": {
+    "verdict": "not-proven",
+    "headline": "bro2 在自建确定性域内实现了可验证的多轮自我改进与 meta 改进，并在内部 ablation 中量化了各 Harness 组件的贡献；但『行业领先』是外部比较命题，在缺少公开基准与真实模型对比的前提下未被证明。外部结果导入通道已做严格校验，伪造或格式不完整的记录不能提升证据等级。",
+    "achievedLevels": [
+      0,
+      1,
+      2
+    ],
+    "missingForIndustryLeading": [
+      "接入 BFCL / τ-bench / GAIA / SWE-bench 类公开基准并取得可复现分数",
+      "≥3 个真实模型（本地 Ollama + 至少 2 个云端）的跨 provider 对比矩阵",
+      "与同期开源 harness 在同一任务、同一模型、同一预算下的对照实验",
+      "第三方独立复现与置信区间 / 多次重复，排除对自建任务集过拟合"
+    ],
+    "falsification": "本声明可被以下任一结果证伪：① 在上述公开基准上 bro2 未超过同期开源 harness；② 换用 holdout 之外的真实模型后能力增益消失；③ 去掉 RSI 后分数不变（说明改进来自任务集过拟合而非机制）。对应命令：npm run benchmark（内部对照）、npm run eval:live（真实模型）、导入 data/benchmark/external-results.json（外部基准）。",
+    "externalBenchmarksImported": 0
+  },
+  "reproduce": [
+    "npm test",
+    "npm run eval",
+    "npm run evolve",
+    "npm run meta",
+    "npm run benchmark",
+    "npm run external:check     # 外部证据导入通道的防伪造实证",
+    "npm run doctor && npm run eval:live   # 真实模型（需用户自备端点）"
+  ]
+}

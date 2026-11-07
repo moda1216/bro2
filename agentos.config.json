@@ -1,0 +1,89 @@
+{
+  "name": "bro2",
+  "model": {
+    "default": "mock",
+    "providers": {
+      "mock": { "type": "mock", "strategy": "heuristic" },
+      "openai": {
+        "type": "openai",
+        "baseUrl": "${OPENAI_BASE_URL}",
+        "apiKeyEnv": "OPENAI_API_KEY",
+        "model": "${OPENAI_MODEL}",
+        "timeoutMs": 120000,
+        "maxRetries": 2
+      },
+      "ollama": {
+        "type": "openai",
+        "baseUrl": "http://127.0.0.1:11434/v1",
+        "apiKeyEnv": "OLLAMA_API_KEY",
+        "model": "${OLLAMA_MODEL}",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 300000,
+        "maxRetries": 1
+      },
+      "openrouter": {
+        "type": "openai",
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "apiKeyEnv": "OPENROUTER_API_KEY",
+        "model": "${OPENROUTER_MODEL}",
+        "includeUsage": true,
+        "timeoutMs": 120000,
+        "maxRetries": 2
+      },
+      "nvidia-nim": {
+        "type": "openai",
+        "baseUrl": "https://integrate.api.nvidia.com/v1",
+        "apiKeyEnv": "NVIDIA_NIM_API_KEY",
+        "model": "${NVIDIA_NIM_MODEL}",
+        "includeUsage": true,
+        "timeoutMs": 120000,
+        "maxRetries": 2
+      },
+      "siliconflow": {
+        "type": "openai",
+        "baseUrl": "https://api.siliconflow.cn/v1",
+        "apiKeyEnv": "SILICONFLOW_API_KEY",
+        "model": "${SILICONFLOW_MODEL}",
+        "includeUsage": true,
+        "timeoutMs": 120000,
+        "maxRetries": 2
+      },
+      "deepseek": {
+        "type": "openai",
+        "baseUrl": "https://api.deepseek.com/v1",
+        "apiKeyEnv": "DEEPSEEK_API_KEY",
+        "model": "${DEEPSEEK_MODEL}",
+        "includeUsage": true,
+        "timeoutMs": 120000,
+        "maxRetries": 2
+      },
+      "groq": {
+        "type": "openai",
+        "baseUrl": "https://api.groq.com/openai/v1",
+        "apiKeyEnv": "GROQ_API_KEY",
+        "model": "${GROQ_MODEL}",
+        "includeUsage": true,
+        "timeoutMs": 120000,
+        "maxRetries": 2
+      }
+    }
+  },
+  "permission": {
+    "level": "workspace-write",
+    "workspace": "./data/workspace",
+    "allowedPaths": ["./data/workspace", "./data/scratch"],
+    "autoApproveSafe": true
+  },
+  "budget": {
+    "maxSteps": 30,
+    "maxTokens": 60000,
+    "maxSeconds": 600,
+    "maxConcurrentTools": 4,
+    "toolTimeoutMs": 30000,
+    "loopDetectionThreshold": 3,
+    "maxToolOutputChars": 12000
+  },
+  "server": { "host": "127.0.0.1", "port": 3080 },
+  "storage": { "dir": "./data" }
+}

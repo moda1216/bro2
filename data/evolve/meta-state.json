@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "evidenceLimit": 12,
+  "policyRule": true,
+  "candidateOrder": "weight",
+  "operatorSet": "all",
+  "plateauPatience": 1,
+  "promotionStrictness": "strict",
+  "editBudgetAdaptation": "fixed"
+}

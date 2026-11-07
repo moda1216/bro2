@@ -1,0 +1,142 @@
+# bro2 · 文档索引
+
+> 全部文档的导航与阅读路径。项目根：`/workspace/bro2`。
+
+---
+
+## 1. 文档地图
+
+| 文档 | 定位 | 什么时候读 |
+| --- | --- | --- |
+| [README.md](../README.md) | 总入口：快速开始、能力矩阵、目录、运行命令 | 第一次接触 |
+| [DESIGN.md](../DESIGN.md) | 8 层架构、能力矩阵、接口契约、治理模型；附录 A 选型决议 · B 有界 RSI · C 策略层 / meta RSI / 基准追加设计 | 想改架构 / 理解分层 |
+| [EVAL.md](../EVAL.md) | 能力评测体系、指标口径、门禁、持续提升闭环、meta RSI 与证据阶梯、真实模型接入 | 要跑评测 / 定位能力问题 |
+| [RSI.md](../RSI.md) | RSI 前沿调研（2026 综述、DGM/SICA/ADAS/SkillOpt 等）、验证层级、失败模式、bro2 有界定位 | 理解"为什么这么设计自我改进" |
+| [META-RSI.md](../META-RSI.md) | meta RSI：改进改进机制自身、冻结 fitness、防自确认循环、实证 | 理解 L4 自指与元层治理 |
+| [BENCHMARK.md](../BENCHMARK.md) | 「领先」的可证伪定义、5 级证据阶梯、ablation、外部基准导入接口 | 要判断能力水平 / 接外部基准 |
+| [ITERATIONS.md](../ITERATIONS.md) | 本轮多轮迭代日志：每轮发现→改动→证据→晋升/拒绝，含被拒改动与未解决问题 | 复核改动 / 继续迭代 |
+| [docs/API.md](./API.md) | REST + SSE API 端点、SSE 事件格式、示例、安全边界 | 接前端 / 外部系统 |
+| [docs/TAKEOVER.md](./TAKEOVER.md) | 真机接管手册：接真实模型 → 跨 provider 矩阵 → 公开基准 → 外部结果导入 | 要把 `not-proven` 往前推 |
+| [docs/LOCAL-LLM.md](./LOCAL-LLM.md) | 本地真实推理服务（llama.cpp + Ollama 官方权重）：装不上 Ollama 二进制时的等价 OpenAI Compat 端点与实测坑 | 沙箱内要跑真实模型 |
+| [docs/FREE-LLM-APIS.md](./FREE-LLM-APIS.md) | 免费 LLM API 接入：OpenRouter/NIM/SiliconFlow/DeepSeek/Groq 的沙箱实测可达性、免费模型、限速、一条命令跑真实强模型 | 本地算力不足、要零部署测真模型 |
+| [docs/RSI-NEXT.md](./RSI-NEXT.md) | RSI 演进路线图：对齐 HARNESS²/Evo²/RRSI/OO-Harness，逐篇映射到 bro2 下一步 | 想推进"业界水平"、理解演进方向 |
+| [docs/INDEX.md](./INDEX.md) | 本文件 | 找文档 |
+
+运行产物（非文档，但常被引用，均在 `data/`）：
+
+| 文件 | 内容 |
+| --- | --- |
+| `data/eval-report.json` / `eval-baseline.json` | 确定性主评测报告与回归基线（仅 `eval` 写，L1 证据来源） |
+| `data/eval-live-report.json` | 真实模型 live 评测报告（第一份真实分数 `0/12`，仅 `eval:live` 写） |
+| `data/live-link-smoke.json` | live 链路自检（显著标注非模型能力分数） |
+| `data/local-llm-stats.json` | 本地真实推理服务累计统计（requests / tokens / 推理秒数，**非能力分数**） |
+| `data/evolve-report.json` | 能力面 RSI 演进报告（train/holdout 曲线、晋升明细） |
+| `data/evolve/ledger.jsonl` / `incidents.jsonl` | 能力层只增账本 / 安全事件 |
+| `data/evolve/state.json` / `strategy.json` | 已落地的能力状态 / 算子先验 |
+| `data/meta-report.json` | meta RSI 报告（冻结 fitness 曲线） |
+| `data/evolve/meta-state.json` / `meta-ledger.jsonl` | 已落地的元状态 / 元层只增账本 |
+| `data/benchmark-report.json` | ablation + 证据阶梯 + 领先度声明 |
+| `data/workspace/` | 工具真实写入的工作区 |
+
+---
+
+## 2. 按任务阅读
+
+| 我想… | 读 | 跑 |
+| --- | --- | --- |
+| 先跑起来 | README §快速开始 | `npm run cli` / `npm run web` |
+| 看懂架构再改代码 | DESIGN → docs/API | `npm test` |
+| 判断能力到底如何 | BENCHMARK → EVAL | `npm run benchmark` → `npm run benchmark:check` |
+| 接真实模型 / Ollama | EVAL §真实模型 → docs/API §5 | `npm run doctor` → `npm run preflight` → `npm run eval:live` |
+| 理解自我改进 | RSI → ITERATIONS | `npm run evolve` → `npm run rsi:check` |
+| 理解 meta 改进 | META-RSI | `npm run meta` → `npm run meta:check` |
+| 验证策略分支真的生效 | ITERATIONS 轮 1 | `npm run policy:check` |
+| 接真实模型 / 补齐外部证据 | docs/TAKEOVER | `npm run preflight` → `npm run eval:live` → 导入外部结果 |
+| 沙箱内验证 live 链路 | docs/TAKEOVER §1.3 | `npm run live:smoke` → `npm run preflight:check` |
+| 沙箱内跑真实模型推理 | docs/LOCAL-LLM.md | 起本地服务 → `npm run preflight` → `npm run eval:live` |
+| 零本地部署跑真实强模型 | docs/FREE-LLM-APIS.md | `npm run free:probe` → 填 Key → `AGENTOS_LIVE_PROVIDER=openrouter npm run eval:live` |
+| 推进 RSI 演进路线 | docs/RSI-NEXT.md | 读路线图 → 落 P0–P5 |
+| 提交前全量回归 | 本页 §3 | `npm test && npm run verify && ...` |
+
+---
+
+## 3. 命令速查
+
+```bash
+# 运行
+npm run cli                    # 交互 CLI
+npm run web                    # Web UI + REST/SSE (127.0.0.1:3080)
+npm run demo                   # 完整离线演示
+npm run doctor                 # 模型端点 + tool_calling 能力诊断（面向人）
+npm run preflight              # 接入门禁：ready=PASS→EXIT=0，未就绪→EXIT=1（CI 可用）
+npm run live:smoke             # live 全链路自检（仿真端点，明确非模型能力分数）
+# 本地真实推理服务（Python，见 docs/LOCAL-LLM.md）：
+#   LOCAL_MAX_TOKENS=128 python3 tools/local-llm-server.py --threads 4 --stats-file data/local-llm-stats.json
+
+# 评测与验证
+npm test                       # 单元 + 端到端 + 故障注入（87 项）
+npm run verify                 # L0–L7 能力矩阵结构自检（23 项）
+npm run eval                   # 确定性行为回归（19 任务 + 门禁）
+npm run eval:live              # 真实模型端到端（内置 preflight 门禁，需自备端点）
+npm run preflight:check        # 门禁防误判 / 证据面隔离（37 项）
+npm run policy:check           # 5 个策略代码分支实证（19 项）
+npm run ollama:check           # Ollama 协议级高保真仿真（4 项）
+npm run free:probe             # 免费 LLM API 可达性 / 鉴权状态探针（5 家）
+
+# 自我改进
+npm run evolve                 # 能力面 RSI（改进固化到运行时）
+npm run evolve:dry             # 只诊断不写回
+npm run rsi:check              # RSI 端到端 + 恶意候选注入（22 项）
+npm run meta                   # meta RSI（改进机制自身）
+npm run meta:dry               # 只诊断不写回
+npm run meta:check             # 元层写保护 / 冻结 fitness（25 项）
+
+# 能力基准
+npm run benchmark              # ablation + 证据阶梯 + 领先度声明
+npm run benchmark:check        # 测量机器诚实性（21 项）
+npm run external:check         # 外部证据导入防伪造（38 项）
+```
+
+**推荐复现顺序**（报告之间有依赖，benchmark 会读其它报告）：
+
+```
+npm run evolve  →  npm run meta  →  npm run eval  →  npm run benchmark
+```
+
+---
+
+## 4. 目录结构
+
+```
+agent-os/
+├── DESIGN.md  README.md  EVAL.md  RSI.md
+├── META-RSI.md  BENCHMARK.md  ITERATIONS.md      # 本轮新增
+├── docs/  API.md · INDEX.md · TAKEOVER.md          # 真机接管手册
+├── agentos.config.json    package.json
+├── bin/agentos.ts                               # CLI / Web 入口
+├── src/
+│   ├── kernel/       events · hooks · trajectory · session · runtime · loop
+│   ├── runtime/      policy.ts                   # ★ 行为策略分派层（本轮新增）
+│   ├── models/       base · mock · openai-compat · router · preflight
+│   ├── context/      budget · builder
+│   ├── tools/        schema · registry · runtime · repair.ts · mcp · plugin · builtins/
+│   ├── governance/   permissions · approval · guards · audit
+│   ├── memory/  cognition/  delegation/
+│   ├── observability/ tracing · eval
+│   ├── benchmark/    ladder · ablation · scoring · external · index
+│   ├── rsi/          types · ledger · guardrails · miner · operators · shadow · loop · meta.ts  # ★ meta 新增
+│   └── interfaces/   cli · api · web/index.html
+├── skills/*/SKILL.md   presets/*.json
+├── data/               eval-tasks.jsonl · evolve/{train,holdout,...} · benchmark/ · 运行时产物
+├── examples/           demo · verify · policy-check · evolve-check · meta-check · benchmark-check · ollama-*
+└── tests/              kernel · governance · tools · e2e · ollama · rsi · meta · benchmark
+```
+
+---
+
+## 5. 一句话边界
+
+bro2 是**可读、可改、与设计逐条对应**的 Agent OS 内核，零第三方依赖；
+它在自建确定性域内实现了可验证的多轮自我改进与 meta 改进，
+但**未证明行业领先**（缺公开基准与真实模型对比），也**不是生产级底座**（应用层沙箱、无类型检查）。
+详见 [BENCHMARK.md](../BENCHMARK.md) 与 [DESIGN.md 附录 A](../DESIGN.md)。

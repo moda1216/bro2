@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>bro2 · 通用 Agent 运行时</title>
+<style>
+:root{
+  --bg:#f5f7fa; --panel:#ffffff; --panel-2:#f0f3f8; --border:#dfe4ec;
+  --text:#1c2330; --muted:#6b7688; --accent:#2f6feb; --accent-soft:#e8f0ff;
+  --ok:#17845c; --warn:#c8820c; --err:#c0392b; --code:#f7f9fc;
+  --shadow:0 1px 3px rgba(20,30,50,.06),0 8px 24px rgba(20,30,50,.05);
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#11151c;--panel:#181e28;--panel-2:#1e2632;--border:#2b3543;--text:#e6ebf2;--muted:#8d99ab;--accent:#5b8dff;--accent-soft:#1e2c48;--ok:#3fbe8c;--warn:#e0a83c;--err:#ef6a5a;--code:#141a23;--shadow:0 1px 3px rgba(0,0,0,.3)}
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.55}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+.app{display:grid;grid-template-columns:236px minmax(0,1fr) 330px;grid-template-rows:52px minmax(0,1fr);height:100vh}
+header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--border);box-shadow:var(--shadow);z-index:3}
+.brand{font-weight:750;font-size:15px;letter-spacing:.2px;white-space:nowrap}
+.brand span{color:var(--accent)}
+.badge{font-size:10px;padding:2px 7px;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-weight:650}
+.hgap{flex:1}
+header label{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+select{background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;outline:none}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block}
+aside{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.side-title{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:14px 14px 8px}
+.side-actions{display:flex;gap:6px;padding:0 12px 10px}
+.btn{background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer;transition:.15s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08);color:#fff}
+.btn.sm{padding:4px 8px;font-size:11px}
+.session-list{overflow:auto;flex:1;padding:0 8px 12px}
+.sess{padding:9px 10px;border-radius:7px;cursor:pointer;margin-bottom:3px;border:1px solid transparent}
+.sess:hover{background:var(--panel-2)}
+.sess.active{background:var(--accent-soft);border-color:var(--accent)}
+.sess .t{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess .m{font-size:10px;color:var(--muted);margin-top:2px}
+main{display:flex;flex-direction:column;min-width:0;min-height:0}
+#stream{flex:1;overflow:auto;padding:18px 22px;scroll-behavior:smooth}
+.msg{margin-bottom:16px;max-width:860px}
+.msg .who{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;display:flex;gap:8px;align-items:center}
+.msg .body{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:11px 14px;white-space:pre-wrap;word-break:break-word;box-shadow:var(--shadow)}
+.msg.user .body{background:var(--accent-soft);border-color:transparent}
+.msg.assistant .body{background:var(--panel)}
+.msg.system .body{background:transparent;border-style:dashed;color:var(--muted);font-size:11px;padding:7px 12px}
+.tool-card{border:1px solid var(--border);border-radius:8px;background:var(--panel);margin:8px 0;overflow:hidden;max-width:860px;box-shadow:var(--shadow)}
+.tool-head{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--panel-2);cursor:pointer;font-size:11.5px}
+.tool-head .nm{font-weight:700;color:var(--accent);font-family:ui-monospace,Menlo,monospace}
+.tool-head .st{margin-left:auto;font-size:10px;padding:1px 7px;border-radius:9px;background:var(--panel);color:var(--muted)}
+.tool-head .st.ok{color:var(--ok)}.tool-head .st.fail{color:var(--err)}
+.tool-body{display:none;padding:9px 12px;border-top:1px solid var(--border)}
+.tool-card.open .tool-body{display:block}
+.tool-body pre{margin:0;background:var(--code);border-radius:6px;padding:9px;max-height:240px;overflow:auto;font-size:11px;white-space:pre-wrap;word-break:break-all;font-family:ui-monospace,Menlo,monospace}
+.tool-body .lbl{font-size:10px;color:var(--muted);margin:6px 0 3px;font-weight:650}
+.composer{border-top:1px solid var(--border);background:var(--panel);padding:10px 16px 14px}
+.composer-row{display:flex;gap:9px;align-items:flex-end}
+textarea{flex:1;resize:none;height:62px;background:var(--panel-2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;outline:none}
+textarea:focus{border-color:var(--accent)}
+.hint{font-size:10.5px;color:var(--muted);margin-top:6px}
+.right{background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 8px}
+.tab{padding:10px 10px;font-size:11.5px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+.panel{flex:1;overflow:auto;padding:12px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.kpi{background:var(--panel-2);border-radius:8px;padding:9px 11px}
+.kpi .n{font-size:17px;font-weight:750;color:var(--accent)}
+.kpi .l{font-size:10px;color:var(--muted)}
+.tr{display:flex;gap:7px;padding:5px 6px;border-bottom:1px solid var(--border);font-size:10.5px}
+.tr .s{color:var(--muted);min-width:26px;font-family:ui-monospace,monospace}
+.tr .ty{font-weight:650;min-width:104px;font-family:ui-monospace,monospace;color:var(--accent)}
+.tr .sm{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rowitem{padding:8px 9px;border:1px solid var(--border);border-radius:7px;margin-bottom:6px;background:var(--panel-2)}
+.rowitem b{font-family:ui-monospace,monospace;font-size:11px}
+.rowitem p{margin:3px 0 0;font-size:10.5px;color:var(--muted)}
+.risk{font-size:9px;padding:1px 5px;border-radius:4px;background:var(--panel);margin-left:5px}
+.risk.danger{color:var(--err)}.risk.write{color:var(--warn)}.risk.safe{color:var(--ok)}
+pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;max-height:320px;overflow:auto;white-space:pre-wrap}
+.modal-mask{position:fixed;inset:0;background:rgba(10,15,25,.5);display:none;align-items:center;justify-content:center;z-index:20}
+.modal-mask.on{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;width:min(460px,92vw);padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h3{margin:0 0 8px;font-size:15px}
+.modal .r{font-size:11.5px;color:var(--muted);margin-bottom:10px}
+.modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.empty{color:var(--muted);text-align:center;padding:30px 10px;font-size:12px}
+@media(max-width:1000px){.app{grid-template-columns:200px minmax(0,1fr)}.right{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">Agent <span>OS</span></div>
+    <div class="badge">Harness v1.0</div>
+    <span class="dot" id="dot"></span><span style="font-size:11px;color:var(--muted)" id="statusText">连接中…</span>
+    <div class="hgap"></div>
+    <label>Preset <select id="presetSel"></select></label>
+    <label>模型 <select id="modelSel"></select></label>
+  </header>
+
+  <aside>
+    <div class="side-title">会话</div>
+    <div class="side-actions">
+      <button class="btn primary" id="newBtn">＋ 新建</button>
+      <button class="btn" id="forkBtn">分叉</button>
+    </div>
+    <div class="session-list" id="sessions"><div class="empty">加载中…</div></div>
+    <div class="side-title" style="border-top:1px solid var(--border);padding-top:12px">运行时</div>
+    <div style="padding:0 12px 14px;font-size:10.5px;color:var(--muted)" id="runtimeInfo">—</div>
+  </aside>
+
+  <main>
+    <div id="stream"><div class="empty">选择一个会话，或直接输入任务开始。<br/>这是通用 Agent 运行时：工具调用、审批与执行轨迹都会实时显示在这里。</div></div>
+    <div class="composer">
+      <div class="composer-row">
+        <textarea id="input" placeholder="描述你的任务…（Enter 发送，Shift+Enter 换行）"></textarea>
+        <button class="btn primary" id="sendBtn" style="height:62px;padding:0 20px">发送</button>
+      </div>
+      <div class="hint">可用 <code>/help</code> 类能力通过工具调用；高危操作会弹出审批。离线 Mock 模型即可跑通完整闭环。</div>
+    </div>
+  </main>
+
+  <div class="right">
+    <div class="tabs">
+      <div class="tab on" data-tab="trace">轨迹</div>
+      <div class="tab" data-tab="metrics">指标</div>
+      <div class="tab" data-tab="tools">工具</div>
+      <div class="tab" data-tab="skills">技能</div>
+    </div>
+    <div class="panel" id="panel"></div>
+  </div>
+</div>
+
+<div class="modal-mask" id="modalMask">
+  <div class="modal">
+    <h3>⚠ 需要人工审批</h3>
+    <div class="r" id="modalReason"></div>
+    <pre class="code" id="modalArgs"></pre>
+    <div class="acts">
+      <button class="btn" data-dec="deny">拒绝</button>
+      <button class="btn" data-dec="approve">批准本次</button>
+      <button class="btn primary" data-dec="always">本会话始终允许</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [] };
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+const post = (path, body) => api(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+
+function addMsg(role, text, cls = "") {
+  const box = $("#stream");
+  const empty = box.querySelector(".empty");
+  if (empty) empty.remove();
+  const d = document.createElement("div");
+  d.className = `msg ${role} ${cls}`;
+  d.innerHTML = `<div class="who">${role === "user" ? "你" : role === "assistant" ? "Agent" : "系统"}</div><div class="body"></div>`;
+  d.querySelector(".body").textContent = text;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+
+function addToolCard(call) {
+  const box = $("#stream");
+  const d = document.createElement("div");
+  d.className = "tool-card open";
+  d.innerHTML = `<div class="tool-head"><span class="nm">${esc(call.name)}</span><span class="st">执行中</span></div>
+    <div class="tool-body"><div class="lbl">参数</div><pre>${esc(JSON.stringify(call.arguments, null, 2))}</pre><div class="lbl">结果</div><pre class="out">等待返回…</pre></div>`;
+  d.querySelector(".tool-head").onclick = () => d.classList.toggle("open");
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  state.calls[call.id] = d;
+}
+
+function finishToolCard(r) {
+  const d = state.calls[r.callId];
+  if (!d) return;
+  const st = d.querySelector(".st");
+  st.textContent = r.ok ? `✓ ${r.elapsedMs ?? 0}ms` : "✗ 失败";
+  st.className = `st ${r.ok ? "ok" : "fail"}`;
+  d.querySelector(".out").textContent = r.ok ? (r.output ?? "(空输出)") : (r.error ?? "未知错误");
+  $("#stream").scrollTop = $("#stream").scrollHeight;
+}
+
+function showApproval(req) {
+  state.approvalId = req.id;
+  $("#modalReason").textContent = `${req.toolName} · ${req.reason}`;
+  $("#modalArgs").textContent = JSON.stringify(req.arguments, null, 2);
+  $("#modalMask").classList.add("on");
+}
+function hideApproval() { state.approvalId = null; $("#modalMask").classList.remove("on"); }
+
+function onEvent(e) {
+  state.traceEvents.push(e);
+  const p = e.payload || {};
+  if (e.type === "tool.call") {
+    for (const c of (p.calls || [])) addToolCard(c);
+  } else if (e.type === "tool.result") {
+    finishToolCard(p.result || {});
+  } else if (e.type === "approval.request") {
+    showApproval(p.request || {});
+  } else if (e.type === "approval.resolved") {
+    hideApproval();
+  } else if (e.type === "guard" || e.type === "error") {
+    addMsg("system", `[${e.type}] ${JSON.stringify(p).slice(0, 300)}`);
+  } else if (e.type === "context.compaction") {
+    addMsg("system", `上下文已压缩，移除 ${p.removed} 条早期消息`);
+  } else if (e.type === "subagent.start" || e.type === "subagent.end") {
+    addMsg("system", `${e.type === "subagent.start" ? "派生子 Agent" : "子 Agent 结束"} · ${esc(p.task || "")} [${esc(p.preset || "")}]`);
+  }
+  if (state.tab === "trace") renderTrace();
+}
+
+async function send() {
+  if (state.sending) return;
+  const text = $("#input").value.trim();
+  if (!text) return;
+  $("#input").value = "";
+  state.sending = true;
+  $("#sendBtn").textContent = "运行中…";
+  $("#sendBtn").disabled = true;
+  addMsg("user", text);
+  state.assistantEl = addMsg("assistant", "");
+  const bodyEl = state.assistantEl.querySelector(".body");
+  state.calls = {};
+  try {
+    const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId: state.sessionId, text }) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n\n")) >= 0) {
+        const block = buf.slice(0, i); buf = buf.slice(i + 2);
+        let ev = "message", data = "";
+        for (const line of block.split("\n")) {
+          if (line.startsWith("event:")) ev = line.slice(6).trim();
+          else if (line.startsWith("data:")) data += line.slice(5).trim();
+        }
+        if (!data || data.startsWith(":")) continue;
+        let obj; try { obj = JSON.parse(data); } catch { continue; }
+        if (ev === "session") { state.sessionId = obj.sessionId; await loadSessions(); }
+        else if (ev === "chunk" && obj.kind === "text") { bodyEl.textContent += obj.text; $("#stream").scrollTop = $("#stream").scrollHeight; }
+        else if (ev === "event") onEvent(obj);
+        else if (ev === "done") { if (!bodyEl.textContent.trim()) bodyEl.textContent = obj.answer || ""; }
+        else if (ev === "error") addMsg("system", `错误: ${obj.error}`);
+      }
+    }
+  } catch (err) {
+    addMsg("system", `请求失败: ${err.message}`);
+  } finally {
+    state.sending = false;
+    $("#sendBtn").textContent = "发送";
+    $("#sendBtn").disabled = false;
+    await loadSessions();
+    if (state.tab === "metrics") renderMetrics();
+  }
+}
+
+function renderTrace() {
+  const rows = state.traceEvents.slice(-180).reverse().map((e) =>
+    `<div class="tr"><span class="s">${e.seq}</span><span class="ty">${esc(e.type)}</span><span class="sm" title="${esc(JSON.stringify(e.payload))}">${esc(summary(e))}</span></div>`).join("");
+  $("#panel").innerHTML = `<div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">Trajectory · 共 ${state.traceEvents.length} 条事件（只增不改）</div>${rows || '<div class="empty">暂无事件</div>'}`;
+}
+function summary(e) {
+  const p = e.payload || {};
+  if (e.type === "tool.call") return (p.calls || []).map((c) => c.name).join(", ");
+  if (e.type === "tool.result") { const r = p.result || {}; return `${r.name} ${r.ok ? "ok" : "fail"} ${String(r.output || r.error || "").slice(0, 90)}`; }
+  return String(p.content || p.reason || p.task || JSON.stringify(p)).slice(0, 140);
+}
+function renderMetrics() {
+  const m = state.status.metrics || {};
+  const k = (n, l) => `<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  $("#panel").innerHTML = `<div class="kpis">${k(m.events ?? 0, "事件总数")}${k(m.toolCalls ?? 0, "工具调用")}${k(m.toolFailures ?? 0, "工具失败")}${k(m.approvals ?? 0, "审批请求")}${k(m.inputTokens ?? 0, "输入 token")}${k(m.outputTokens ?? 0, "输出 token")}${k(m.avgToolLatencyMs ?? 0, "平均工具耗时 ms")}${k(m.errors ?? 0, "错误")}</div>
+    <div class="lbl" style="font-size:10px;color:var(--muted);font-weight:700;margin:10px 0 6px">按工具统计</div>
+    <pre class="code">${esc(JSON.stringify(m.perTool || {}, null, 2))}</pre>`;
+}
+function renderTools() {
+  const items = (state.status.tools || []).map((t) => `<div class="rowitem"><b>${esc(t.name)}</b><span class="risk ${esc(t.risk)}">${esc(t.risk)}</span><p>${esc(t.description)}</p></div>`).join("");
+  $("#panel").innerHTML = `<div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">已注册 ${(state.status.tools || []).length} 个工具</div>${items}`;
+}
+function renderSkills() {
+  const items = (state.status.skills || []).map((s) => `<div class="rowitem"><b>${esc(s.name)}</b><p>${esc(s.description)}</p><p style="color:var(--accent)">${(s.tags || []).join(" · ")}</p></div>`).join("");
+  $("#panel").innerHTML = `<div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">技能包 ${(state.status.skills || []).length} 个（渐进披露）</div>${items || '<div class="empty">未安装技能</div>'}`;
+}
+function renderPanel() {
+  if (state.tab === "trace") renderTrace();
+  else if (state.tab === "metrics") renderMetrics();
+  else if (state.tab === "tools") renderTools();
+  else renderSkills();
+}
+
+async function loadStatus() {
+  state.status = await api("/api/status");
+  const ps = $("#presetSel");
+  ps.innerHTML = state.status.presets.map((p) => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join("");
+  const ms = $("#modelSel");
+  ms.innerHTML = state.status.models.map((m) => `<option value="${esc(m.name)}" ${m.name === state.status.model ? "selected" : ""}>${esc(m.name)}${m.failures ? ` (${m.failures} 失败)` : ""}</option>`).join("");
+  $("#statusText").textContent = `${state.status.model} · ${state.status.permission}`;
+  $("#dot").style.background = "var(--ok)";
+  $("#runtimeInfo").innerHTML = `工具 <b>${state.status.tools.length}</b> · 技能 <b>${state.status.skills.length}</b> · Hook <b>${state.status.hooks}</b><br/>插件 ${esc((state.status.plugins.loaded || []).join(", ") || "无")}<br/>会话 <b>${state.status.sessionCount}</b>`;
+}
+
+async function loadSessions() {
+  const d = await api("/api/sessions");
+  const box = $("#sessions");
+  box.innerHTML = d.sessions.length ? d.sessions.map((s) =>
+    `<div class="sess ${s.id === state.sessionId ? "active" : ""}" data-id="${esc(s.id)}"><div class="t">${esc(s.title)}</div><div class="m">${esc(s.preset)} · ${esc(s.status)} · ${esc(String(s.updatedAt).slice(5, 16))}</div></div>`).join("") : '<div class="empty">暂无会话</div>';
+  box.querySelectorAll(".sess").forEach((el) => el.onclick = () => selectSession(el.dataset.id));
+}
+
+async function selectSession(id) {
+  state.sessionId = id;
+  state.traceEvents = [];
+  state.calls = {};
+  $("#stream").innerHTML = "";
+  const d = await api(`/api/trace?session=${encodeURIComponent(id)}&limit=300`);
+  state.traceEvents = d.events;
+  for (const e of d.events) {
+    const p = e.payload || {};
+    if (e.type === "message.user") addMsg("user", p.content || "");
+    else if (e.type === "message.assistant" && (p.content || "").trim()) addMsg("assistant", p.content || "");
+    else if (e.type === "tool.call") for (const c of (p.calls || [])) addToolCard(c);
+    else if (e.type === "tool.result") finishToolCard(p.result || {});
+  }
+  await loadSessions();
+  renderPanel();
+}
+
+async function newSession() {
+  const d = await api("/api/sessions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ preset: $("#presetSel").value }) });
+  state.sessionId = d.session.id;
+  state.traceEvents = []; state.calls = {};
+  $("#stream").innerHTML = "";
+  addMsg("system", `已创建会话 ${d.session.id} · Preset ${d.session.preset}。输入任务开始。`);
+  await loadSessions(); renderPanel();
+}
+
+$("#sendBtn").onclick = send;
+$("#input").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
+$("#newBtn").onclick = newSession;
+$("#forkBtn").onclick = async () => {
+  if (!state.sessionId) return;
+  try { const d = await post("/api/fork", { sessionId: state.sessionId }); state.sessionId = d.session.id; await loadSessions(); await selectSession(state.sessionId); }
+  catch (e) { alert(e.message); }
+};
+$("#presetSel").onchange = newSession;
+$("#modelSel").onchange = async (e) => { try { await post("/api/model", { name: e.target.value }); await loadStatus(); } catch (err) { alert(err.message); } };
+document.querySelectorAll(".tab").forEach((t) => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach((x) => x.classList.remove("on"));
+  t.classList.add("on"); state.tab = t.dataset.tab;
+  if (state.tab === "metrics") api("/api/metrics").then((d) => { state.status.metrics = d.metrics; });
+  renderPanel();
+});
+document.querySelectorAll("[data-dec]").forEach((b) => b.onclick = async () => {
+  if (!state.approvalId) return;
+  try { await post(`/api/approvals/${encodeURIComponent(state.approvalId)}`, { decision: b.dataset.dec }); }
+  catch (e) { alert(e.message); }
+  hideApproval();
+});
+
+(async () => {
+  try {
+    await loadStatus();
+    await loadSessions();
+    if (state.status.sessionCount > 0) {
+      const d = await api("/api/sessions");
+      await selectSession(d.sessions[0].id);
+    } else await newSession();
+    renderPanel();
+  } catch (e) { $("#statusText").textContent = `连接失败: ${e.message}`; $("#dot").style.background = "var(--err)"; }
+})();
+</script>
+</body>
+</html>

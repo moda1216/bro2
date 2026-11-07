@@ -1,0 +1,48 @@
+# ─────────────────────────────────────────────────────────────
+# bro2 · 产出物管理 · 忽略规则
+# 原则：源码 / 配置 / 文档 / 测试 / 证据数据 = 受版本控制（交付物）；
+#       运行时产物 / 本地环境 / 依赖缓存 = 忽略。
+# ─────────────────────────────────────────────────────────────
+
+# 依赖（bro2 零运行时依赖；仅防止误装）
+node_modules/
+
+# 运行时会话与系统日志（每次运行再生，不进版本库）
+data/sessions/
+data/system.jsonl
+data/workspace/
+data/local-llm-stats.json
+data/memory/long-term.json
+
+# 本地推理模型缓存（大文件，外部下载）
+/root/.cache/bro2-llm/
+*.gguf
+
+# 日志
+*.log
+/logs/
+
+# 本地环境与密钥
+.env
+.env.local
+*.key
+*.pem
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# 构建 / 转译产物（bro2 用 --experimental-strip-types，无构建步骤）
+dist/
+build/
+*.tsbuildinfo
+
+# Python 缓存（本地推理服务 tools/）
+__pycache__/
+*.pyc
+.venv/
+venv/

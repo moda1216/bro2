@@ -1,0 +1,124 @@
+{
+  "kind": "live-link-smoke",
+  "version": 1,
+  "agent": "bro2",
+  "timestamp": "2026-11-07T13:42:03.944Z",
+  "endpointKind": "simulated-local-bridge",
+  "endpoint": "http://127.0.0.1:40251/v1",
+  "isModelCapabilityScore": false,
+  "notARealScoreReason": "端点为本地 OpenAI 兼容协议仿真，返回脚本化响应；分数反映的是框架链路与脚本，不含模型智能。真实分数必须在真机上用真模型跑 eval:live。",
+  "verdict": "not-proven",
+  "preflight": {
+    "ready": true,
+    "endpoint": "http://127.0.0.1:40251/v1",
+    "model": "qwen3:8b"
+  },
+  "httpRequests": 28,
+  "linkTask": {
+    "overall": 1,
+    "ok": true,
+    "strict": true,
+    "protocolViolations": 0
+  },
+  "fullTaskSet": {
+    "total": 12,
+    "active": 12,
+    "skipped": 7,
+    "overall": 0,
+    "protocolViolations": 0
+  },
+  "assertions": [
+    {
+      "label": "preflight.ready",
+      "ok": true,
+      "detail": "ready=true"
+    },
+    {
+      "label": "linkReport.mode === live",
+      "ok": true,
+      "detail": "mode=live"
+    },
+    {
+      "label": "linkReport.strict === true",
+      "ok": true,
+      "detail": "strict=true"
+    },
+    {
+      "label": "链路任务判分通过",
+      "ok": true,
+      "detail": "overall=1 ok=true"
+    },
+    {
+      "label": "协议违规为 0",
+      "ok": true,
+      "detail": "protocolViolations=0"
+    },
+    {
+      "label": "全部任务产出结果",
+      "ok": true,
+      "detail": "runs=12 total=12"
+    },
+    {
+      "label": "deterministicOnly 被跳过",
+      "ok": true,
+      "detail": "skipped=7"
+    },
+    {
+      "label": "完整集协议违规为 0",
+      "ok": true,
+      "detail": "protocolViolations=0"
+    },
+    {
+      "label": "strict 模式未降级到 Mock",
+      "ok": true,
+      "detail": "provider=ollama"
+    },
+    {
+      "label": "确有真实 HTTP 请求",
+      "ok": true,
+      "detail": "requests=28"
+    },
+    {
+      "label": "请求为 SSE 流式",
+      "ok": true,
+      "detail": "stream=27"
+    },
+    {
+      "label": "请求携带 tools",
+      "ok": true,
+      "detail": "withTools=27"
+    },
+    {
+      "label": "本地端点免认证",
+      "ok": true,
+      "detail": "withAuth=0"
+    },
+    {
+      "label": "结果回喂（tool 角色消息）",
+      "ok": true,
+      "detail": "withToolResult=13"
+    },
+    {
+      "label": "确定性报告未被覆盖",
+      "ok": true,
+      "detail": "mode=deterministic gate=true"
+    },
+    {
+      "label": "未伪造外部基准结果",
+      "ok": true,
+      "detail": "external-results.json 不存在"
+    },
+    {
+      "label": "本链路自检未改动真机 live 报告",
+      "ok": true,
+      "detail": "eval-live-report.json 状态未变（PRESENT:10051: → PRESENT:10051:）"
+    }
+  ],
+  "disclaimer": "本产物只证明 live 链路可用，不得用于证据阶梯 L3/L4，不得用于宣布领先。完整任务集分数低是预期结果：脚本化端点无法回答真实任务。",
+  "howToGetRealScore": [
+    "npm run doctor",
+    "export OLLAMA_BASE_URL=http://127.0.0.1:11434/v1 && export OLLAMA_MODEL=qwen3:8b   # 或 OPENAI_* 指向云端",
+    "npm run preflight",
+    "npm run eval:live        # → data/eval-live-report.json 才是第一份真实分数"
+  ]
+}

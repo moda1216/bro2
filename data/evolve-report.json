@@ -1,0 +1,215 @@
+{
+  "version": 1,
+  "agent": "bro2",
+  "timestamp": "2026-11-07T06:26:47.114Z",
+  "dryRun": false,
+  "level": "L3 + 受限 L4（有界 RSI）",
+  "taskSetHash": "829feced27f6",
+  "integrity": {
+    "ok": true,
+    "files": 19,
+    "changed": []
+  },
+  "generations": [
+    {
+      "generation": 1,
+      "signals": [
+        {
+          "kind": "policy",
+          "count": 5,
+          "taskIds": [
+            "e5",
+            "e6",
+            "e7",
+            "e8",
+            "e9"
+          ]
+        }
+      ],
+      "candidates": 5,
+      "promoted": 1,
+      "rejected": 0,
+      "blocked": 0,
+      "trainBefore": 0.286,
+      "trainAfter": 0.429,
+      "holdoutBefore": 0.5,
+      "holdoutAfter": 0.625,
+      "decision": "promoted"
+    },
+    {
+      "generation": 2,
+      "signals": [
+        {
+          "kind": "policy",
+          "count": 4,
+          "taskIds": [
+            "e6",
+            "e7",
+            "e8",
+            "e9"
+          ]
+        }
+      ],
+      "candidates": 4,
+      "promoted": 1,
+      "rejected": 0,
+      "blocked": 0,
+      "trainBefore": 0.429,
+      "trainAfter": 0.571,
+      "holdoutBefore": 0.625,
+      "holdoutAfter": 0.75,
+      "decision": "promoted"
+    },
+    {
+      "generation": 3,
+      "signals": [
+        {
+          "kind": "policy",
+          "count": 3,
+          "taskIds": [
+            "e7",
+            "e8",
+            "e9"
+          ]
+        }
+      ],
+      "candidates": 3,
+      "promoted": 1,
+      "rejected": 0,
+      "blocked": 0,
+      "trainBefore": 0.571,
+      "trainAfter": 0.714,
+      "holdoutBefore": 0.75,
+      "holdoutAfter": 0.875,
+      "decision": "promoted"
+    },
+    {
+      "generation": 4,
+      "signals": [
+        {
+          "kind": "policy",
+          "count": 2,
+          "taskIds": [
+            "e8",
+            "e9"
+          ]
+        }
+      ],
+      "candidates": 2,
+      "promoted": 1,
+      "rejected": 1,
+      "blocked": 0,
+      "trainBefore": 0.714,
+      "trainAfter": 0.857,
+      "holdoutBefore": 0.875,
+      "holdoutAfter": 1,
+      "decision": "promoted"
+    },
+    {
+      "generation": 5,
+      "signals": [
+        {
+          "kind": "policy",
+          "count": 1,
+          "taskIds": [
+            "e9"
+          ]
+        }
+      ],
+      "candidates": 1,
+      "promoted": 0,
+      "rejected": 0,
+      "blocked": 1,
+      "trainBefore": 0.857,
+      "trainAfter": 0.857,
+      "holdoutBefore": 1,
+      "holdoutAfter": 1,
+      "decision": "no-improvement"
+    },
+    {
+      "generation": 6,
+      "signals": [
+        {
+          "kind": "policy",
+          "count": 1,
+          "taskIds": [
+            "e9"
+          ]
+        }
+      ],
+      "candidates": 1,
+      "promoted": 0,
+      "rejected": 0,
+      "blocked": 1,
+      "trainBefore": 0.857,
+      "trainAfter": 0.857,
+      "holdoutBefore": 1,
+      "holdoutAfter": 1,
+      "decision": "no-improvement"
+    }
+  ],
+  "promoted": 4,
+  "rejected": 1,
+  "blocked": 2,
+  "incidents": 2,
+  "evalRuns": 22,
+  "trainCurve": [
+    0.286,
+    0.429,
+    0.571,
+    0.714,
+    0.857,
+    0.857
+  ],
+  "holdoutCurve": [
+    0.5,
+    0.625,
+    0.75,
+    0.875,
+    1,
+    1
+  ],
+  "finalState": {
+    "version": 1,
+    "budget": {
+      "compactTokens": 36000,
+      "loopDetectionThreshold": 2,
+      "maxSteps": 30,
+      "maxConcurrentTools": 4,
+      "toolTimeoutMs": 30000
+    },
+    "policy": {
+      "loopDetection": "exact",
+      "malformedArgs": "repair",
+      "grounding": "require-evidence",
+      "compaction": "salience",
+      "parallel": "risk-first"
+    },
+    "skillOverlays": {}
+  },
+  "finalStrategy": {
+    "version": 1,
+    "operatorWeights": {
+      "relax-loop-threshold": 1,
+      "raise-step-ceiling": 1,
+      "tune-compaction": 1,
+      "extend-tool-timeout": 1,
+      "add-reliability-guidance": 1.4,
+      "enable-args-repair": 1.2,
+      "enable-grounding": 1.2,
+      "enable-salience-compaction": 1.2,
+      "enable-advisory-loop": 0.7,
+      "enable-risk-first-parallel": 1.2
+    },
+    "editBudget": 5,
+    "maxGenerations": 10,
+    "plateauPatience": 2,
+    "maxEvalRuns": 90,
+    "maxDrift": 14,
+    "rejectedEdits": [
+      "05990223c862"
+    ]
+  },
+  "ledgerPath": "/workspace/agent-os/data/evolve/ledger.jsonl",
+  "stoppedBy": "plateau"
+}

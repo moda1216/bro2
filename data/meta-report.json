@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "agent": "bro2",
+  "timestamp": "2026-11-07T07:12:00.003Z",
+  "dryRun": false,
+  "baselineFitness": {
+    "finalHoldout": 1,
+    "areaUnderCurve": 0.7917,
+    "evalRuns": 22,
+    "promotions": 4,
+    "efficiency": 0.7197,
+    "score": 0.8879
+  },
+  "finalFitness": {
+    "finalHoldout": 1,
+    "areaUnderCurve": 0.75,
+    "evalRuns": 20,
+    "promotions": 4,
+    "efficiency": 0.75,
+    "score": 0.9
+  },
+  "finalMeta": {
+    "version": 1,
+    "evidenceLimit": 12,
+    "policyRule": true,
+    "candidateOrder": "weight",
+    "operatorSet": "all",
+    "plateauPatience": 1,
+    "promotionStrictness": "strict",
+    "editBudgetAdaptation": "fixed"
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "candidates": 6,
+      "promoted": 1,
+      "rejected": 5,
+      "blocked": 0,
+      "bestKey": "plateauPatience",
+      "scoreBefore": 0.8879,
+      "scoreAfter": 0.9,
+      "best": {
+        "key": "plateauPatience",
+        "to": 1,
+        "fitness": {
+          "finalHoldout": 1,
+          "areaUnderCurve": 0.75,
+          "evalRuns": 20,
+          "promotions": 4,
+          "efficiency": 0.75,
+          "score": 0.9
+        },
+        "reason": "收敛后更早停止，减少无效基线评测"
+      }
+    },
+    {
+      "round": 2,
+      "candidates": 5,
+      "promoted": 0,
+      "rejected": 5,
+      "blocked": 0,
+      "bestKey": null,
+      "scoreBefore": 0.9,
+      "scoreAfter": 0.9
+    }
+  ],
+  "promoted": 1,
+  "rejected": 10,
+  "blocked": 0,
+  "integrity": {
+    "ok": true,
+    "changed": []
+  },
+  "ledgerPath": "/workspace/agent-os/data/evolve/meta-ledger.jsonl",
+  "claim": "证明的是「改进机制在冻结 fitness 上单调提升且能力不退化」，不是模型变聪明；基座模型始终冻结。"
+}
