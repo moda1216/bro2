@@ -10,6 +10,27 @@
 
 ---
 
+## [2.0.4] — 2026-11-08 · 无 Key 端点统一聚合器（PATCH）
+
+> 类型：**PATCH · 能力增强 + 接入扩展**。回答"所有远程无 Key 端点应被统一智能管理、聚合成唯一接口"——对标 KeylessAI / Zerogateway 的统一路由器设计。
+
+### 新增（Added）
+- **无 Key 端点统一聚合器** `src/models/keyless.ts` · `KeylessAggregator implements LLMProvider, StatsProvider, CompositeProvider`：把 `kilo` / `pollinations` / `opencode-zen` / `keylessai` / `llm7` 等免 Key 上游（含 KeylessAI 统一网关、Zerogateway 风格路由器、DeepSeek-Harness 插件模型）**聚合成唯一 OpenAI 兼容接口**交给 bro2；`tests/keyless.test.ts`（10 项）。
+- **智能管理（四类机制）**：
+  1. **健康评分路由（smart-fallback）**：综合优先级、失败惩罚、限流惩罚、最近延迟、成功率打分选最优上游；并支持 `round-robin` / `priority` 策略。
+  2. **限流感知故障转移**：识别 `429 / FreeUsageLimit / Too Many Requests / 5xx` 等，将上游标记为限流冷却并自动切到其它可用上游，而非反复重试打满配额。
+  3. **能力感知**：标记「不支持 function calling」的上游在带 `tools` 的请求中被跳过，避免真实工具任务上踩坑。
+  4. **应急兜底**：全部上游失败时降级到 `emergencyProvider`（如本地小模型），不静默返回空响应。
+- **网状可观测**：`meshStats()` 露出每个上游明细健康度（失败/冷却/限流/延迟/成功率）；`inferenceStats()` 暴露聚合层远程调用计数；`underlying()` 供 `preflight` 对真实端点做探针。
+- **配置与装载**：`agentos.config.json` 新增 `keyless` 聚合器（`autoDiscoverKeyless:true` 自动纳入所有「apiKeyOptional 且非本地」的已注册 provider），新增上游 `keylessai`（统一网关）、`zerogateway`（路由思路）、`dsv41-flash` / `kimi-k3` / `glm-53`（DeepSeek-Harness 插件免 Key 模型，填 `OUR_FREE_MODEL_BASE_URL` 即接入）；`src/index.ts` 增加第三遍 `keyless` 装配。
+- **CLI 增强**：`doctor` 现可展示聚合器网状健康度；`npm run free:probe` 新增 keyless 网状报告；`npm run keyless:demo` 离线确定性演示限流故障转移 + 应急兜底（`examples/keyless-demo.ts`）。
+- `OpenAICompatProvider` 新增 `supportsTools` 能力声明（供聚合器做能力感知路由）。
+
+### 诚实边界（不变）
+- `leadership.verdict = not-proven`、证据阶梯 L4 = `not-achieved` 不变：聚合器提升的是「网状韧性 + 接入便利」，不抬高单模型能力；公开基准对齐与第三方复现（ROADMAP P5）仍待完成。
+
+---
+
 ## [2.0.2] — 2026-11-07 · 无 Key 真实评测通路（PATCH）
 
 > 类型：**PATCH · 真实证据 + 接入补齐**。打通「零 API Key、零注册」的真实模型评测，并归档首份无 Key 真实分数。

@@ -29,6 +29,12 @@ export interface OpenAICompatOptions {
   extraHeaders?: Record<string, string>;
   /** 自动生成一个随机 UUID 并作为该请求头名发送（如 "x-session-id"），无 Key 端点据此区分匿名会话。 */
   genSessionHeader?: string;
+  /**
+   * 是否原生支持 function calling。由 `probe()` 的结论或配置显式声明。
+   * 不设置（undefined）视为「未知→假定支持」，避免误跳可用上游；
+   * 显式 false 时，聚合器在带 tools 的请求中跳过该上游。
+   */
+  supportsTools?: boolean;
 }
 
 export type ToolCallingSupport = "native" | "text-json" | "unsupported" | "unknown";
@@ -137,6 +143,7 @@ export class OpenAICompatProvider implements LLMProvider {
   private readonly apiKeyOptional: boolean;
   private readonly includeUsage: boolean;
   private readonly extraHeaders: Record<string, string>;
+  private readonly supportsTools: boolean | undefined;
 
   constructor(options: OpenAICompatOptions) {
     this.name = options.name;
@@ -149,6 +156,7 @@ export class OpenAICompatProvider implements LLMProvider {
     // 本地端点（Ollama / vLLM / LM Studio）默认不认证，无需伪造 API Key
     this.apiKeyOptional = options.apiKeyOptional ?? isLocalEndpoint(this.baseUrl);
     this.includeUsage = options.includeUsage ?? true;
+    this.supportsTools = options.supportsTools;
     // 注入额外请求头（如 OpenCode Zen 的 x-session-id）；genSessionHeader 自动生成随机会话 ID
     const eh = { ...(options.extraHeaders ?? {}) };
     if (options.genSessionHeader) eh[options.genSessionHeader] = globalThis.crypto.randomUUID();
@@ -167,6 +175,11 @@ export class OpenAICompatProvider implements LLMProvider {
 
   get targetModel(): string {
     return this.model;
+  }
+
+  /** 能力声明：是否原生支持 function calling（undefined = 未声明/未知）。供聚合器做能力感知路由。 */
+  get capabilityTools(): boolean | undefined {
+    return this.supportsTools;
   }
 
   private headers(): Record<string, string> {

@@ -17,7 +17,8 @@ import { createAgentOS, AGENT_NAME } from "../src/index.ts";
 import { runCLI } from "../src/interfaces/cli.ts";
 import { startServer } from "../src/interfaces/api.ts";
 import { OpenAICompatProvider } from "../src/models/openai-compat.ts";
-import { isCompositeProvider } from "../src/models/cache.ts";
+import { isCompositeProvider, isStatsProvider } from "../src/models/cache.ts";
+import { isMeshProvider } from "../src/models/keyless.ts";
 import type { LLMProvider } from "../src/models/base.ts";
 import { runPreflight, formatPreflight } from "../src/models/preflight.ts";
 import type { PreflightResult } from "../src/models/preflight.ts";
@@ -98,6 +99,27 @@ const os = createAgentOS({ autoApprove: flags.autoApprove });
 if (flags.mode === "doctor") {
   process.stdout.write("\n" + "=".repeat(84) + `\n  ${AGENT_NAME} · 模型接入诊断\n` + "=".repeat(84) + "\n");
   for (const [name, provider] of os.providers) {
+    if (isMeshProvider(provider)) {
+      const ms = provider.meshStats();
+      process.stdout.write(`\n  [${name}] 无 Key 端点统一聚合器（KeylessAggregator）· ${ms.backendCount} 个上游\n`);
+      const cap = (b: { supportsTools: boolean }) => (b.supportsTools ? "tools✓" : "tools✗");
+      for (const b of ms.backends) {
+        process.stdout.write(`    - ${b.name}  prio=${b.priority} ${cap(b)} ${b.rateLimited ? "[限流冷却] " : b.cooledDown ? "[失败冷却] " : ""}[${b.tags.join(",") || "-"}]\n`);
+      }
+      process.stdout.write(`    → 聚合器把上述上游聚合成唯一接口，按健康/限流/能力智能选优+故障转移。\n`);
+      continue;
+    }
+    if (isCompositeProvider(provider) && !(provider instanceof OpenAICompatProvider)) {
+      process.stdout.write(`\n  [${name}] 组合型 provider（底层：${provider.underlying().map((p) => p.name).join(", ")}）\n`);
+      process.stdout.write(`    对底层真实端点分别运行 probe() 见下方：\n`);
+      for (const inner of provider.underlying()) {
+        if (inner instanceof OpenAICompatProvider) {
+          const r = await inner.probe();
+          process.stdout.write(`    · ${inner.name}: reachable=${r.reachable ? "✓" : "✗"} toolCalling=${r.toolCalling} streaming=${r.streaming ? "✓" : "✗"}\n`);
+        }
+      }
+      continue;
+    }
     if (!(provider instanceof OpenAICompatProvider)) {
       process.stdout.write(`\n  [${name}] 离线确定性模型（Mock）——无需端点探测，用于框架回归。\n`);
       continue;

@@ -159,7 +159,65 @@ bro2 不止"能接"，还把"本地部署的小模型"和"远程强模型"组合
 
 ---
 
-## 七、探针脚本
+## 七、无 Key 端点的统一聚合器（KeylessAggregator）
+
+> 当免 Key 端点变多（Kilo / Pollinations / OpenCode Zen / KeylessAI / LLM7 / 各类 harness 插件模型），
+> 「一个个手动接」既繁琐又脆弱——单点限流/宕机就让整条 agent 链路失败。bro2 用一个
+> `KeylessAggregator` 把**所有远程无 Key 端点聚合成唯一接口**，对齐 KeylessAI / Zerogateway 的统一路由思路。
+
+### 7.1 怎么用
+
+```bash
+# 把整张免 Key 网状当成单一强模型来源，bro2 调用侧只认一个名字
+AGENTOS_LIVE_PROVIDER=keyless npm run preflight   # 对底层真实端点逐一门禁
+AGENTOS_LIVE_PROVIDER=keyless npm run eval:live   # 零 Key 真实评测 bro2
+
+npm run keyless:demo     # 离线确定性演示：限流故障转移 + 应急兜底
+npm run free:probe       # 查看聚合器纳入了哪些上游及其健康度
+```
+
+### 7.2 配置（`agentos.config.json`）
+
+```json
+"keyless": {
+  "type": "keyless",
+  "backends": ["kilo", { "name": "keylessai", "priority": 4 }, "opencode-zen", "pollinations", "llm7"],
+  "autoDiscoverKeyless": true,        // 自动纳入所有「apiKeyOptional 且非本地」的已注册 provider
+  "strategy": "smart-fallback",       // 健康评分 + 故障转移 + 限流感知
+  "rateLimitCooldownMs": 60000,
+  "failureCooldownMs": 30000,
+  "emergencyProvider": "local-qwen"   // 全部上游失败时降级到本地小模型
+}
+```
+
+支持的上游（均已注册或预留接入位）：
+
+| 上游 | 类型 | 接入方式 |
+|---|---|---|
+| `kilo` | 免 Key 网关（kilo-auto/free，原生 tool_calls）| 已接入 |
+| `pollinations` | 免 Key 匿名层（gpt-oss-20b）| 已接入，实测可用 |
+| `opencode-zen` | 免 Key（需 x-session-id，适配器自动生成）| 已接入 |
+| `keylessai` | **统一网关** `https://keylessai.thryx.workers.dev/v1`，聚合 Pollinations 等上游，自带故障转移/限流处理 | 已接入（默认模型 gpt-oss-20b）|
+| `zerogateway` | **统一路由器**风格思路：聚合多免费层、智能回退（Python 库）| 预留 `ZEROGATEWAY_BASE_URL` 即接入 |
+| `dsv41-flash` / `kimi-k3` / `glm-53` | DeepSeek-Harness 插件（pi/dsh-our-free-model）内置免 Key 模型（DeepSeek V4.1 Flash / Kimi K3 / GLM-5.3）| 预留 `OUR_FREE_MODEL_BASE_URL` 即接入 |
+| `llm7` | 免 Key 聚合端点 | 已接入（可达性核验）|
+
+> 未配置的上游（如未填 `OUR_FREE_MODEL_BASE_URL` 的 harness 插件模型）会被聚合器**自动跳过**，保证网状健康；
+> 填了对应环境变量后即纳入——无需改代码。
+
+### 7.3 智能管理机制
+
+1. **健康评分路由（smart-fallback）**：综合优先级、失败惩罚、限流惩罚、最近延迟、成功率打分，选最优上游（另支持 `round-robin` / `priority`）。
+2. **限流感知故障转移**：识别 `429 / FreeUsageLimit / Too Many Requests / 5xx`，将上游标记限流冷却并切到其它上游，而非反复重试打满配额。
+3. **能力感知**：标记「不支持 function calling」的上游在带 `tools` 请求中被跳过，避免真实工具任务踩坑。
+4. **应急兜底**：全部上游失败时降级到 `emergencyProvider`（如本地小模型），不静默返回空响应。
+
+每次评测后，`keyless.meshStats()` 露出每个上游的明细健康度（失败/冷却/限流/延迟/成功率），
+`inferenceStats()` 暴露聚合层远程调用计数，供 `eval:live` 复盘「网状韧性」。
+
+---
+
+## 八、探针脚本
 
 `npm run free:probe`（`examples/free-api-probe.ts`）会对所有已注册免费服务执行 `probe()`，
 输出每个端点的 `networkReachable / authRejected / toolCalling / streaming`。
@@ -167,7 +225,7 @@ bro2 不止"能接"，还把"本地部署的小模型"和"远程强模型"组合
 
 ---
 
-## 七、诚实提醒
+## 九、诚实提醒
 
 - 免费额度会随时收紧（2025–2026 已有多家调整政策），建议备 2–3 家轮切。
 - 不要为"刷分"滥用免费额度；bro2 的 `preflight` 门禁会在端点故障时 `EXIT=1` 并拒绝写低分报告，

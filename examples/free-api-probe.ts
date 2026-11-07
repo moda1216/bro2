@@ -16,6 +16,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createAgentOS } from "../src/index.ts";
 import { OpenAICompatProvider } from "../src/models/openai-compat.ts";
+import { isMeshProvider } from "../src/models/keyless.ts";
 import type { ModelProbeResult } from "../src/models/openai-compat.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -84,6 +85,22 @@ for (const name of providers) {
   for (const w of r.warnings) line(`     ! ${w}`);
 }
 
+// 无 Key 端点统一聚合器：把上面所有免 Key 上游聚合成唯一接口，并报告网状健康度。
+const keyless = os.providers.get("keyless");
+if (keyless && isMeshProvider(keyless)) {
+  const ms = keyless.meshStats();
+  hr("无 Key 端点统一聚合器（keyless · 唯一接口）");
+  line(`  聚合上游数 : ${ms.backendCount}`);
+  line(`  策略       : smart-fallback（健康评分 + 故障转移 + 限流感知）`);
+  line("  上游明细（prio / 工具能力 / 状态 / 标签）：");
+  for (const b of ms.backends) {
+    const state = b.rateLimited ? "限流冷却" : b.cooledDown ? "失败冷却" : "就绪";
+    line(`    - ${b.name.padEnd(14)} prio=${String(b.priority).padStart(2)} tools=${b.supportsTools ? "✓" : "✗"} ${state} [${b.tags.join(",") || "-"}]`);
+  }
+  line("");
+  line("  → bro2 只需 AGENTOS_LIVE_PROVIDER=keyless 即可把整张免 Key 网状当成单一强模型来源；");
+  line("    任一上游限流/宕机时自动切到其它上游，必要时降级到本地小模型（emergencyProvider）。");
+}
 hr("接入结论");
 line(`  全部端点网络可达：${allReachable ? "✓" : "部分受限（见上）"}`);
 line("");

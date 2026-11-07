@@ -48,6 +48,13 @@ AGENTOS_LIVE_PROVIDER=openrouter OPENROUTER_API_KEY=sk-... npm run eval:live
   - `agentos.config.json` 的 `hybrid` provider（`remote=kilo`, `local=local-qwen`），及 `kilo`/`opencode-zen`/`llm7` 三个无 Key 端点。
   - `eval:live` 报告新增 `inference` 指标：`remoteCalls / localCalls / cacheHits / remoteAvoided / remoteCallRatio`。
   - `npm run hybrid:demo` 实测：`remoteCalls=1 / localCalls=2 / cacheHits=4 / remoteAvoided=4`，**远程占比 100%→14.3%**。
+- **已交付（v2.0.4 · 无 Key 端点统一聚合器，对应本轮"所有远程无 Key 端点应统一智能管理"）**：
+  - `src/models/keyless.ts` · `KeylessAggregator`：把 `kilo` / `pollinations` / `opencode-zen` / `keylessai`(统一网关) / `llm7` 等免 Key 上游**聚合成唯一 OpenAI 兼容接口**，对标 KeylessAI / Zerogateway 的统一路由器设计。
+  - 四类智能管理机制：① 健康评分路由（smart-fallback，综合优先级/失败/限流/延迟/成功率打分）② 限流感知故障转移（429/FreeUsageLimit/5xx 自动切上游）③ 能力感知（不支持工具的上游在带 tools 请求中跳过）④ 应急兜底（全部失败降级到 `emergencyProvider` 本地小模型）。
+  - `agentos.config.json` 新增 `keyless` 聚合器（`autoDiscoverKeyless:true` 自动纳入所有免 Key 已注册 provider）+ 上游 `keylessai`、`zerogateway`(路由思路)、`dsv41-flash`/`kimi-k3`/`glm-53`(DeepSeek-Harness 插件免 Key 模型，填 `OUR_FREE_MODEL_BASE_URL` 即接入)；`tests/keyless.test.ts`（10 项）、`npm run keyless:demo`（离线故障转移演示）。
+  - 调用侧只需 `AGENTOS_LIVE_PROVIDER=keyless`，单点限流/宕机被智能故障转移吸收，bro2 不再感知背后是哪家端点。
+  - **与 P0 的关系**：聚合器把"无 Key 端点很多但各自不稳定"收敛为一个高可用的单一强模型来源，直接强化 P0 的"一行命令跑真实模型"——且免去为单家端点限流而手忙脚乱。
+  - **与 P0.5 的关系**：`hybrid.remote` 可指向 `keyless`（整个免 Key 网状作为远程侧），两层正交叠加：聚合器解决"远程侧可用性"，hybrid 解决"远程侧开销"。
 - **下一步（待建）**：
   - **P0.5-a 本地小模型当分类器**：用本地模型对每轮请求做"该走本地还是远程"的分类，替代启发式，提升路由精度。
   - **P0.5-b 语义/近似缓存**：对 Near-duplicate 提示做 embedding 相似度匹配，扩展命中面（当前是精确匹配）。
@@ -147,15 +154,16 @@ P0 ──▶ P1 ──▶ P2 ──┐
         │           ├──▶ P4 ──▶ P5
         └──▶ P3 ────┘
 P0.5(混合推理) 横切 P0–P4：用本地小模型承接便宜/重复调用，降低远程开销并提升韧性
+P0.5(统一聚合器 v2.0.4)：把多个免 Key 端点聚合成唯一高可用接口，故障转移吸收单点限流/宕机
 依赖：P0(真实分数) → P1(live RSI) → P2(经验) / P3(OOD)
      P2+P3 → P4(类族) → P5(L4 升 partial)
-     P0.5-a/b/c 可独立于 P1–P4 推进（纯 harness 工程优化）
+     P0.5-a/b/c 可独立于 P1–P4 推进（纯 harness 工程优化）；统一聚合器已交付
 ```
 
 | 优先级 | 工作流 | 论文 | 状态 | 是否需外部数据 |
 | --- | --- | --- | --- | --- |
 | **P0** | 免费 API 真实评测（无 Key 通路已通） | 全部 | 🟡 无 Key 已跑通；强 Key 对比待供 | 无 Key 无需；强模型对比需 1 个免费 Key |
-| **P0.5** | 混合推理：本地+远程协同降远程调用 | HARNESS²/Evo² | 🟢 核心链路已交付 | 否（本地小模型 + 无 Key 端点即可） |
+| **P0.5** | 混合推理：本地+远程协同降远程调用 + 无 Key 端点统一聚合 | HARNESS²/Evo²/KeylessAI·Zerogateway | 🟢 核心链路已交付（hybrid v2.0.3 + keyless v2.0.4） | 否（本地小模型 + 免 Key 端点即可） |
 | **P1** | live RSI（对比式） | HARNESS² | 🟡 模块就绪 | 否 |
 | **P2** | 经验库 EXPERIENCE.md | HARNESS² | 🔲 待建 | 否 |
 | **P3** | RRSI 正则 + OOD 通道 | RRSI | 🔲 待建 | 否 |

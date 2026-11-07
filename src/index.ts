@@ -27,6 +27,7 @@ import type { MockScript } from "./models/mock.ts";
 import { OpenAICompatProvider } from "./models/openai-compat.ts";
 import { CachedProvider } from "./models/cache.ts";
 import { HybridProvider, cheapToLocalPolicy, remoteOnlyPolicy } from "./models/hybrid.ts";
+import { KeylessAggregator, type KeylessBackend } from "./models/keyless.ts";
 import type { LLMProvider } from "./models/base.ts";
 import { SessionManager } from "./kernel/session.ts";
 import type { Session } from "./kernel/session.ts";
@@ -240,6 +241,7 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
       includeUsage: cfg.includeUsage !== false,
       extraHeaders: cfg.extraHeaders as Record<string, string> | undefined,
       genSessionHeader: typeof cfg.genSessionHeader === "string" ? (cfg.genSessionHeader as string) : undefined,
+      supportsTools: cfg.supportsTools === undefined ? undefined : cfg.supportsTools === true,
     });
   };
 
@@ -253,8 +255,8 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
       const p = buildCompat(name, cfg);
       router.register(name, p);
       providers.set(name, p);
-    } else if (cfg.type === "cached" || cfg.type === "hybrid") {
-      // 依赖其它已注册 provider，留待第二遍装配
+    } else if (cfg.type === "cached" || cfg.type === "hybrid" || cfg.type === "keyless") {
+      // 依赖其它已注册 provider，留待后续遍装配
       deferred.push({ name, cfg });
     }
   }
@@ -283,7 +285,81 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
       });
       router.register(name, p);
       providers.set(name, p);
+    } else if (cfg.type === "keyless") {
+      // 第三遍（见下方聚合器装配）：先收集被引用的上游，延迟到所有 provider 就绪后装配。
+      // 这里仅占位，真正装配在 deferred 遍历结束后进行。
     }
+  }
+
+  // 第三遍：无 Key 端点聚合器（keyless）。聚合第一遍的 openai 无 Key 上游，
+  // 可选 autoDiscover 自动纳入所有「apiKeyOptional 且非本地」的已注册 provider。
+  for (const { name, cfg } of deferred) {
+    if (cfg.type !== "keyless") continue;
+    const backends: KeylessBackend[] = [];
+
+    // 1) 显式引用的上游（引用其它已注册 provider；未配置/未注册的自动跳过，不阻塞装配）
+    const referenced = Array.isArray(cfg.backends) ? (cfg.backends as unknown[]) : [];
+    for (const ref of referenced) {
+      const refName = typeof ref === "string" ? ref : (ref as Record<string, unknown>)?.["name"] as string | undefined;
+      if (!refName) continue;
+      const p = providers.get(refName);
+      if (!p) {
+        console.warn(`[keyless] 上游 "${refName}" 未注册，已跳过`);
+        continue;
+      }
+      const meta = typeof ref === "object" && ref ? (ref as Record<string, unknown>) : {};
+      const upstreamCfg = (config.model.providers as Record<string, Record<string, unknown>> | undefined)?.[refName];
+      const configured = !(p instanceof Object) || (p as { configured?: boolean }).configured !== false;
+      // 未配置的 openai 上游（如 env 未填的 harness 插件端点）跳过，保证网状健康
+      if (configured === false) {
+        console.warn(`[keyless] 上游 "${refName}" 未配置（缺 baseUrl/model），已跳过`);
+        continue;
+      }
+      backends.push({
+        provider: p,
+        supportsTools: meta.supportsTools === false ? false : upstreamCfg?.supportsTools === false ? false : undefined,
+        priority: typeof meta.priority === "number" ? meta.priority : (typeof upstreamCfg?.priority === "number" ? upstreamCfg.priority : 0),
+        tags: Array.isArray(meta.tags) ? (meta.tags as string[]) : (Array.isArray(upstreamCfg?.tags) ? (upstreamCfg.tags as string[]) : []),
+      });
+    }
+
+    // 2) 自动发现：纳入所有「无 Key 且非本地」的已注册 openai provider（去重、排除自身/已引用）
+    if (cfg.autoDiscoverKeyless === true) {
+      const isLocal = (u: string) => /^(https?:\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1)/i.test(u);
+      for (const [pn, p] of providers) {
+        if (pn === name) continue;
+        if (backends.some((b) => b.provider === p)) continue;
+        const pc = (config.model.providers as Record<string, Record<string, unknown>> | undefined)?.[pn];
+        const openai = p instanceof OpenAICompatProvider;
+        const keyless = openai && (pc?.apiKeyOptional === true);
+        const remote = openai && !isLocal((p as { endpoint?: string }).endpoint ?? "");
+        if (openai && keyless && remote && (p as { configured?: boolean }).configured !== false) {
+          backends.push({
+            provider: p,
+            supportsTools: pc?.supportsTools === false ? false : undefined,
+            priority: typeof pc?.priority === "number" ? pc.priority : 0,
+            tags: Array.isArray(pc?.tags) ? (pc.tags as string[]) : [],
+          });
+        }
+      }
+    }
+
+    if (backends.length === 0) {
+      console.warn(`[keyless] 聚合器 "${name}" 没有任何可用上游，运行时将拒绝请求`);
+    }
+    const agg = new KeylessAggregator({
+      name,
+      backends,
+      strategy: (cfg.strategy as "smart-fallback" | "round-robin" | "priority") ?? "smart-fallback",
+      rateLimitCooldownMs: typeof cfg.rateLimitCooldownMs === "number" ? cfg.rateLimitCooldownMs : 60000,
+      failureCooldownMs: typeof cfg.failureCooldownMs === "number" ? cfg.failureCooldownMs : 30000,
+      maxAttempts: typeof cfg.maxAttempts === "number" ? cfg.maxAttempts : undefined,
+      ...(cfg.emergencyProvider && providers.get(String(cfg.emergencyProvider))
+        ? { emergencyProvider: providers.get(String(cfg.emergencyProvider)) }
+        : {}),
+    });
+    router.register(name, agg);
+    providers.set(name, agg);
   }
 
   if (options.providerOverride) {

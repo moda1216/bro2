@@ -114,6 +114,82 @@
         "timeoutMs": 120000,
         "maxRetries": 2
       },
+      "keylessai": {
+        "type": "openai",
+        "baseUrl": "https://keylessai.thryx.workers.dev/v1",
+        "model": "gpt-oss-20b",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 180000,
+        "maxRetries": 2,
+        "priority": 4,
+        "tags": ["unified-gateway"],
+        "note": "KeylessAI：统一 OpenAI 兼容端点，聚合 Pollinations 等上游，自带故障转移/限流处理。模型以各家为准（可用 KEYLESSAI_MODEL 覆盖，默认 gpt-oss-20b）。"
+      },
+      "zerogateway": {
+        "type": "openai",
+        "baseUrl": "${ZEROGATEWAY_BASE_URL}",
+        "model": "${ZEROGATEWAY_MODEL}",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 180000,
+        "maxRetries": 2,
+        "priority": 3,
+        "tags": ["unified-gateway", "zerogateway"],
+        "note": "Zerogateway 风格的统一路由器（Python 库）思路：聚合多免费层、智能回退。填 ZEROGATEWAY_BASE_URL 即接入。"
+      },
+      "dsv41-flash": {
+        "type": "openai",
+        "baseUrl": "${OUR_FREE_MODEL_BASE_URL}",
+        "model": "${OUR_FREE_MODEL_MODEL}",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 180000,
+        "maxRetries": 2,
+        "priority": 6,
+        "tags": ["harness-plugin", "deepseek-v4.1-flash"],
+        "note": "DeepSeek Harness 插件 pi/dsh-our-free-model 内置模型（DeepSeek V4.1 Flash 等），安装后免 Key。填 OUR_FREE_MODEL_BASE_URL 即接入。"
+      },
+      "kimi-k3": {
+        "type": "openai",
+        "baseUrl": "${OUR_FREE_MODEL_BASE_URL}",
+        "model": "${OUR_FREE_MODEL_MODEL}",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 180000,
+        "maxRetries": 2,
+        "priority": 5,
+        "tags": ["harness-plugin", "kimi-k3"],
+        "note": "同上插件内置 Kimi K3 等模型。"
+      },
+      "glm-53": {
+        "type": "openai",
+        "baseUrl": "${OUR_FREE_MODEL_BASE_URL}",
+        "model": "${OUR_FREE_MODEL_MODEL}",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 180000,
+        "maxRetries": 2,
+        "priority": 5,
+        "tags": ["harness-plugin", "glm-5.3"],
+        "note": "同上插件内置 GLM-5.3 等模型。"
+      },
+      "keyless": {
+        "type": "keyless",
+        "backends": [
+          "kilo",
+          { "name": "keylessai", "priority": 4 },
+          "opencode-zen",
+          "pollinations",
+          "llm7"
+        ],
+        "autoDiscoverKeyless": true,
+        "strategy": "smart-fallback",
+        "rateLimitCooldownMs": 60000,
+        "failureCooldownMs": 30000,
+        "emergencyProvider": "local-qwen",
+        "note": "无 Key 远程端点统一聚合器：把 kilo/pollinations/opencode-zen/keylessai/llm7 等聚合为唯一接口，智能故障转移+限流感知。未配置的上游（如 harness 插件端点）自动跳过。"
+      },
       "hybrid": {
         "type": "hybrid",
         "remote": "kilo",
