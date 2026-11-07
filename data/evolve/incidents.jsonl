@@ -55,3 +55,23 @@
 {"ts":"2026-11-07T13:50:50.688Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 技能增量包含 holdout 答案片段「修复完成」","patchId":"atk-answer"}
 {"ts":"2026-11-07T13:50:50.710Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 单次编辑必须恰好 1 处（textual learning rate），实际 2","patchId":"atk-multi"}
 {"ts":"2026-11-07T13:51:06.336Z","generation":5,"severity":"warning","kind":"patch_blocked","detail":"enable-advisory-loop: 候选 05990223c862 已在拒绝缓冲中（防振荡）","patchId":"05990223c862"}
+{"ts":"2026-11-07T13:56:50.555Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 路径 permission.level 不在能力面白名单（触碰治理/验证器）","patchId":"atk-permission"}
+{"ts":"2026-11-07T13:56:50.576Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 路径 eval.tasks 不在能力面白名单（触碰治理/验证器）","patchId":"atk-eval"}
+{"ts":"2026-11-07T13:56:50.598Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 技能增量包含 holdout 答案片段「修复完成」","patchId":"atk-answer"}
+{"ts":"2026-11-07T13:56:50.619Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 单次编辑必须恰好 1 处（textual learning rate），实际 2","patchId":"atk-multi"}
+{"ts":"2026-11-07T13:57:06.254Z","generation":5,"severity":"warning","kind":"patch_blocked","detail":"enable-advisory-loop: 候选 05990223c862 已在拒绝缓冲中（防振荡）","patchId":"05990223c862"}
+{"ts":"2026-11-07T13:58:52.883Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 路径 permission.level 不在能力面白名单（触碰治理/验证器）","patchId":"atk-permission"}
+{"ts":"2026-11-07T13:58:52.905Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 路径 eval.tasks 不在能力面白名单（触碰治理/验证器）","patchId":"atk-eval"}
+{"ts":"2026-11-07T13:58:52.927Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 技能增量包含 holdout 答案片段「修复完成」","patchId":"atk-answer"}
+{"ts":"2026-11-07T13:58:52.949Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 单次编辑必须恰好 1 处（textual learning rate），实际 2","patchId":"atk-multi"}
+{"ts":"2026-11-07T13:59:08.626Z","generation":5,"severity":"warning","kind":"patch_blocked","detail":"enable-advisory-loop: 候选 05990223c862 已在拒绝缓冲中（防振荡）","patchId":"05990223c862"}
+{"ts":"2026-11-07T14:01:52.369Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 路径 permission.level 不在能力面白名单（触碰治理/验证器）","patchId":"atk-permission"}
+{"ts":"2026-11-07T14:01:52.391Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 路径 eval.tasks 不在能力面白名单（触碰治理/验证器）","patchId":"atk-eval"}
+{"ts":"2026-11-07T14:01:52.414Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 技能增量包含 holdout 答案片段「修复完成」","patchId":"atk-answer"}
+{"ts":"2026-11-07T14:01:52.435Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 单次编辑必须恰好 1 处（textual learning rate），实际 2","patchId":"atk-multi"}
+{"ts":"2026-11-07T14:02:08.043Z","generation":5,"severity":"warning","kind":"patch_blocked","detail":"enable-advisory-loop: 候选 05990223c862 已在拒绝缓冲中（防振荡）","patchId":"05990223c862"}
+{"ts":"2026-11-07T14:06:11.468Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 路径 permission.level 不在能力面白名单（触碰治理/验证器）","patchId":"atk-permission"}
+{"ts":"2026-11-07T14:06:11.490Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 路径 eval.tasks 不在能力面白名单（触碰治理/验证器）","patchId":"atk-eval"}
+{"ts":"2026-11-07T14:06:11.511Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 技能增量包含 holdout 答案片段「修复完成」","patchId":"atk-answer"}
+{"ts":"2026-11-07T14:06:11.533Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 单次编辑必须恰好 1 处（textual learning rate），实际 2","patchId":"atk-multi"}
+{"ts":"2026-11-07T14:06:27.299Z","generation":5,"severity":"warning","kind":"patch_blocked","detail":"enable-advisory-loop: 候选 05990223c862 已在拒绝缓冲中（防振荡）","patchId":"05990223c862"}

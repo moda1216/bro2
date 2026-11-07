@@ -2,15 +2,15 @@
   "kind": "live-link-smoke",
   "version": 1,
   "agent": "bro2",
-  "timestamp": "2026-11-07T13:42:03.944Z",
+  "timestamp": "2026-11-07T14:06:37.801Z",
   "endpointKind": "simulated-local-bridge",
-  "endpoint": "http://127.0.0.1:40251/v1",
+  "endpoint": "http://127.0.0.1:42069/v1",
   "isModelCapabilityScore": false,
   "notARealScoreReason": "端点为本地 OpenAI 兼容协议仿真，返回脚本化响应；分数反映的是框架链路与脚本，不含模型智能。真实分数必须在真机上用真模型跑 eval:live。",
   "verdict": "not-proven",
   "preflight": {
     "ready": true,
-    "endpoint": "http://127.0.0.1:40251/v1",
+    "endpoint": "http://127.0.0.1:42069/v1",
     "model": "qwen3:8b"
   },
   "httpRequests": 28,

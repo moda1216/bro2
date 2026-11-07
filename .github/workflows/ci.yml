@@ -1,0 +1,31 @@
+name: bro2 CI · 产出物验收门禁
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  acceptance-gate:
+    name: 离线验收门禁（产出物健康度）
+    runs-on: ubuntu-latest
+    # bro2 零运行时依赖，仅需 Node 22 的 --experimental-strip-types
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.6.0"
+
+      - name: 运行产出物健康度聚合（含全部离线验收门禁）
+        run: npm run project:status
+
+      - name: 失败即阻断（exit code 非 0 时 CI 红）
+        if: failure()
+        run: |
+          echo "::error::产出物健康度未达标 —— 阻断合并/发布。"
+          echo "本地可运行 'npm run project:status' 查看具体失败门禁。"
+          exit 1
