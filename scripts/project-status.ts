@@ -28,6 +28,7 @@ const GATES: Gate[] = [
   { id: "verify", label: "能力矩阵结构自检", cmd: "npm run verify", timeoutMs: 60_000, gate: true },
   { id: "policy", label: "行为策略代码分支实证", cmd: "npm run policy:check", timeoutMs: 60_000, gate: true },
   { id: "rsi", label: "RSI 端到端 + 恶意候选注入", cmd: "npm run rsi:check", timeoutMs: 60_000, gate: true },
+  { id: "contrast", label: "对比式改进 live 闭环（防 reward hacking）", cmd: "npm run contrast:live", timeoutMs: 60_000, gate: true },
   { id: "meta", label: "元 RSI 写保护 + 冻结 fitness", cmd: "npm run meta:check", timeoutMs: 60_000, gate: true },
   { id: "benchmark", label: "基准诚实性测量", cmd: "npm run benchmark:check", timeoutMs: 60_000, gate: true },
   { id: "external", label: "外部证据防伪造", cmd: "npm run external:check", timeoutMs: 60_000, gate: true },
@@ -102,7 +103,7 @@ function section(title: string, gates: Gate[]) {
 console.log("\x1b[1m════════════════════════════════════════════════════════════\x1b[0m");
 console.log("\x1b[1m  bro2 · 产出物健康度报告 (npm run project:status)\x1b[0m");
 console.log("\x1b[1m════════════════════════════════════════════════════════════\x1b[0m");
-console.log(`版本: v2.0.0   判定: leadership.verdict = not-proven   证据阶梯 L4 = not-achieved`);
+console.log(`版本: v2.0.5   判定: leadership.verdict = not-proven   证据阶梯 L4 = not-achieved`);
 
 const gateRes = section("A. 发布阻断门禁（全绿方可发布）", GATES);
 const infoRes = section("B. 信息展示（不阻断发布）", INFO);

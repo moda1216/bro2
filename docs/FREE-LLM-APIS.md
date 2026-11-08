@@ -119,12 +119,12 @@ AGENTOS_LIVE_PROVIDER=pollinations npm run eval:live   # 真实模型评测，�
 bro2 不止"能接"，还把"本地部署的小模型"和"远程强模型"组合成一个 `hybrid` provider，
 **在保持任务能力的同时，显著降低远程调用次数**——这正是"远程模型 API 反过来优化 bro2"的关键。
 
-`hybrid` 在 `agentos.config.json` 中这样定义（已内置）：
+`hybrid` 在 `agentos.config.json` 中这样定义（已内置；`remote` 自 v2.0.5 起指向 `keyless` 聚合器，见 §7.4 双层叠加）：
 
 ```json
 "hybrid": {
   "type": "hybrid",
-  "remote": "kilo",            // 远程强模型（免 Key 端点）
+  "remote": "keyless",         // 远程侧 = 免 Key 网状聚合器（内层管可用性）
   "local": "local-qwen",       // 本地小模型（llama.cpp，零调用成本）
   "policy": "cheap-to-local",  // 启发式路由：便宜的调用留本地
   "cache": true,               // 缓存优先：相同提示零调用
@@ -155,7 +155,7 @@ bro2 不止"能接"，还把"本地部署的小模型"和"远程强模型"组合
 
 > 该机制与 RSI 形成闭环：对比式改进（`src/rsi/contrast.ts`）可把
 > "remoteAvoided 提升而分数不降"作为一条真实的改进目标，持续反哺 bro2。
-> 详见 `docs/ROADMAP.md` 的「混合推理」工作流，与 `src/models/{cache,hybrid}.ts`。
+> 详见 [ROADMAP.md](../ROADMAP.md) 的「混合推理」工作流，与 `src/models/{cache,hybrid}.ts`。
 
 ---
 
@@ -214,6 +214,37 @@ npm run free:probe       # 查看聚合器纳入了哪些上游及其健康度
 
 每次评测后，`keyless.meshStats()` 露出每个上游的明细健康度（失败/冷却/限流/延迟/成功率），
 `inferenceStats()` 暴露聚合层远程调用计数，供 `eval:live` 复盘「网状韧性」。
+
+### 7.4 双层叠加：`hybrid.remote → keyless`（v2.0.5）
+
+聚合器（第七节）解决「远程侧可用性」，`HybridProvider`（第六节）解决「远程侧开销」，二者**正交**，
+可嵌套叠加成双层，让 bro2 调用侧只认一个 `hybrid` 接口：
+
+```
+调用 → HybridProvider（外层：开销）
+         ├─ 便宜/重复调用 → local-qwen / 缓存      （零远程）
+         └─ 需推理调用   → keyless 聚合器（内层：可用性）
+                              ├─ smart-fallback 选优
+                              ├─ 429/5xx → 自动故障转移到其它免 Key 上游
+                              └─ 全挂 → emergencyProvider 本地兜底
+```
+
+配置（`agentos.config.json`）：把 `hybrid.remote` 从 `kilo` 改为 `keyless` 即可，`local` 仍是 `local-qwen`。
+
+| 层 | 组件 | 管什么 | 机制 |
+| --- | --- | --- | --- |
+| 外层 | `HybridProvider` | 远程**开销** | 缓存优先 + `cheap-to-local` 路由 + 限流降级 |
+| 内层 | `KeylessAggregator` | 远程**可用性** | 健康评分 + 限流故障转移 + 能力感知 + 应急兜底 |
+
+工程要点：
+- `src/index.ts` 组合根先把 `keyless`（与 `cached`）装配好、再装配 `hybrid`，嵌套依赖不依赖配置书写顺序。
+- `src/models/resolve.ts` 提供递归端点穿透（`probeTargets` 远端 configured 上游优先、本地兜底殿后），
+  `preflight` / `eval:live` 门禁共用；任一远端上游 ready 即放行，符合「网状故障转移」语义。
+- `doctor` 递归展开 `hybrid → keyless → 各上游`；`eval:live` 的 `inference.remoteDetail` 露出网状明细。
+- 演示：`npm run hybrid:keyless:demo`（离线确定性）——4 次任务仅 1 次穿透远程网状（`remoteCallRatio=0.25`），
+  其中还含 1 次 429 限流故障转移；测试 `tests/nested-hybrid-keyless.test.ts`（8 项）。
+
+> 诚实边界：双层叠加提升的是**网状韧性 + 远程开销**，不抬高单模型能力；`not-proven` / L4 `not-achieved` 不变。
 
 ---
 

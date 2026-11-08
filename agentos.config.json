@@ -192,11 +192,12 @@
       },
       "hybrid": {
         "type": "hybrid",
-        "remote": "kilo",
+        "remote": "keyless",
         "local": "local-qwen",
         "policy": "cheap-to-local",
         "cache": true,
-        "fallback": true
+        "fallback": true,
+        "note": "双层叠加：remote 指向 keyless 聚合器（免 Key 网状，smart-fallback 故障转移），本地小模型承接便宜/重复调用并作限流兜底；聚合器管可用性、hybrid 管开销。"
       }
     }
   },

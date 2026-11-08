@@ -10,6 +10,28 @@
 
 ---
 
+## [2.0.5] — 2026-11-08 · 双层叠加（免 Key 网状 + 本地协同）+ P1 对比式改进 live 闭环（PATCH）
+
+> 类型：**PATCH · 能力增强 + 路线图推进**。把 `hybrid.remote` 指向 `keyless`，形成「聚合器管可用性 / hybrid 管开销」的正交双层；并按 ROADMAP 推进 **P1**（对比式改进接入 live RSI）。
+
+### 新增（Added）
+- **双层叠加**：`agentos.config.json` 的 `hybrid.remote` 从 `kilo` 改为 `keyless`——外层 `HybridProvider` 把便宜/重复调用拦在本地+缓存，内层 `KeylessAggregator` 把单点限流吸收为故障转移，bro2 调用侧仍只见一个接口。
+- **组合根装配顺序修复** `src/index.ts`：把 `keyless`（与 `cached`）提前到 `hybrid` 之前装配，使 `hybrid.remote=keyless` 的嵌套依赖不再依赖配置书写顺序。
+- **可复用端点穿透解析** `src/models/resolve.ts`：`resolveLeaves / leafEndpoints / probeTargets` 递归展开组合/网状 provider，去重防环、远端 configured 上游优先、本地兜底殿后；`preflight` 与 `eval:live` 门禁共用同一套判定（任一远端上游 ready 即放行，体现故障转移韧性）。
+- **doctor 递归展示** `bin/agentos.ts`：逐层展开 `hybrid → keyless → 各上游`，并把 `HybridProvider.inferenceStats()` 的 `remoteDetail`（网状明细）暴露到评测报告。
+- **P1 · 对比式改进 live 闭环** `src/rsi/live-contrast.ts`：`toRunSummary / baselineFromRuns / evaluateLiveCandidates / LiveContrastVerifier`，把 `contrast.ts`（HARNESS² Propose–Probe–Compose）接入真实评测轨迹；**候选自报分数提升 `scoreGain` 绝不参与判定**——只抬分数没修复失败模式的伪修复被判定为 reward hacking 并拒绝；全程 `usedGroundTruthVerifier=false`。
+- **P1 验证**：`tests/contrast-live.test.ts`（9 项）+ `examples/contrast-live.ts`（`npm run contrast:live`，用真实 fault 任务轨迹演示 2 真修复晋升 / 2 伪修复拦截）；纳入 `project:status` 第 10 道门禁。
+
+### 验证（Verification）
+- `tests/nested-hybrid-keyless.test.ts`（8 项）+ `tests/contrast-live.test.ts`（9 项）；全量 `npm test` **131/131**。
+- `npm run hybrid:keyless:demo`：4 次任务仅 1 次穿透远程网状，`remoteCallRatio=0.25`，含 1 次限流故障转移；`remoteDetail.backendCount=3`。
+- `npm run project:status`：**10/10 发布门禁通过**（新增 contrast 门禁）。
+
+### 诚实边界（不变）
+- `leadership.verdict = not-proven`、证据阶梯 L4 = `not-achieved` 不变。双层叠加提升的是**网状韧性 + 远程开销**，P1 提供的是**无真值下防 reward hacking 的改进判据**，均不抬高单模型能力；公开基准对齐与第三方复现（ROADMAP P5）仍待完成。
+
+---
+
 ## [2.0.4] — 2026-11-08 · 无 Key 端点统一聚合器（PATCH）
 
 > 类型：**PATCH · 能力增强 + 接入扩展**。回答"所有远程无 Key 端点应被统一智能管理、聚合成唯一接口"——对标 KeylessAI / Zerogateway 的统一路由器设计。

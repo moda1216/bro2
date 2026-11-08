@@ -261,40 +261,10 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     }
   }
 
-  // 第二遍：组合型 provider（cached / hybrid），引用第一遍已注册的底层 provider。
-  for (const { name, cfg } of deferred) {
-    if (cfg.type === "cached") {
-      const inner = providers.get(String(cfg.inner ?? ""));
-      if (!inner) throw new Error(`cached provider "${name}" 引用的 inner "${cfg.inner}" 未注册`);
-      const p = new CachedProvider(name, inner);
-      router.register(name, p);
-      providers.set(name, p);
-    } else if (cfg.type === "hybrid") {
-      const remote = providers.get(String(cfg.remote ?? ""));
-      const local = providers.get(String(cfg.local ?? ""));
-      if (!remote) throw new Error(`hybrid provider "${name}" 引用的 remote "${cfg.remote}" 未注册`);
-      if (!local) throw new Error(`hybrid provider "${name}" 引用的 local "${cfg.local}" 未注册`);
-      const policyName = String(cfg.policy ?? "cheap-to-local");
-      const policy = policyName === "remote-only" ? remoteOnlyPolicy : cheapToLocalPolicy;
-      const p = new HybridProvider(name, {
-        remote,
-        local,
-        policy,
-        cache: cfg.cache !== false,
-        fallbackOnRateLimit: cfg.fallbackOnRateLimit !== false,
-      });
-      router.register(name, p);
-      providers.set(name, p);
-    } else if (cfg.type === "keyless") {
-      // 第三遍（见下方聚合器装配）：先收集被引用的上游，延迟到所有 provider 就绪后装配。
-      // 这里仅占位，真正装配在 deferred 遍历结束后进行。
-    }
-  }
-
-  // 第三遍：无 Key 端点聚合器（keyless）。聚合第一遍的 openai 无 Key 上游，
-  // 可选 autoDiscover 自动纳入所有「apiKeyOptional 且非本地」的已注册 provider。
-  for (const { name, cfg } of deferred) {
-    if (cfg.type !== "keyless") continue;
+  // 第二遍：构建只依赖第一遍 openai provider 的组合层（cached / keyless）。
+  // keyless 必须早于 hybrid 装配——hybrid.remote 可指向 keyless（免 Key 网状 +
+  // 本地协同的双层叠加），二者顺序固定，不再依赖 config 书写顺序。
+  const buildKeyless = (name: string, cfg: Record<string, unknown>): void => {
     const backends: KeylessBackend[] = [];
 
     // 1) 显式引用的上游（引用其它已注册 provider；未配置/未注册的自动跳过，不阻塞装配）
@@ -360,6 +330,38 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     });
     router.register(name, agg);
     providers.set(name, agg);
+  };
+
+  for (const { name, cfg } of deferred) {
+    if (cfg.type === "cached") {
+      const inner = providers.get(String(cfg.inner ?? ""));
+      if (!inner) throw new Error(`cached provider "${name}" 引用的 inner "${cfg.inner}" 未注册`);
+      const p = new CachedProvider(name, inner);
+      router.register(name, p);
+      providers.set(name, p);
+    } else if (cfg.type === "keyless") {
+      buildKeyless(name, cfg);
+    }
+  }
+
+  // 第三遍：构建 hybrid（可引用以上任意 provider，含 keyless 网状 / cached / openai）。
+  for (const { name, cfg } of deferred) {
+    if (cfg.type !== "hybrid") continue;
+    const remote = providers.get(String(cfg.remote ?? ""));
+    const local = providers.get(String(cfg.local ?? ""));
+    if (!remote) throw new Error(`hybrid provider "${name}" 引用的 remote "${cfg.remote}" 未注册`);
+    if (!local) throw new Error(`hybrid provider "${name}" 引用的 local "${cfg.local}" 未注册`);
+    const policyName = String(cfg.policy ?? "cheap-to-local");
+    const policy = policyName === "remote-only" ? remoteOnlyPolicy : cheapToLocalPolicy;
+    const p = new HybridProvider(name, {
+      remote,
+      local,
+      policy,
+      cache: cfg.cache !== false,
+      fallbackOnRateLimit: cfg.fallbackOnRateLimit !== false,
+    });
+    router.register(name, p);
+    providers.set(name, p);
   }
 
   if (options.providerOverride) {

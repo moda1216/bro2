@@ -20,4 +20,15 @@ export {
   evolvePaths, loadState, loadStrategy, saveState, saveStrategy,
   makeShadowRoot, freshDefaultState, freshDefaultStrategy,
 } from "./shadow.ts";
+export {
+  toRunSummary, baselineFromRuns, evaluateLiveCandidates,
+  LiveContrastVerifier, failureSignals as contrastFailureSignals,
+} from "./live-contrast.ts";
+export type {
+  LiveCandidate, LiveDecision, LiveContrastReport,
+} from "./live-contrast.ts";
+export {
+  behavioralContrast, failureSignals, proposeProbeCompose,
+} from "./contrast.ts";
+export type { RunSummary, ContrastResult, ProbeCandidate, ComposeResult } from "./contrast.ts";
 export * from "./types.ts";

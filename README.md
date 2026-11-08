@@ -216,7 +216,7 @@ data/meta-report.json         meta 报告 + 元层只增账本
 
 12. **冻结评分面 + 元层写保护**：fitness / 证据阶梯 / ablation 评分在 `PROTECTED_FILES` 内，元候选只能改 7 个有限枚举，禁止触碰验证层级（详见 [META-RSI.md](./META-RSI.md)）
 
-**验证**：`87 / 87` 测试通过；`verify.ts` 23/23 覆盖 L0–L7；`eval` 19/19、总体 100%、未配对 tool_call 0、门禁 PASS；`evolve` 4 代单调提升、train 0.286→0.857 / holdout 0.5→1.0；`policy:check` 19/19；`rsi:check` 22/22（含恶意候选拦截）；`meta` fitness 0.8879→0.9 且能力不退化、`meta:check` 25/25；`benchmark` ablation 完整 10/10 vs 朴素 1/10、`benchmark:check` 21/21；Ollama 协议实证 4/4；`external:check` 38/38（外部证据防伪造）；`preflight:check` 37/37（接入门禁）、`live:smoke` 17/17（live 链路自检）；**轮 7** 本地真实推理服务 `preflight` 六项门禁全绿后 `eval:live` 得到第一份真实分数 `0.0%`（0/12，协议违规 0），见 [docs/LOCAL-LLM.md](./docs/LOCAL-LLM.md)。
+**验证**：`131 / 131` 测试通过；`verify.ts` 23/23 覆盖 L0–L7；`eval` 19/19、总体 100%、未配对 tool_call 0、门禁 PASS；`evolve` 4 代单调提升、train 0.286→0.857 / holdout 0.5→1.0；`policy:check` 19/19；`rsi:check` 22/22（含恶意候选拦截）；`meta` fitness 0.8879→0.9 且能力不退化、`meta:check` 25/25；`benchmark` ablation 完整 10/10 vs 朴素 1/10、`benchmark:check` 21/21；Ollama 协议实证 4/4；`external:check` 38/38（外部证据防伪造）；`preflight:check` 37/37（接入门禁）、`live:smoke` 17/17（live 链路自检）；**轮 7** 本地真实推理服务 `preflight` 六项门禁全绿后 `eval:live` 得到第一份真实分数 `0.0%`（0/12，协议违规 0），见 [docs/LOCAL-LLM.md](./docs/LOCAL-LLM.md)。
 
 ---
 
@@ -282,7 +282,7 @@ src/memory/  src/cognition/  src/delegation/  src/governance/
 src/observability/        tracing · eval（评测框架 = 自我改进的验证器）
 src/interfaces/           cli · api · web/index.html
 skills/*/SKILL.md  presets/*.json
-tests/*.test.ts           单元 + 端到端 + 故障注入 + 模型适配 + RSI / meta / benchmark / external / preflight 回归（87 项）
+tests/*.test.ts           单元 + 端到端 + 故障注入 + 模型适配 + RSI / meta / benchmark / external / preflight / 双层叠加 / 对比式改进 live 回归（131 项）
 examples/                 demo · verify · policy-check · evolve-check · meta-check · benchmark-check · external-check · ollama-*
 data/eval-tasks.jsonl     可判分任务集（19 项 / 6 类）· eval-baseline.json（带指纹）
 data/evolve/              train / holdout（写保护）· state · strategy · ledger · incidents
@@ -294,6 +294,22 @@ data/                     运行时产物（会话 / Trajectory / 记忆 / 工�
 
 ---
 
-**验收结果**：`npm test` → 87/87；`npm run eval` → 19/19 门禁 PASS；`npm run evolve` → 4 代单调提升、改进固化到运行时；`policy:check` 19/19；`rsi:check` 22/22（防 reward hacking）；`npm run meta` → fitness 0.8879→0.9 且能力不退化、`meta:check` 25/25；`npm run benchmark` → ablation 完整 10/10 vs 朴素 1/10、证据阶梯 L0–L2 achieved / L4 not-achieved、`benchmark:check` 21/21、`external:check` 38/38；`demo` 6 步全链路、`verify` 23/23 覆盖 L0–L7、`ollama:check` 4/4；`preflight:check` 37/37（接入门禁防误判、证据面隔离）、`live:smoke` 17/17（live 全链路自检，明确非模型能力分数）、`preflight` 沙箱实测端点不可达 `EXIT=1`、指向就绪端点 `EXIT=0`；CLI headless 与 Web API 均已验证。**第一份真实模型分数（轮 7 · [路线 B](./docs/LOCAL-LLM.md)）**：本地真实推理服务（llama.cpp + Ollama 官方 registry 权重 qwen2.5:0.5b / CPU 4 核）过 `preflight` 六项门禁后，`eval:live` 实测 `overall 0.0%`（0/12）、门禁 FAIL、协议违规 0，18 次真实 CPU 推理、`errors=0`，报告 `data/eval-live-report.json`。
+**验收结果**：`npm test` → 131/131；`npm run eval` → 19/19 门禁 PASS；`npm run evolve` → 4 代单调提升、改进固化到运行时；`policy:check` 19/19；`rsi:check` 22/22（防 reward hacking）；`npm run meta` → fitness 0.8879→0.9 且能力不退化、`meta:check` 25/25；`npm run benchmark` → ablation 完整 10/10 vs 朴素 1/10、证据阶梯 L0–L2 achieved / L4 not-achieved、`benchmark:check` 21/21、`external:check` 38/38；`demo` 6 步全链路、`verify` 23/23 覆盖 L0–L7、`ollama:check` 4/4；`preflight:check` 37/37（接入门禁防误判、证据面隔离）、`live:smoke` 17/17（live 全链路自检，明确非模型能力分数）、`preflight` 沙箱实测端点不可达 `EXIT=1`、指向就绪端点 `EXIT=0`；CLI headless 与 Web API 均已验证。**第一份真实模型分数（轮 7 · [路线 B](./docs/LOCAL-LLM.md)）**：本地真实推理服务（llama.cpp + Ollama 官方 registry 权重 qwen2.5:0.5b / CPU 4 核）过 `preflight` 六项门禁后，`eval:live` 实测 `overall 0.0%`（0/12）、门禁 FAIL、协议违规 0，18 次真实 CPU 推理、`errors=0`，报告 `data/eval-live-report.json`。
 
 > **能力水平怎么读**：以上主要是**框架侧 + 确定性评测域**证据。轮 7 已在沙箱内用本地真实推理服务跑出第一份真实分数 `0.0%`（0/12）—— 这是 `qwen2.5:0.5b / CPU 4 核 / 单模型` 的真实结果，未粉饰；它实证了「Mock 100% 只说明 Harness 正确，不代表模型强」，同时因协议违规 0 / 工具错误率 0 而不构成对框架能力的否定。自我改进的增益只在**该评测域内**成立。项目明确给出 `leadership.verdict = not-proven`：要证明行业领先，还需公开基准对齐、≥3 个真实模型对比矩阵与第三方复现。**但「本地跑不了大模型」已不构成验证障碍**——免费 LLM API（OpenRouter/NIM 等，OpenAI 兼容）让 bro2 在真实强模型上跑 `eval:live` 只需一行命令；且 harness 工程质量可在冻结模型下由 RSI 持续进化（对比式改进见 [src/rsi/contrast.ts](./src/rsi/contrast.ts)，演进路线见图 [docs/RSI-NEXT.md](./docs/RSI-NEXT.md)）。详见 [BENCHMARK.md](./BENCHMARK.md)、[EVAL.md](./EVAL.md)、[docs/TAKEOVER.md](./docs/TAKEOVER.md)、[docs/FREE-LLM-APIS.md](./docs/FREE-LLM-APIS.md) 与 [RSI.md §6](./RSI.md)。
+
+---
+
+## 开源协议
+
+本项目采用 [MIT License](./LICENSE)。
+
+```
+MIT License · Copyright (c) 2026 moda1216
+```
+
+- 允许商用、修改、分发、再授权，唯一要求是保留版权声明与许可声明。
+- 软件按「原样」提供，不附带任何明示或暗示的担保。
+- 第三方模型服务（OpenAI 兼容端点 / 免费 LLM API）各自有独立的服务条款与额度政策，使用 bro2 接入它们时请遵守对应服务方条款；bro2 本身不含任何模型权重或凭据。
+
+欢迎通过 Issue / Pull Request 参与。提交前请运行 `npm run project:status`，确保全部发布门禁仍为绿色；CI 会对每次 push / PR 复跑同一套离线验收门禁。

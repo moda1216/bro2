@@ -17,11 +17,12 @@ import { createAgentOS, AGENT_NAME } from "../src/index.ts";
 import { runCLI } from "../src/interfaces/cli.ts";
 import { startServer } from "../src/interfaces/api.ts";
 import { OpenAICompatProvider } from "../src/models/openai-compat.ts";
-import { isCompositeProvider, isStatsProvider } from "../src/models/cache.ts";
+import { isCompositeProvider } from "../src/models/cache.ts";
 import { isMeshProvider } from "../src/models/keyless.ts";
 import type { LLMProvider } from "../src/models/base.ts";
 import { runPreflight, formatPreflight } from "../src/models/preflight.ts";
 import type { PreflightResult } from "../src/models/preflight.ts";
+import { probeTargets } from "../src/models/resolve.ts";
 import { runEval, loadTasks, loadBaseline, saveReport, formatReport } from "../src/observability/eval.ts";
 import { runEvolve, formatEvolveReport, runMetaEvolve, formatMetaReport } from "../src/rsi/index.ts";
 import { runBenchmark, formatBenchmarkReport } from "../src/benchmark/index.ts";
@@ -98,50 +99,45 @@ const os = createAgentOS({ autoApprove: flags.autoApprove });
 // ---------------------------------------------------------------- doctor
 if (flags.mode === "doctor") {
   process.stdout.write("\n" + "=".repeat(84) + `\n  ${AGENT_NAME} · 模型接入诊断\n` + "=".repeat(84) + "\n");
-  for (const [name, provider] of os.providers) {
+
+  const cap = (b: { supportsTools: boolean }) => (b.supportsTools ? "tools✓" : "tools✗");
+
+  // 递归展示：mesh（网状聚合器）→ 组合型 → 具体 OpenAI 端点，逐层展开嵌套结构。
+  const describe = async (provider: LLMProvider, indent: string): Promise<void> => {
     if (isMeshProvider(provider)) {
       const ms = provider.meshStats();
-      process.stdout.write(`\n  [${name}] 无 Key 端点统一聚合器（KeylessAggregator）· ${ms.backendCount} 个上游\n`);
-      const cap = (b: { supportsTools: boolean }) => (b.supportsTools ? "tools✓" : "tools✗");
+      process.stdout.write(`${indent}⛓ 无 Key 端点统一聚合器（KeylessAggregator）· ${ms.backendCount} 个上游\n`);
       for (const b of ms.backends) {
-        process.stdout.write(`    - ${b.name}  prio=${b.priority} ${cap(b)} ${b.rateLimited ? "[限流冷却] " : b.cooledDown ? "[失败冷却] " : ""}[${b.tags.join(",") || "-"}]\n`);
+        process.stdout.write(`${indent}  - ${b.name}  prio=${b.priority} ${cap(b)} ${b.rateLimited ? "[限流冷却] " : b.cooledDown ? "[失败冷却] " : ""}[${b.tags.join(",") || "-"}]\n`);
       }
-      process.stdout.write(`    → 聚合器把上述上游聚合成唯一接口，按健康/限流/能力智能选优+故障转移。\n`);
-      continue;
+      process.stdout.write(`${indent}  → 按健康/限流/能力智能选优 + 故障转移（网状视角：meshAttempts=${ms.meshAttempts} failovers=${ms.rateLimitFailovers}）\n`);
+      return;
     }
     if (isCompositeProvider(provider) && !(provider instanceof OpenAICompatProvider)) {
-      process.stdout.write(`\n  [${name}] 组合型 provider（底层：${provider.underlying().map((p) => p.name).join(", ")}）\n`);
-      process.stdout.write(`    对底层真实端点分别运行 probe() 见下方：\n`);
-      for (const inner of provider.underlying()) {
-        if (inner instanceof OpenAICompatProvider) {
-          const r = await inner.probe();
-          process.stdout.write(`    · ${inner.name}: reachable=${r.reachable ? "✓" : "✗"} toolCalling=${r.toolCalling} streaming=${r.streaming ? "✓" : "✗"}\n`);
-        }
-      }
-      continue;
+      process.stdout.write(`${indent}🔗 组合型 provider（底层：${provider.underlying().map((p) => p.name).join(", ")}）\n`);
+      for (const inner of provider.underlying()) await describe(inner, indent + "  ");
+      return;
     }
     if (!(provider instanceof OpenAICompatProvider)) {
-      process.stdout.write(`\n  [${name}] 离线确定性模型（Mock）——无需端点探测，用于框架回归。\n`);
-      continue;
+      process.stdout.write(`${indent}🧪 离线确定性模型（Mock）——无需端点探测，用于框架回归。\n`);
+      return;
     }
     const p = provider as OpenAICompatProvider & { configured: boolean; baseUrl?: string };
-    process.stdout.write(`\n  [${name}]  OpenAI 兼容端点（本地 Ollama / vLLM / LM Studio / 云端 API）\n`);
-    process.stdout.write(`    configured : ${p.configured ? "✓" : "✗ 未配置 baseUrl 或 model"}\n`);
+    process.stdout.write(`${indent}🌐 OpenAI 兼容端点`);
     if (!p.configured) {
-      process.stdout.write("    → 设置 OPENAI_BASE_URL / OPENAI_API_KEY / OPENAI_MODEL，或 OLLAMA_BASE_URL / OLLAMA_MODEL\n");
-      continue;
+      process.stdout.write(`（未配置 baseUrl/model → 设置 ${p.baseUrl ? "API Key" : "OPENAI_*/OLLAMA_*"}）\n`);
+      return;
     }
     const r = await p.probe();
-    process.stdout.write(`    reachable  : ${r.reachable ? "✓" : "✗"}   (${r.latencyMs} ms)\n`);
-    process.stdout.write(`    network    : ${r.networkReachable ? "✓ 端点可达" : "✗ 网络不可达"}   http=${r.httpStatus ?? "-"}\n`);
-    process.stdout.write(`    auth       : ${r.authRejected ? "✗ 认证被拒 (401/403)" : r.networkReachable ? "✓ 通过" : "? 未判定"}\n`);
-    process.stdout.write(`    model      : ${r.model}\n`);
-    process.stdout.write(`    models     : ${r.models.length ? r.models.slice(0, 8).join(", ") : "(端点未提供清单)"}\n`);
-    process.stdout.write(`    streaming  : ${r.streaming ? "✓ SSE" : "✗"}\n`);
-    const tc: Record<string, string> = { native: "✓ 原生 tool_calls", "text-json": "✗ 只写进正文", unsupported: "✗ 不支持", unknown: "? 未判定" };
-    process.stdout.write(`    toolCalling: ${tc[r.toolCalling] ?? r.toolCalling}   ← Agent 能否使用工具的硬前提\n`);
-    for (const w of r.warnings) process.stdout.write(`    ! ${w}\n`);
-    for (const s of r.suggestions) process.stdout.write(`    → ${s}\n`);
+    process.stdout.write(`\n${indent}  reachable  : ${r.reachable ? "✓" : "✗"}   (${r.latencyMs} ms)\n`);
+    process.stdout.write(`${indent}  toolCalling: ${r.toolCalling}   ← Agent 能否使用工具的硬前提\n`);
+    for (const w of r.warnings) process.stdout.write(`${indent}  ! ${w}\n`);
+    return;
+  };
+
+  for (const [name, provider] of os.providers) {
+    process.stdout.write(`\n  [${name}] `);
+    await describe(provider, "    ");
   }
   process.stdout.write("\n" + "=".repeat(84) + "\n");
   await os.shutdown();
@@ -161,7 +157,9 @@ else if (flags.mode === "preflight") {
       allReady = false;
       continue;
     }
-    if (!(provider instanceof OpenAICompatProvider)) {
+    // 组合/网状 provider（hybrid→keyless→各上游）：穿透到底层真实端点，
+    // 任一远端上游 ready 即视为门禁通过（聚合器本就做故障转移）。
+    if (!(provider instanceof OpenAICompatProvider) && !isCompositeProvider(provider)) {
       // --all 时 Mock 是预期内的离线回退，不算阻断；单独指定时才判为错误。
       if (!flags.all) {
         process.stderr.write(`provider "${name}" 是离线 Mock，不能用于 live 评测。\n`);
@@ -169,10 +167,24 @@ else if (flags.mode === "preflight") {
       }
       continue;
     }
-    const r = await runPreflight(provider);
-    results.push(r);
-    if (!r.ready) allReady = false;
-    if (!flags.json) process.stdout.write(formatPreflight(r) + "\n");
+    const targets = probeTargets(provider);
+    if (targets.length === 0) {
+      if (!flags.all) {
+        process.stderr.write(`provider "${name}" 没有已配置的 OpenAI 兼容端点。\n`);
+        allReady = false;
+      }
+      continue;
+    }
+    // 单端点：直接判定；网状/组合：任一远端 ready 即通过（体现故障转移韧性）。
+    let groupReady = false;
+    for (const t of targets) {
+      const r = await runPreflight(t);
+      results.push(r);
+      if (r.ready) groupReady = true;
+      if (!flags.json) process.stdout.write(formatPreflight(r) + "\n");
+      if (isCompositeProvider(provider) && r.ready) break; // 网状：命中一个健康上游即可
+    }
+    if (!groupReady) allReady = false;
   }
   if (flags.json) {
     process.stdout.write(JSON.stringify({ allReady, results }, null, 2) + "\n");
@@ -202,19 +214,23 @@ else if (flags.mode === "eval") {
       await os.shutdown();
       process.exit(1);
     }
-    // 组合型 provider（hybrid / cached）委托给底层真实端点做门禁。
-    let target: LLMProvider | undefined = provider;
-    while (target && !(target instanceof OpenAICompatProvider) && isCompositeProvider(target)) {
-      target = target.underlying().find((p) => p instanceof OpenAICompatProvider) ?? target.underlying()[0];
-    }
-    if (!(target instanceof OpenAICompatProvider)) {
+    // 组合/网状 provider（hybrid→keyless→各上游）递归穿透到真实端点，
+    // 任一远端上游 ready 即放行（聚合器的故障转移保证可用）。
+    const targets = probeTargets(provider);
+    if (targets.length === 0) {
       process.stderr.write(`预检跳过：provider "${providerName}" 没有可探测的 OpenAI 兼容底层端点。\n`);
     } else {
-      const pf = await runPreflight(target);
-      if (!flags.json) process.stdout.write(formatPreflight(pf) + "\n");
-      if (!pf.ready) {
-        if (flags.json) process.stdout.write(JSON.stringify({ error: "preflight-blocked", preflight: pf }, null, 2) + "\n");
-        process.stderr.write("已拒绝运行 live 评测：先修复上述阻断项；确需跳过用 --skip-preflight（不建议）。\n");
+      let anyReady = false;
+      let last: PreflightResult | undefined;
+      for (const t of targets) {
+        const pf = await runPreflight(t);
+        last = pf;
+        if (!flags.json) process.stdout.write(formatPreflight(pf) + "\n");
+        if (pf.ready) { anyReady = true; break; } // 网状命中一个健康上游即可
+      }
+      if (!anyReady) {
+        if (flags.json) process.stdout.write(JSON.stringify({ error: "preflight-blocked", preflight: last }, null, 2) + "\n");
+        process.stderr.write("已拒绝运行 live 评测：所有上游端点均未就绪；先修复上述阻断项；确需跳过用 --skip-preflight（不建议）。\n");
         await os.shutdown();
         process.exit(1);
       }

@@ -11,14 +11,14 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.0.4**（语义化，见 CHANGELOG） |
+| 版本 | **v2.0.5**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
 | 架构 | 8 层：kernel / models / context / tools / memory / cognition / delegation / governance / observability / interfaces |
 | 唯一真相源 | `Trajectory`（每次运行的轨迹日志，不可变追加） |
-| 源代码规模 | 57 个 `.ts` 源文件 + 1 个 Web 入口 HTML + 1 个 Python 本地推理服务 |
-| 测试规模 | 12 个测试文件；`npm test` **114** 项全绿 |
+| 源代码规模 | 59 个 `.ts` 源文件 + 1 个 Web 入口 HTML + 1 个 Python 本地推理服务 |
+| 测试规模 | 16 个测试文件；`npm test` **131** 项全绿 |
 | 诚实判定 | `leadership.verdict = not-proven`；证据阶梯 L4 = `not-achieved`（不伪造外部基准） |
 | 仓库状态 | 已初始化 git，初始提交 `v2.0.0` tag；`.gitignore` 隔离运行时产物 |
 | 版本控制 | git（提交粒度 = 逻辑交付单元；发布 = tag + CHANGELOG 条目） |
@@ -31,10 +31,11 @@
 
 | 验收项 | 命令 | 当前结果 | 性质 |
 | --- | --- | --- | --- |
-| 单元测试 + e2e + 故障注入 | `npm test` | **114 / 114 PASS** | 交付门禁 |
-| 能力矩阵结构自检 | `npm run verify` | 22 项 PASS | 结构门禁 |
+| 单元测试 + e2e + 故障注入 | `npm test` | **131 / 131 PASS** | 交付门禁 |
+| 能力矩阵结构自检 | `npm run verify` | 23 项 PASS | 结构门禁 |
 | 行为策略代码分支实证 | `npm run policy:check` | 19 项 PASS | 策略门禁 |
 | RSI 端到端 + 恶意候选注入 | `npm run rsi:check` | **22 / 22 PASS** | RSI 门禁 |
+| 对比式改进 live 闭环（防 reward hacking） | `npm run contrast:live` | 完整性 ✓ OK，2 晋升 / 2 拦截 | P1 门禁 |
 | 元 RSI 写保护 + 冻结 fitness | `npm run meta:check` | 25 项 PASS | 元层门禁 |
 | 基准诚实性测量 | `npm run benchmark:check` | 21 项 PASS | 基准门禁 |
 | 外部证据防伪造 | `npm run external:check` | **38 / 38 PASS** | 反自证门禁 |
@@ -76,8 +77,10 @@
 | OpenAI 兼容适配 | `src/models/openai-compat.ts` | probe() 区分网络/认证/HTTP | `tests/ollama.test.ts` |
 | Provider 路由 | `src/models/router.ts` | 多 provider 选择 | `tests/ollama.test.ts` |
 | 透明响应缓存 | `src/models/cache.ts` | CachedProvider：相同请求零调用 + 效率统计 | `tests/cache.test.ts` |
-| 本地+远程混合 | `src/models/hybrid.ts` | HybridProvider：缓存优先 + 启发式路由 + 限流降级 | `tests/hybrid.test.ts` |
+| 本地+远程混合 | `src/models/hybrid.ts` | HybridProvider：缓存优先 + 启发式路由 + 限流降级 + `remoteDetail` 网状明细 | `tests/hybrid.test.ts` |
 | 无 Key 端点聚合 | `src/models/keyless.ts` | KeylessAggregator：多免 Key 上游统一为单一接口 + 健康评分/限流感知/故障转移/能力感知 + 网状统计 | `tests/keyless.test.ts` |
+| 组合/网状端点穿透 | `src/models/resolve.ts` | resolveLeaves / leafEndpoints / probeTargets：递归展开 + 去重防环 + 远端优先（门禁共用） | `tests/nested-hybrid-keyless.test.ts` |
+| **双层叠加** | `hybrid.remote → keyless` | 免 Key 网状（可用性）+ 本地协同（开销）正交叠加 | `tests/nested-hybrid-keyless.test.ts` / `npm run hybrid:keyless:demo` |
 | 接入门禁 | `src/models/preflight.ts` | 6 项就绪检查，未就绪 EXIT=1 | `tests/preflight.test.ts` |
 
 **context / tools / memory / cognition / delegation / governance / observability / benchmark / rsi / interfaces** — ✅（共 43 个源文件）
@@ -91,7 +94,7 @@
 | governance | `permissions` `approval` `guards` `audit` | `tests/governance.test.ts` |
 | observability | `tracing` `eval` | `npm run eval` |
 | benchmark | `ladder` `ablation` `scoring` `external` `index` | `npm run benchmark:check` (21) |
-| **rsi** | `types` `ledger` `guardrails` `miner` `operators` `shadow` `loop` `meta` `contrast` `index` | `npm run rsi:check` (22) / `meta:check` (25) / `contrast.test.ts` (9) |
+| **rsi** | `types` `ledger` `guardrails` `miner` `operators` `shadow` `loop` `meta` `contrast` `live-contrast` `index` | `npm run rsi:check` (22) / `meta:check` (25) / `contrast.test.ts` (9) / `contrast-live.test.ts` (9) / `npm run contrast:live` |
 | interfaces | `cli` `api` `web/index.html` | `npm run verify` |
 
 ### 3.2 配置与入口 — ✅
@@ -133,13 +136,16 @@
 | 端到端 | `tests/e2e.test.ts` | 跨层编排 | — |
 | RSI | `tests/rsi.test.ts` | 有界改进、只增账本 | — |
 | 对比式改进 | `tests/contrast.test.ts` | HARNESS² Propose–Probe–Compose | 9 |
+| 对比式改进 live 闭环（P1） | `tests/contrast-live.test.ts` | 无真值判定 / 防 reward hacking / 多轮收敛 | 9 |
+| 双层叠加（嵌套） | `tests/nested-hybrid-keyless.test.ts` | hybrid→keyless 装配 / 端点穿透 / 统计 | 8 |
 | 元 RSI | `tests/meta.test.ts` | 元层写保护 | — |
 | 基准 | `tests/benchmark.test.ts` | ablation / ladder | — |
 | 外部证据 | `tests/external.test.ts` | 防伪造校验器 | — |
 | 接入门禁 | `tests/preflight.test.ts` | 门禁逻辑 | — |
 | Ollama | `tests/ollama.test.ts` | 协议兼容 | — |
 | 无 Key 聚合 | `tests/keyless.test.ts` | 聚合/故障转移/能力感知/统计 | — |
-| **合计** | 12 文件 | — | **114** |
+| 缓存 / 混合推理 | `tests/cache.test.ts` / `tests/hybrid.test.ts` | 缓存优先 / 路由 / 限流降级 | — |
+| **合计** | 16 文件 | — | **131** |
 
 ### 3.6 文档 — ✅
 | 产出物 | 路径 | 受众 / 用途 |
@@ -209,7 +215,7 @@
 
 交付物晋升到"已发布"必须满足：
 
-1. **代码门禁**：`npm test` 全绿（114/114），无新增 `any` / 无绕过类型检查。
+1. **代码门禁**：`npm test` 全绿（131/131），无新增 `any` / 无绕过类型检查。
 2. **能力门禁**：断言绑定**真实代码分支**（如 `policy:check` 实跑策略分派），禁止数值硬编码。
 3. **诚实门禁**：`benchmark:check` + `external:check` 通过 —— 不得出现 `verdict=proven`、不得编造 `external-results.json`。
 4. **证据隔离**：确定性报告与 live 报告分文件；门禁阻止在"未就绪"时写低分报告（`preflight` EXIT=1）。
@@ -244,4 +250,4 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.0.1**（初始工程化基线 v2.0.0 + 产出物管理交付）。
+- 当前最新：**v2.0.5**（双层叠加 hybrid.remote→keyless + P1 对比式改进 live 闭环；`npm test` 131/131，`project:status` 10/10 门禁）。

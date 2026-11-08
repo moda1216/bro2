@@ -18,6 +18,7 @@
  */
 import type { LLMProvider, LLMRequest, LLMResponse } from "./base.ts";
 import { EMPTY_STATS, type InferenceStats, type StatsProvider, type CompositeProvider } from "./cache.ts";
+import { isMeshProvider, type MeshStats } from "./keyless.ts";
 
 export type RouteDecision = "local" | "remote";
 
@@ -130,12 +131,16 @@ export class HybridProvider implements LLMProvider, StatsProvider, CompositeProv
     const local = this.localCalls + this.fallbackCalls;
     const avoided = this.cacheHits + this.fallbackCalls;
     const total = remote + local + this.cacheHits;
+    // 远端若是免 Key 聚合器（KeylessAggregator），把其网状明细一并暴露，
+    // 让「双层叠加」真实执行路径（hybrid 决策 → keyless 网状故障转移）可被复盘。
+    const remoteDetail: MeshStats | undefined = isMeshProvider(this.remote) ? this.remote.meshStats() : undefined;
     return {
       remoteCalls: remote,
       localCalls: local,
       cacheHits: this.cacheHits,
       remoteAvoided: avoided,
       remoteCallRatio: total > 0 ? remote / total : 0,
+      ...(remoteDetail ? { remoteDetail } : {}),
     };
   }
 

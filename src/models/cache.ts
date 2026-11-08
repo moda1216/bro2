@@ -25,6 +25,11 @@ export interface InferenceStats {
   remoteAvoided: number;
   /** 远程调用占比 = remoteCalls / (remoteCalls + localCalls + cacheHits) */
   remoteCallRatio: number;
+  /**
+   * 远端若是聚合器（如 KeylessAggregator），其网状明细（上游健康/故障转移次数）。
+   * 供 doctor / 评测复盘展示「双层叠加」的真实执行路径；非聚合器时为 undefined。
+   */
+  remoteDetail?: unknown;
 }
 
 export const EMPTY_STATS: InferenceStats = {

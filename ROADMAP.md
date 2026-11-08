@@ -55,13 +55,17 @@ AGENTOS_LIVE_PROVIDER=openrouter OPENROUTER_API_KEY=sk-... npm run eval:live
   - 调用侧只需 `AGENTOS_LIVE_PROVIDER=keyless`，单点限流/宕机被智能故障转移吸收，bro2 不再感知背后是哪家端点。
   - **与 P0 的关系**：聚合器把"无 Key 端点很多但各自不稳定"收敛为一个高可用的单一强模型来源，直接强化 P0 的"一行命令跑真实模型"——且免去为单家端点限流而手忙脚乱。
   - **与 P0.5 的关系**：`hybrid.remote` 可指向 `keyless`（整个免 Key 网状作为远程侧），两层正交叠加：聚合器解决"远程侧可用性"，hybrid 解决"远程侧开销"。
+- **已交付（v2.0.5 · 双层叠加 `hybrid.remote → keyless`，对应本轮"免 Key 网状 + 本地协同双层叠加"）**：
+  - `hybrid.remote` 从 `kilo` 改为 `keyless` 聚合器：外层 Hybrid 管「远程开销」（便宜/重复调用拦在本地+缓存），内层 KeylessAggregator 管「远程可用性」（单点限流/宕机吸收为故障转移），两层正交叠加，调用侧仍只见一个 `hybrid` 接口。
+  - `src/index.ts` 修复组合根装配顺序（keyless/cached 先于 hybrid），使嵌套依赖不再依赖配置书写顺序；`src/models/resolve.ts` 抽出可复用的递归端点穿透（`resolveLeaves / leafEndpoints / probeTargets`），`preflight` / `eval:live` 门禁共用；`doctor` 递归展示 `hybrid→keyless→上游`；`inferenceStats` 新增 `remoteDetail`（网状明细）。
+  - `tests/nested-hybrid-keyless.test.ts`（8 项）+ `npm run hybrid:keyless:demo`（离线：4 任务仅 1 次穿透远程网状，`remoteCallRatio=0.25`，含 1 次限流故障转移）。
 - **下一步（待建）**：
   - **P0.5-a 本地小模型当分类器**：用本地模型对每轮请求做"该走本地还是远程"的分类，替代启发式，提升路由精度。
   - **P0.5-b 语义/近似缓存**：对 Near-duplicate 提示做 embedding 相似度匹配，扩展命中面（当前是精确匹配）。
   - **P0.5-c 闭环到 RSI**：把 `remoteAvoided↑ 且分数不降` 作为对比式改进（P1）的一条真实目标，让混合推理持续自我优化。
-- **验收标准**：`npm run hybrid:demo` 与 `tests/{cache,hybrid}.test.ts` 全绿；`eval:live --provider hybrid` 报告含非空 `inference` 字段。
+- **验收标准**：`npm run hybrid:demo` / `hybrid:keyless:demo` 与 `tests/{cache,hybrid,nested-hybrid-keyless}.test.ts` 全绿；`eval:live --provider hybrid` 报告含非空 `inference` 字段。
 - **依赖**：P0（真实远程端点作为 `remote` 一侧）。
-- **状态**：🟢 **核心链路已交付**；P0.5-a/b/c 待建。
+- **状态**：🟢 **双层叠加已交付（v2.0.5）**；P0.5-a/b/c 待建。
 - **论文依据**：**HARNESS²**（Propose–Probe–Compose 的"用更便宜的执行验证改动"思想）、**Evo²**（仅改 harness 即可放大模型有效能力）。
 
 ---
@@ -73,11 +77,14 @@ AGENTOS_LIVE_PROVIDER=openrouter OPENROUTER_API_KEY=sk-... npm run eval:live
 - **产出物**：
   - `evolve --live` 模式：基线轮 vs 探测轮的行为对比判定改动是否真修好某失败模式。
   - 新增 `tests/contrast-live.test.ts` 实证在真实模型反馈下不靠真值标签收敛。
+- **已交付（v2.0.5 · 对比式改进接入 live 闭环）**：
+  - `src/rsi/live-contrast.ts`：`toRunSummary / baselineFromRuns`（真实 `EvalRunMetrics` 轨迹 → 行为摘要）、`evaluateLiveCandidates`（Propose–Probe–Compose 判定）、`LiveContrastVerifier`（多轮累积 + 收敛 + 完整性）。**候选自报分数 `scoreGain` 绝不参与判定**——只抬分数没修复失败模式的伪修复被判为 reward hacking 拒绝；全程 `usedGroundTruthVerifier=false`。
+  - `tests/contrast-live.test.ts`（9 项：接受真修复 / 拒绝伪修复 / 协议违规直接拒 / 多轮收敛 / 完整性 OK）；`examples/contrast-live.ts` + `npm run contrast:live`（用真实 fault 任务轨迹演示 2 晋升 / 2 拦截），纳入 `project:status` 第 10 道发布门禁。
 - **验收标准**：
-  - `contrast` 接受"修复了具体失败模式"的改动、拒绝"仅提升分数但无解"的改动（防 reward hacking）。
-  - 接入后 `npm run rsi:check` 仍 22/22，新增 live 分支单测全绿。
+  - `contrast` 接受"修复了具体失败模式"的改动、拒绝"仅提升分数但无解"的改动（防 reward hacking）。✅ 已实证
+  - 接入后 `npm run rsi:check` 仍 22/22，新增 live 分支单测全绿。✅ `npm test` 131/131
 - **依赖**：P0（真实模型反馈作为探针信号源，可选；也可先用 Mock 闭环验证）。
-- **状态**：🟡 模块已实现，待接入主循环。
+- **状态**：🟢 **核心闭环已交付（v2.0.5，确定性轨迹实证）**；`evolve --live` 完整编排（真实强模型反馈下自动 Propose 编辑）仍待 P0 强 Key 后推进。
 - **论文依据**：**HARNESS²**（arXiv 2610.14224，Google+Northwestern）。
 
 ---
@@ -155,16 +162,18 @@ P0 ──▶ P1 ──▶ P2 ──┐
         └──▶ P3 ────┘
 P0.5(混合推理) 横切 P0–P4：用本地小模型承接便宜/重复调用，降低远程开销并提升韧性
 P0.5(统一聚合器 v2.0.4)：把多个免 Key 端点聚合成唯一高可用接口，故障转移吸收单点限流/宕机
+P0.5(双层叠加 v2.0.5)：hybrid.remote→keyless，聚合器管可用性 / hybrid 管开销，正交叠加
+P1(对比式改进 live 闭环 v2.0.5)：contrast 接入真实轨迹，scoreGain 不参与判定（防 reward hacking）
 依赖：P0(真实分数) → P1(live RSI) → P2(经验) / P3(OOD)
      P2+P3 → P4(类族) → P5(L4 升 partial)
-     P0.5-a/b/c 可独立于 P1–P4 推进（纯 harness 工程优化）；统一聚合器已交付
+     P0.5-a/b/c 可独立于 P1–P4 推进（纯 harness 工程优化）；统一聚合器 + 双层叠加 + P1 闭环已交付
 ```
 
 | 优先级 | 工作流 | 论文 | 状态 | 是否需外部数据 |
 | --- | --- | --- | --- | --- |
 | **P0** | 免费 API 真实评测（无 Key 通路已通） | 全部 | 🟡 无 Key 已跑通；强 Key 对比待供 | 无 Key 无需；强模型对比需 1 个免费 Key |
-| **P0.5** | 混合推理：本地+远程协同降远程调用 + 无 Key 端点统一聚合 | HARNESS²/Evo²/KeylessAI·Zerogateway | 🟢 核心链路已交付（hybrid v2.0.3 + keyless v2.0.4） | 否（本地小模型 + 免 Key 端点即可） |
-| **P1** | live RSI（对比式） | HARNESS² | 🟡 模块就绪 | 否 |
+| **P0.5** | 混合推理 + 无 Key 端点统一聚合 + 双层叠加 | HARNESS²/Evo²/KeylessAI·Zerogateway | 🟢 全链路已交付（hybrid v2.0.3 + keyless v2.0.4 + 双层叠加 v2.0.5） | 否（本地小模型 + 免 Key 端点即可） |
+| **P1** | live RSI（对比式改进 live 闭环） | HARNESS² | 🟢 核心闭环已交付（v2.0.5，防 reward hacking 实证） | 否（确定性轨迹已实证；强模型自动编排待 P0） |
 | **P2** | 经验库 EXPERIENCE.md | HARNESS² | 🔲 待建 | 否 |
 | **P3** | RRSI 正则 + OOD 通道 | RRSI | 🔲 待建 | 否 |
 | **P4** | OO-Harness 类族 + Router | OO-Harness | 🔲 待建 | 否 |
