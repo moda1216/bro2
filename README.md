@@ -28,7 +28,7 @@ bro2 不是聊天机器人，也不是固定功能的助手。它把**模型、�
 | 特性 | 说明 |
 | --- | --- |
 | **可组装的 Agent 内核** | 状态机 Loop、7 个生命周期 Hook、统一事件协议、会话恢复/分叉、DI 容器；Trajectory 只增日志是唯一数据源，回放/统计/审计全部由它派生。 |
-| **模型无关 + 智能路由** | 云端 API / 本地 Ollama / 免 Key 网关共用一套适配器；`KeylessAggregator` 聚合多个免 Key 上游并做健康检查与限流故障转移；`HybridProvider` 把便宜/重复调用拦在本地与缓存，降低远程开销。 |
+| **模型无关 + 智能路由** | 云端 API / 本地 Ollama / 免 Key 网关共用一套适配器；`KeylessAggregator` 聚合多个免 Key 上游并做健康检查与限流故障转移；`HybridProvider` 把便宜/重复调用拦在本地与缓存；`LearnedRoutePolicy` 从跨会话经验学习「哪类请求本地就够」，越用越省。 |
 | **工具与插件体系** | 26 个内置工具（文件 / Shell / 安全计算 / HTTP / 规划 / 记忆 / 协作…）、显式 JSON Schema 校验、子进程隔离与超时；MCP 连接器与运行时热插拔插件。 |
 | **三层记忆 + 渐进披露** | 短期（Trajectory）/ 长期（跨会话）/ 工作记忆（scratchpad）；Skills 只把摘要注入系统提示，命中后再加载全文，节省上下文预算。 |
 | **声明式 Agent 形态** | 4 种内置 Preset（`standard` / `minimal` / `researcher` / `creator`）+ 自定义 Manifest，配合 Skill 与 Connector 组合成垂直 Agent。 |
@@ -36,6 +36,7 @@ bro2 不是聊天机器人，也不是固定功能的助手。它把**模型、�
 | **治理与可观测** | 三级沙箱、HITL 审批、Guards（步数 / token / 时长 / 死循环）、密钥脱敏与审计；轨迹视图、实时指标、结构化日志。 |
 | **三套入口** | 流式 CLI、Web UI（轨迹视图 + 审批弹窗）、REST + SSE API，覆盖交互、演示与集成。 |
 | **有界可验证自我改进** | 能力面 RSI 用 train/holdout 双门禁迭代真实代码行为；meta RSI 用冻结 fitness 改进「如何找改进」。验证器写保护、单调晋升、只增账本、防 reward hacking。 |
+| **复利式自我改进** | `ExperienceBank` 按失败模式沉淀已验证的有效解，Propose 阶段直接命中，收敛所需探测次数随使用递减；`VelocityLedger` 用冻结尺子度量改进速度，样本不足不宣称加速。经验只裁剪探测集、绝不绕过行为判定。 |
 | **可证伪的能力基准** | 5 级证据阶梯、7 变体 ablation、冻结评分面、外部证据校验；领先度结论如实标注而非自评。 |
 
 ---
@@ -185,6 +186,7 @@ PRE_STEP Hooks → ContextBuilder → 预算压缩 → LLM(stream, tool_calls)
 
 | 版本 | 日期 | 要点 |
 | --- | --- | --- |
+| **2.1.0** | 2026-11-08 | 复利中枢：跨会话经验库、冻结速度尺子、学习型路由（越用越快 / 越用越省） |
 | **2.0.6** | 2026-11-08 | 打通 OpenRouter 免费 550B 强模型的真实评测通路，取得首份真实模型分数 |
 | **2.0.5** | 2026-11-08 | 免 Key 网状 + 本地协同双层叠加；对比式改进 live 闭环（防 reward hacking） |
 | **2.0.4** | 2026-11-08 | 无 Key 端点统一聚合器 `KeylessAggregator`（健康评分 / 限流故障转移） |

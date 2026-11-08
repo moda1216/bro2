@@ -11,14 +11,14 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.0.6**（语义化，见 CHANGELOG） |
+| 版本 | **v2.1.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
 | 架构 | 8 层：kernel / models / context / tools / memory / cognition / delegation / governance / observability / interfaces |
 | 唯一真相源 | `Trajectory`（每次运行的轨迹日志，不可变追加） |
-| 源代码规模 | 59 个 `.ts` 源文件 + 1 个 Web 入口 HTML + 1 个 Python 本地推理服务 |
-| 测试规模 | 16 个测试文件；`npm test` **131** 项全绿 |
+| 源代码规模 | 63 个 `.ts` 源文件 + 1 个 Web 入口 HTML + 1 个 Python 本地推理服务 |
+| 测试规模 | 17 个测试文件；`npm test` **149** 项全绿 |
 | 诚实判定 | `leadership.verdict = not-proven`；证据阶梯 L4 = `not-achieved`（不伪造外部基准） |
 | 仓库状态 | 已初始化 git，初始提交 `v2.0.0` tag；`.gitignore` 隔离运行时产物 |
 | 版本控制 | git（提交粒度 = 逻辑交付单元；发布 = tag + CHANGELOG 条目） |
@@ -36,6 +36,7 @@
 | 行为策略代码分支实证 | `npm run policy:check` | 19 项 PASS | 策略门禁 |
 | RSI 端到端 + 恶意候选注入 | `npm run rsi:check` | **22 / 22 PASS** | RSI 门禁 |
 | 对比式改进 live 闭环（防 reward hacking） | `npm run contrast:live` | 完整性 ✓ OK，2 晋升 / 2 拦截 | P1 门禁 |
+| 复利中枢（越用越快 / 越用越省） | `npm run compound:demo` | 10/10 断言，trend=accelerating，remoteAvoided=6 | 两大目标门禁 |
 | 元 RSI 写保护 + 冻结 fitness | `npm run meta:check` | 25 项 PASS | 元层门禁 |
 | 基准诚实性测量 | `npm run benchmark:check` | 21 项 PASS | 基准门禁 |
 | 外部证据防伪造 | `npm run external:check` | **38 / 38 PASS** | 反自证门禁 |
@@ -95,7 +96,7 @@
 | governance | `permissions` `approval` `guards` `audit` | `tests/governance.test.ts` |
 | observability | `tracing` `eval` | `npm run eval` |
 | benchmark | `ladder` `ablation` `scoring` `external` `index` | `npm run benchmark:check` (21) |
-| **rsi** | `types` `ledger` `guardrails` `miner` `operators` `shadow` `loop` `meta` `contrast` `live-contrast` `index` | `npm run rsi:check` (22) / `meta:check` (25) / `contrast.test.ts` (9) / `contrast-live.test.ts` (9) / `npm run contrast:live` |
+| **rsi** | `types` `ledger` `guardrails` `miner` `operators` `shadow` `loop` `meta` `contrast` `live-contrast` `experience` `velocity` `compound` `index` | `npm run rsi:check` (22) / `meta:check` (25) / `contrast.test.ts` (9) / `contrast-live.test.ts` (9) / `compound.test.ts` (18) / `npm run contrast:live` / `compound:demo` |
 | interfaces | `cli` `api` `web/index.html` | `npm run verify` |
 
 ### 3.2 配置与入口 — ✅
@@ -146,7 +147,7 @@
 | Ollama | `tests/ollama.test.ts` | 协议兼容 | — |
 | 无 Key 聚合 | `tests/keyless.test.ts` | 聚合/故障转移/能力感知/统计 | — |
 | 缓存 / 混合推理 | `tests/cache.test.ts` / `tests/hybrid.test.ts` | 缓存优先 / 路由 / 限流降级 | — |
-| **合计** | 16 文件 | — | **131** |
+| **合计** | 17 文件 | — | **149** |
 
 ### 3.6 文档 — ✅
 | 产出物 | 路径 | 受众 / 用途 |
@@ -164,6 +165,7 @@
 | 本地推理 | `docs/LOCAL-LLM.md` | llama.cpp 等价端点与坑 |
 | 免费 API | `docs/FREE-LLM-APIS.md` | OpenRouter/NIM/... 实测可达性 |
 | RSI 演进 | `docs/RSI-NEXT.md` | 对齐 4 篇论文 → P0–P5 |
+| 复利中枢 | `docs/COMPOUND-LOOP.md` | 两大设计目标 → 经验层 / 冻结速度尺子 / 治理红线 |
 | **本项目** | `DELIVERABLES.md` `CHANGELOG.md` `ROADMAP.md` | 产出物管理三件套 |
 
 ### 3.7 数据证据产物（Data / Evidence Artifacts）— ✅
@@ -216,7 +218,7 @@
 
 交付物晋升到"已发布"必须满足：
 
-1. **代码门禁**：`npm test` 全绿（131/131），无新增 `any` / 无绕过类型检查。
+1. **代码门禁**：`npm test` 全绿（149/149），无新增 `any` / 无绕过类型检查。
 2. **能力门禁**：断言绑定**真实代码分支**（如 `policy:check` 实跑策略分派），禁止数值硬编码。
 3. **诚实门禁**：`benchmark:check` + `external:check` 通过 —— 不得出现 `verdict=proven`、不得编造 `external-results.json`。
 4. **证据隔离**：确定性报告与 live 报告分文件；门禁阻止在"未就绪"时写低分报告（`preflight` EXIT=1）。
@@ -251,4 +253,4 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.0.6**（P0 真实强模型评测：OpenRouter 免费 550B 实测总体 41.7%（5/12 通过）、协议违规 0；`npm test` 131/131，`project:status` 10/10 门禁）。
+- 当前最新：**v2.1.0**（复利中枢：经验库 + 冻结速度尺子 + 学习型路由，兑现两大设计目标的核心闭环；`npm test` 149/149，`project:status` 11/11 门禁）。

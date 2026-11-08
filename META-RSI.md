@@ -121,6 +121,34 @@ score        = 0.6 * finalHoldout + 0.4 * efficiency
 
 ---
 
+## 7.1 与复利层的关系（v2.1.0 新增，边界澄清）
+
+v2.1.0 引入「复利中枢」：经验库（`src/rsi/experience.ts`）、冻结速度尺子（`src/rsi/velocity.ts`）、
+复利闭环（`src/rsi/compound.ts`）、学习型路由（`src/models/route-experience.ts`）。它们与 meta RSI 是
+**两个不同层级、共享治理哲学但互不混用**的机制，必须分清：
+
+| | meta RSI（本文主体） | 复利层（v2.1.0） |
+| --- | --- | --- |
+| 改进对象 | `MetaState` 的 7 个有限枚举（「如何搜索改进」的参数） | Propose 的探测集 / 路由先验（「复用哪些已验证解」） |
+| 尺子 | 冻结 `measureMetaFitness`：`0.6*finalHoldout + 0.4*efficiency` | 冻结 `VelocityLedger`：attempts / IPA / firstTryHitRate |
+| 晋升判据 | 单调提升 + 能力不退化 + `integrityOk` | **不做晋升**；经验只影响候选顺序，判定仍走 `behavioralContrast` |
+| 落盘 | `data/evolve/meta-state.json` + `meta-ledger.jsonl` | `data/rsi/experience.jsonl` + `velocity.jsonl` |
+| 作用层 | L4 元层 | L3 能力层的 Propose 阶段 + L1 模型层路由 |
+
+**为什么速度尺子也必须冻结**：`VelocityLedger` 的指标定义、样本下限 `MIN_SAMPLES`、趋势阈值
+`TREND_EPSILON` 全部固定在代码里，经验库与 `MetaState` 都无法改动——与 `measureMetaFitness` 放在
+`PROTECTED_FILES` 写保护面同源。否则「越用越快」可以被「把尺子改松」轻易伪造（objective hacking）。
+样本不足时宁可返回 `insufficient-data`，也不宣称加速；出现协议违规的轮次不计入趋势。
+
+**明确不做**：复利层不修改 `MetaState`、不改动 `measureMetaFitness`、不自动改核心源码、不生成任意
+元候选。它只把「本代实证有效的解」变成「下代可直接命中的先验」，把搜索从 memoryless 变成
+compounding；元层的 6 个白名单候选与冻结 fitness 晋升链保持原样。
+
+**待建衔接（P3/P4）**：把 `VelocityLedger` 趋势接入 meta fitness 作为效率维度、把经验库的跨签名
+检索交给 HarnessRouter，都需先在 OOD 通道上证明不过拟合，再动元层——**顺序不能颠倒**。
+
+---
+
 ## 8. 运行
 
 ```bash

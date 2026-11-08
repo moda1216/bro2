@@ -11,6 +11,71 @@
 
 ---
 
+## 0. 两大设计目标与路线图的对齐（v2.1.0 重排）
+
+> 用户定义的两大目标：
+> 1. **harness 能够持续自动完成自我改进；越使用改进速度越快。**
+> 2. **能够用本地部署小模型配合远程免费、免 Key 的大模型，胜任大多数任务——对大模型智能程度容错性高、使用成本低。**
+
+### 0.1 现状诊断：两个目标卡在同一个缺失件上
+
+v2.0.6 之前，P0 / P0.5 / P1 已把「能不能跑真模型」「能不能省远程调用」「能不能无真值判定改进」逐个打通，
+但对着两大目标复核，暴露出一个**共同的结构性缺口**：
+
+| 目标 | 已有机制 | 缺口 |
+| --- | --- | --- |
+| 1 · 越用越快 | `Ledger.stats()` 按**算子**聚合成功率 → 更新搜索先验；`MetaState` 7 个有限枚举 + 6 个固定元候选 | 都是「搜索参数」，不是「搜索经验」。每轮从默认态重新搜索（memoryless），**没有度量、更没有优化「达到改进花了多少次探测」** |
+| 2 · 越用越省/越稳 | `cheapToLocalPolicy` 静态启发式；`KeylessAggregator` 进程内健康态；`InferenceStats` 仪表盘 | 路由不学习实际成败、端点质量重启清零、成本只被观测**从不回控路由**，因此不会随使用递减 |
+
+一句话：**现有 RSI 是「每轮重新搜索」，现有路由是「静态规则 + 进程内状态」；两者都缺一个跨会话、只增、可检索的经验层。**
+
+### 0.2 共享中枢：复利层（v2.1.0 交付）
+
+两个目标指向同一个中枢，因此把路线图从「P0→P5 的论文映射」升级为**两条目标主线 + 一个共享底座**：
+
+```
+目标 1 · 复利主线
+  P1 行为判定 →【P2 经验库】→【冻结速度尺子】→ P3 OOD 防过拟合 → P4 Harness 类族/Router
+                    ▲                    ▲
+                    │  共享 ExperienceBank（事件式只增账本 / 指纹 / 检索 / OOD 失效）
+目标 2 · 容错成本主线 ───┴────────────────────┘
+  P0.5 双层叠加 →【学习型路由 + 跨会话端点经验】→ P0.5-b 语义缓存 → P0.5-c 成本入 RSI
+```
+
+- **经验层**（`src/rsi/experience.ts`）：按失败模式 / 请求结构 / 上游三类指纹，把实证结果写成只增事件，
+  读取时折叠成可复用快照；`invalidate()` 让 OOD 退化的经验失效而非删除。
+- **冻结速度尺子**（`src/rsi/velocity.ts`）：把 `attempts / firstTryHitRate / improvementPerAttempt`
+  变成一等公民；样本不足一律 `insufficient-data`，绝不宣称加速；协议违规轮不计入趋势。
+- **复利闭环**（`src/rsi/compound.ts`）：经验**只裁剪 Propose 的探测集**，判定仍走全量行为对比；
+  经验不灵必回退；始终保留 1 个探索位（RRSI 正则思想）。
+- **学习型路由**（`src/models/route-experience.ts`）：实现 `RoutePolicy` 注入 `HybridProvider`、零侵入；
+  远程失败→本地兜底同时记 `remote: failure` 与 `local: success`，把容错转化为成本优势。
+
+详见 [docs/COMPOUND-LOOP.md](./docs/COMPOUND-LOOP.md)。
+
+### 0.3 目标 → 工作流映射（状态）
+
+| 目标 | 工作流 | 状态 |
+| --- | --- | --- |
+| 1 | P1 行为对比判定 | 🟢 v2.0.5 已交付 |
+| 1 | **P2 经验库 + 复利速度度量** | 🟢 **v2.1.0 核心闭环交付**（18 单测 + 第 11 道门禁） |
+| 1 | P3 RRSI / OOD 正则 | 🔲 待建（已具备 `invalidate` 接口与探索位） |
+| 1 | P4 OO-Harness 类族 / Router | 🔲 待建（跨失败模式泛化的落点） |
+| 2 | P0.5 双层叠加 | 🟢 v2.0.5 已交付 |
+| 2 | **P0.5-a 学习型路由 + P0.5-c 成本经验闭环** | 🟢 **v2.1.0 最小闭环交付** |
+| 2 | P0.5-b 语义 / 近似缓存 | 🔲 待建 |
+| 2 | P0.5-c 完整「成本作为 RSI 晋升目标」 | 🟡 经验已回写路由；进入 evolve 晋升判据待建 |
+| — | P0 真实强模型 / P5 公开基准 | 🟢 P0 首份分数（v2.0.6）/ 🔲 P5 |
+
+### 0.4 诚实边界
+
+- 复利在**同一失败模式类内**成立；跨失败模式的泛化属于 P3 OOD 通道 / P4 HarnessRouter，尚未实现。
+- `VelocityLedger` 判定的是**搜索成本下降**，不是能力分数提升；`leadership.verdict` 仍为 `not-proven`、L4 仍 `not-achieved`。
+- 学习型路由的「越用越省」在离线确定性轨迹上实证；真实模型下的成本收益需 `eval:live --provider hybrid` 复测。
+- 所有经验只影响先验与探测顺序，**绝不绕过行为判定**；自报分数始终不参与接受。
+
+---
+
 ## P0 · 用免费 API 跑真实强模型评测
 
 - **目标**：拿到 bro2 在**真实强模型**（非 0.5B 小模型）上的第一份有效分数，证明"本地算力不足 ≠ 无法验证业界水平"。
@@ -63,10 +128,13 @@ AGENTOS_LIVE_PROVIDER=openrouter OPENROUTER_API_KEY=sk-... npm run eval:live
   - `hybrid.remote` 从 `kilo` 改为 `keyless` 聚合器：外层 Hybrid 管「远程开销」（便宜/重复调用拦在本地+缓存），内层 KeylessAggregator 管「远程可用性」（单点限流/宕机吸收为故障转移），两层正交叠加，调用侧仍只见一个 `hybrid` 接口。
   - `src/index.ts` 修复组合根装配顺序（keyless/cached 先于 hybrid），使嵌套依赖不再依赖配置书写顺序；`src/models/resolve.ts` 抽出可复用的递归端点穿透（`resolveLeaves / leafEndpoints / probeTargets`），`preflight` / `eval:live` 门禁共用；`doctor` 递归展示 `hybrid→keyless→上游`；`inferenceStats` 新增 `remoteDetail`（网状明细）。
   - `tests/nested-hybrid-keyless.test.ts`（8 项）+ `npm run hybrid:keyless:demo`（离线：4 任务仅 1 次穿透远程网状，`remoteCallRatio=0.25`，含 1 次限流故障转移）。
+- **已交付（v2.1.0 · P0.5-a / P0.5-c 最小闭环）**：
+  - `src/models/route-experience.ts` · `LearnedRoutePolicy`：实现 `RoutePolicy` 注入 `HybridProvider`、零侵入；用跨会话经验替代静态启发式，冷启动回退保护，远程失败→本地兜底的经验反哺成本。
+  - 端点质量经验跨会话累积，补充 `KeylessAggregator` 进程内健康态重启清零的短板。
+  - `npm run compound:demo` 实证：5 个原本走远程的请求被压到本地，`remoteAvoided=6`。
 - **下一步（待建）**：
-  - **P0.5-a 本地小模型当分类器**：用本地模型对每轮请求做"该走本地还是远程"的分类，替代启发式，提升路由精度。
   - **P0.5-b 语义/近似缓存**：对 Near-duplicate 提示做 embedding 相似度匹配，扩展命中面（当前是精确匹配）。
-  - **P0.5-c 闭环到 RSI**：把 `remoteAvoided↑ 且分数不降` 作为对比式改进（P1）的一条真实目标，让混合推理持续自我优化。
+  - **P0.5-c 完整闭环**：把 `remoteAvoided↑ 且分数不降` 正式纳入 evolve 晋升判据（当前只回写路由经验，尚未进入能力层晋升）。
 - **验收标准**：`npm run hybrid:demo` / `hybrid:keyless:demo` 与 `tests/{cache,hybrid,nested-hybrid-keyless}.test.ts` 全绿；`eval:live --provider hybrid` 报告含非空 `inference` 字段。
 - **依赖**：P0（真实远程端点作为 `remote` 一侧）。
 - **状态**：🟢 **双层叠加已交付（v2.0.5）**；P0.5-a/b/c 待建。
@@ -104,8 +172,15 @@ AGENTOS_LIVE_PROVIDER=openrouter OPENROUTER_API_KEY=sk-... npm run eval:live
   - 经验库在 evolve 多轮后累积且只增；新任务能检索到相关历史编辑并提升首轮成功率。
   - 不引入"记忆特定任务集"的过拟合（与 P3 的 OOD 通道协同）。
 - **依赖**：P1（对比式改进产生的"有效/无效"判定是经验来源）。
-- **状态**：🔲 待建。
-- **论文依据**：**HARNESS²**（Experience Reflector → `EXPERIENCE.md`）。
+- **状态**：🟢 **核心闭环已交付（v2.1.0）**——经验库 + 冻结速度尺子 + 复利闭环 + 第 11 道门禁；跨失败模式泛化（P4 Router）仍待建。
+- **已交付（v2.1.0 · P2 落地）**：
+  - `src/rsi/experience.ts` · `ExperienceBank`：事件式只增账本、三类指纹、检索复用、OOD 失效。
+  - `src/rsi/velocity.ts` · `VelocityLedger`：冻结速度尺子（attempts / IPA / firstTryHitRate），样本不足不宣称加速。
+  - `src/rsi/compound.ts` · `compoundProbe`：经验只裁剪 Propose 探测集、判定仍走全量行为对比、不灵必回退、保留探索位。
+  - `src/models/route-experience.ts` · `LearnedRoutePolicy`：目标 2 的学习型路由闭环（见 P0.5）。
+  - `tests/compound.test.ts`（18 项）+ `npm run compound:demo`（10/10 断言）+ `project:status` 第 11 道门禁 `compound`。
+  - 详见 [docs/COMPOUND-LOOP.md](./docs/COMPOUND-LOOP.md)。
+- **论文依据**：**HARNESS²**（Experience Reflector → `EXPERIENCE.md`）、**RRSI**（探索正则）。
 
 ---
 
@@ -169,6 +244,8 @@ P0.5(统一聚合器 v2.0.4)：把多个免 Key 端点聚合成唯一高可用�
 P0.5(双层叠加 v2.0.5)：hybrid.remote→keyless，聚合器管可用性 / hybrid 管开销，正交叠加
 P1(对比式改进 live 闭环 v2.0.5)：contrast 接入真实轨迹，scoreGain 不参与判定（防 reward hacking）
 P0(强模型实测 v2.0.6)：OpenRouter 免费 550B 跑通 eval:live，第一份强模型分数 41.7%（5/12，协议违规 0）
+P2(复利中枢 v2.1.0)：ExperienceBank + VelocityLedger + compoundProbe + LearnedRoutePolicy
+  两条主线共享经验层：目标1 裁剪探测集降收敛成本；目标2 路由/端点经验跨会话降远程开销
 依赖：P0(真实分数) → P1(live RSI) → P2(经验) / P3(OOD)
      P2+P3 → P4(类族) → P5(L4 升 partial)
      P0.5-a/b/c 可独立于 P1–P4 推进（纯 harness 工程优化）；统一聚合器 + 双层叠加 + P1 闭环 + P0 强模型实测已交付
@@ -177,9 +254,9 @@ P0(强模型实测 v2.0.6)：OpenRouter 免费 550B 跑通 eval:live，第一份
 | 优先级 | 工作流 | 论文 | 状态 | 是否需外部数据 |
 | --- | --- | --- | --- | --- |
 | **P0** | 免费 API 真实评测（含免费强模型） | 全部 | 🟢 核心目标已交付（v2.0.6，550B 实测 41.7%）；多模型矩阵待建 | 免费层 Key 已够用；横向对比需更多 provider 额度 |
-| **P0.5** | 混合推理 + 无 Key 端点统一聚合 + 双层叠加 | HARNESS²/Evo²/KeylessAI·Zerogateway | 🟢 全链路已交付（hybrid v2.0.3 + keyless v2.0.4 + 双层叠加 v2.0.5） | 否（本地小模型 + 免 Key 端点即可） |
+| **P0.5** | 混合推理 + 无 Key 聚合 + 双层叠加 + 学习型路由 | HARNESS²/Evo²/KeylessAI·Zerogateway | 🟢 全链路已交付（v2.0.3–v2.0.5）；P0.5-a/c 最小闭环 v2.1.0；P0.5-b 待建 | 否（本地小模型 + 免 Key 端点即可） |
 | **P1** | live RSI（对比式改进 live 闭环） | HARNESS² | 🟢 核心闭环已交付（v2.0.5，防 reward hacking 实证） | 否（确定性轨迹已实证；强模型自动编排待 P0） |
-| **P2** | 经验库 EXPERIENCE.md | HARNESS² | 🔲 待建 | 否 |
+| **P2** | 经验库 + 复利速度度量（复利中枢） | HARNESS² / RRSI | 🟢 核心闭环已交付（v2.1.0） | 否 |
 | **P3** | RRSI 正则 + OOD 通道 | RRSI | 🔲 待建 | 否 |
 | **P4** | OO-Harness 类族 + Router | OO-Harness | 🔲 待建 | 否 |
 | **P5** | 公开基准对齐 L4 | 全部 | 🔲 待建 | 需外部基准数据 |

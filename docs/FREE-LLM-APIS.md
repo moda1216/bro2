@@ -282,6 +282,39 @@ AGENTOS_LIVE_PROVIDER=openrouter npm run eval:live   # 报告写 data/eval-live-
 平均延迟 9.3s、总 token 128413。
 
 > 诚实边界：这是**单模型、单任务集、k=1** 的真实分数。报告内部 `gate.pass=false` 是相对确定性 mock 基线（1.0）的对比结果，
-> 不是发布阻断门禁（`npm run project:status` 仍 10/10 全绿）。41.7% 不构成「领先」证据，
+> 不是发布阻断门禁（当时 `npm run project:status` 为 10/10；v2.1.0 起为 11/11）。41.7% 不构成「领先」证据，
 > `leadership.verdict = not-proven`、L4 `not-achieved` 不变；失败集中在 grounding / 上下文锚定 / 多步工具编排，
 > 为 P1 对比式改进与 P3 OOD 通道提供真实失败模式输入。
+
+---
+
+## 十一、v2.1.0 学习型路由：越用越省、越用越稳
+
+第七节的双层叠加解决了**结构性**问题（有路由、有故障转移、有缓存），但 `cheapToLocalPolicy`
+是静态启发式、`KeylessAggregator` 的健康态是进程内内存态、`InferenceStats` 只是仪表盘——
+成本被观测，却从不回控路由。v2.1.0 补上 P0.5-a / P0.5-c 的最小闭环：
+
+```ts
+// src/models/route-experience.ts · 实现 RoutePolicy，注入 HybridProvider，零侵入
+const policy = new LearnedRoutePolicy(new ExperienceBank("data/rsi/experience.jsonl"));
+// hybrid 的 policy 换成 policy 即可；调用后由调用链回写实际结果
+policy.observe(req, decision, ok, fallbackUsed);
+policy.endpointOutcome("kilo", ok, latencyMs);
+```
+
+| 机制 | 效果 |
+| --- | --- |
+| 请求结构指纹命中「本地足够」的实证经验 | 直接走本地小模型，省掉一次远程调用 |
+| 证据不足（样本 < 3 或成功率 < 0.7） | 回退 `cheapToLocalPolicy`，冷启动不退化 |
+| 远程 429/5xx → 本地兜底成功 | 同时记 `remote: failure` + `local: success`，下次同类请求直接本地 |
+| 端点成败写进只增账本 | 跨会话累积，补上聚合器健康态重启清零的短板 |
+
+`npm run compound:demo` 实测：8 个请求中 5 个原本启发式要走远程，学习型路由实际远程调用 **0**，
+`remoteAvoided=6`；新建实例（模拟新会话）仍能复用经验与端点质量。
+
+> 与第七节的关系：聚合器管「远程侧可用性」、hybrid 管「远程侧开销」、经验层管「开销随使用递减」，
+> 三层正交叠加。设计细节、冻结速度尺子与治理红线见 [COMPOUND-LOOP.md](./COMPOUND-LOOP.md)
+> 与 [ROADMAP.md §0](../ROADMAP.md)。
+>
+> 诚实边界：以上是离线确定性轨迹上的成本证据，不是真实模型能力分数；真实链路收益需
+> `eval:live --provider hybrid` 复测。经验只影响路由先验，绝不改变任何能力评测判定。

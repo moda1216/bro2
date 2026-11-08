@@ -10,6 +10,52 @@
 
 ---
 
+## [2.1.0] — 2026-11-08 · 复利中枢：两大设计目标的可证伪落点（MINOR）
+
+> 类型：**MINOR · 新增能力域**。新增跨会话经验层与冻结速度度量，把「越使用改进速度越快」与
+> 「越用越省 / 越用越稳」从口号变成有门禁、可证伪、防 reward hacking 的工程闭环。详见
+> [docs/COMPOUND-LOOP.md](./docs/COMPOUND-LOOP.md) 与 [ROADMAP.md §0](./ROADMAP.md)。
+
+### 新增（Added）
+- **`src/rsi/experience.ts` · ExperienceBank（P2 落地）**：事件式只增账本，三类指纹
+  （失败模式 / 请求结构 / 上游），读取时折叠成快照；`retrieve` / `prioritize` / `invalidate`。
+  指纹只由类别与结构特征构成，禁止编码任务 id 或答案（防记忆任务集）。
+- **`src/rsi/velocity.ts` · VelocityLedger（复利速度度量）**：`firstTryHitRate` / `avgAttempts` /
+  `improvementPerAttempt` / `reuseRate` 一等公民；样本 < 6 一律 `insufficient-data`；
+  协议违规轮不计入趋势；`selfReported=false`、`frozenMetric=true`。
+- **`src/rsi/compound.ts` · compoundProbe（复利闭环）**：经验只裁剪 Propose 探测集、
+  **判定仍走全量行为对比**；经验不灵必回退；保留 `EXPLORE_SLOTS=1` 探索位（RRSI 正则思想）；
+  经验回写只由「行为对比成立且非 reward hacking」的接受项驱动。
+- **`src/models/route-experience.ts` · LearnedRoutePolicy（P0.5-a/c 最小闭环）**：实现 `RoutePolicy`
+  注入 `HybridProvider`、零侵入；冷启动回退启发式；远程失败→本地兜底同时记
+  `remote: failure` 与 `local: success`；端点质量经验跨会话累积（补充聚合器进程内健康态）。
+- **测试 / 演示 / 门禁**：`tests/compound.test.ts`（18 项）、`examples/compound-demo.ts` +
+  `npm run compound:demo`（10/10 断言）、`project:status` 第 11 道阻断门禁 `compound`。
+- **文档**：新增 `docs/COMPOUND-LOOP.md`；`ROADMAP.md` 重排为「两大目标双主线 + 共享中枢」；
+  `META-RSI.md` 补 §7.1 边界澄清；README 产品特性与更新日志同步。
+
+### 设计决策（Design）
+- 经验复用**不靠改判定结果**体现变快（`proposeProbeCompose` 是全量判定），而是靠 Propose 阶段
+  减少探测次数；从根上杜绝「经验库 → reward hacking」的通路。
+- `requestSignature` 刻意**不含末条角色**：否则经验指纹与 `cheapToLocalPolicy` 视角重合，
+  学习型路由永远无法覆盖启发式判断、也就没有增益；由 `minSamples` + `minLocalSuccessRate`
+  双重冷启动保护把关。
+
+### 验证（Verified）
+- `npm test` **149/149 PASS**（新增 18）；`npm run project:status` **11/11 阻断门禁通过**。
+- `compound:demo` 实测：同一失败模式第 1 轮探测 3 次、第 2 轮起 2 次，
+  `VelocityLedger trend=accelerating`（IPA 0.444→0.500、探测 2.25→2.00）；
+  学习型路由把 5 个原本走远程的请求压到本地（`remoteAvoided=6`）；端点质量跨会话保留。
+- 诚实边界不变：`leadership.verdict = not-proven`、L4 `not-achieved`；复利仅在同失败模式类内成立，
+  跨类泛化属 P3/P4；离线确定性轨迹不是真实模型能力分数。
+
+### 仍待建（Next）
+- P0.5-b 语义 / 近似缓存；P0.5-c 把成本正式纳入 evolve 晋升判据。
+- P3 RRSI 正则 + OOD 通道；P4 OO-Harness 类族 / HarnessRouter（跨失败模式泛化）。
+- P2 后续：把 `VelocityLedger` 趋势接入 meta fitness 效率维度（须先过 OOD 校验）。
+
+---
+
 ## [2.0.6] — 2026-11-08 · P0 真实强模型评测通路打通（OpenRouter 免费 550B）（PATCH）
 
 > 类型：**PATCH · 证据更新 + 路线图推进**。用 OpenRouter 免费层的 120B+ 强模型跑通 `eval:live`，拿到 bro2 在真实强模型上的第一份有效分数，兑现 ROADMAP P0 的核心目标。

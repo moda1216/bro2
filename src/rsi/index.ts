@@ -31,4 +31,20 @@ export {
   behavioralContrast, failureSignals, proposeProbeCompose,
 } from "./contrast.ts";
 export type { RunSummary, ContrastResult, ProbeCandidate, ComposeResult } from "./contrast.ts";
+
+// 复利中枢（P2 经验库 + 冻结速度度量 + 编排闭环）：两大设计目标共享的底座
+export {
+  ExperienceBank, failureSignature, requestSignature, endpointSignature, experiencePath,
+} from "./experience.ts";
+export type {
+  ExperienceDomain, ExperienceOutcome, ExperienceEvent, ExperienceEntry,
+  PrioritizeResult, ExperienceStats,
+} from "./experience.ts";
+export {
+  VelocityLedger, MIN_SAMPLES, TREND_EPSILON, velocityPath,
+} from "./velocity.ts";
+export type { AttemptRecord, VelocitySnapshot, VelocityTrend } from "./velocity.ts";
+export { compoundProbe, EXPLORE_SLOTS } from "./compound.ts";
+export type { CompoundOptions, CompoundResult } from "./compound.ts";
+
 export * from "./types.ts";
