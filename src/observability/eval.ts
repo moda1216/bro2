@@ -10,7 +10,7 @@
  * 所有指标都从 Trajectory 只增日志抽取，不引入第二套状态来源。
  * 因此每一条轨迹既是评测证据，也是可回放的回归用例。
  */
-import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
@@ -23,6 +23,7 @@ import type { RunResult } from "../kernel/loop.ts";
 import { ApprovalDecision } from "../governance/approval.ts";
 import { EMPTY_STATS, type InferenceStats } from "../models/cache.ts";
 import type { RuntimeConfig } from "../kernel/runtime.ts";
+import { emptyRun, extract, faultConfig, grade, mergeConfigForEval } from "./eval-grade.ts";
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -67,6 +68,8 @@ export interface EvalTask {
   compactTokens?: number;
   /** 依赖脚本化模型行为，live 模式跳过 */
   deterministicOnly?: boolean;
+  /** 依赖真实模型能力（无脚本），deterministic 模式跳过 */
+  liveOnly?: boolean;
 }
 
 export interface EvalRunMetrics {
@@ -175,179 +178,10 @@ export interface EvalOptions {
    */
   configOverride?: Partial<RuntimeConfig>;
   onProgress?: (line: string) => void;
-}
-
-// ---------------------------------------------------------------- 指标抽取
-
-interface Extracted {
-  toolCalls: number;
-  toolNames: Set<string>;
-  toolErrors: number;
-  guards: number;
-  compactions: number;
-  approvalsDenied: number;
-  protocolViolations: number;
-  errors: number;
-  providers: string[];
-  repairs: number;
-  groundingRejects: number;
-  loopAdvisories: number;
-  compactionEvidence: number;
-}
-
-function extract(events: readonly Event[]): Extracted {
-  const out: Extracted = {
-    toolCalls: 0,
-    toolNames: new Set<string>(),
-    toolErrors: 0,
-    guards: 0,
-    compactions: 0,
-    approvalsDenied: 0,
-    protocolViolations: 0,
-    errors: 0,
-    providers: [],
-    repairs: 0,
-    groundingRejects: 0,
-    loopAdvisories: 0,
-    compactionEvidence: 0,
-  };
-  const requested = new Set<string>();
-  const answered = new Set<string>();
-  for (const e of events) {
-    switch (e.type) {
-      case EventType.ToolCall: {
-        const calls = (e.payload.calls as ToolCall[] | undefined) ?? [];
-        out.toolCalls += calls.length;
-        for (const c of calls) {
-          out.toolNames.add(c.name);
-          requested.add(c.id);
-        }
-        break;
-      }
-      case EventType.ToolResult: {
-        const r = e.payload.result as ToolResult | undefined;
-        if (r) {
-          answered.add(r.callId);
-          // 记录"实际执行"的工具名：repair 策略会修正拼错的调用名
-          out.toolNames.add(r.name);
-          if (!r.ok) out.toolErrors += 1;
-        }
-        break;
-      }
-      case EventType.Guard:
-        out.guards += 1;
-        break;
-      case EventType.Compaction:
-        out.compactions += 1;
-        out.compactionEvidence += Number(e.payload.evidenceKept ?? 0);
-        break;
-      case EventType.ToolRepair:
-        out.repairs += 1;
-        break;
-      case EventType.GroundingReject:
-        out.groundingRejects += 1;
-        break;
-      case EventType.LoopAdvisory:
-        out.loopAdvisories += 1;
-        break;
-      case EventType.ApprovalResolved:
-        if (e.payload.decision === ApprovalDecision.Deny) out.approvalsDenied += 1;
-        break;
-      case EventType.Error:
-        out.errors += 1;
-        break;
-      case EventType.AssistantMessage:
-        if (typeof e.payload.provider === "string") out.providers.push(String(e.payload.provider));
-        break;
-      default:
-        break;
-    }
-  }
-  // 协议正确性硬指标：每个 tool_call 必须有配对的 tool 结果消息
-  for (const id of requested) if (!answered.has(id)) out.protocolViolations += 1;
-  return out;
-}
-
-// ---------------------------------------------------------------- 评分
-
-function grade(task: EvalTask, run: RunResult, ex: Extracted, workspace: string): string[] {
-  const reasons: string[] = [];
-  const expectedStop = task.expectedStop ?? "completed";
-  if (run.stoppedBy !== expectedStop) reasons.push(`停止原因 ${run.stoppedBy} ≠ ${expectedStop}`);
-
-  if (task.expectedTools) {
-    for (const name of task.expectedTools) {
-      if (!ex.toolNames.has(name)) reasons.push(`未调用工具 ${name}`);
-    }
-  }
-  if (task.expectNoTools && run.toolCallCount > 0) {
-    reasons.push(`期望零工具调用，实际 ${run.toolCallCount}`);
-  }
-  if (task.expectedAnswer && task.expectedAnswer.length > 0) {
-    const lower = run.answer.toLowerCase();
-    if (!task.expectedAnswer.some((k) => lower.includes(k.toLowerCase()))) {
-      reasons.push(`终答未包含期望内容 ${JSON.stringify(task.expectedAnswer)}`);
-    }
-  }
-  if (task.expectedFiles) {
-    for (const f of task.expectedFiles) {
-      const p = join(workspace, f.path);
-      if (!existsSync(p)) {
-        reasons.push(`期望文件未生成: ${f.path}`);
-        continue;
-      }
-      if (f.contains && !readFileSync(p, "utf8").includes(f.contains)) {
-        reasons.push(`文件 ${f.path} 未包含 "${f.contains}"`);
-      }
-    }
-  }
-  if (task.maxSteps !== undefined && run.steps + 1 > task.maxSteps) {
-    reasons.push(`步数 ${run.steps + 1} 超过上限 ${task.maxSteps}`);
-  }
-  if (task.expectGuard && ex.guards === 0) reasons.push("未触发预期的 Guard");
-  if (task.expectToolErrors && ex.toolErrors === 0) reasons.push("故障未被工具层捕获并回喂");
-  if (task.expectApprovalDenied && ex.approvalsDenied === 0) reasons.push("审批拒绝未被正确施加");
-  if (task.expectCompaction && ex.compactions === 0) reasons.push("未触发上下文压缩");
-  if (task.expectRepair && ex.repairs === 0) reasons.push("未触发受控参数修复（repair 策略未生效）");
-  if (task.expectGroundingReject && ex.groundingRejects === 0) reasons.push("未触发终答接地打回");
-  if (task.expectLoopAdvisory && ex.loopAdvisories === 0) reasons.push("未触发死循环软警告（advisory 策略未生效）");
-  if (task.expectCompactionEvidence && ex.compactionEvidence === 0) reasons.push("压缩未优先保留工具证据（salience 策略未生效）");
-  if (task.expectNoLoopAdvisory && ex.loopAdvisories > 0) reasons.push("治理不变量被破坏：死循环被软警告绕过");
-  if (task.expectNoRepair && ex.repairs > 0) reasons.push("治理不变量被破坏：无关工具被模糊修复");
-  // 所有任务共享的零容忍正确性断言
-  if (ex.protocolViolations > 0) reasons.push(`存在 ${ex.protocolViolations} 个未配对 tool_call（协议违规）`);
-  if (!run.answer) reasons.push("终答为空");
-  return reasons;
-}
-
-function faultConfig(task: EvalTask, tmp: string): Partial<RuntimeConfig> {
-  const patch: Record<string, unknown> = {
-    storage: { dir: tmp },
-    permission: { workspace: join(tmp, "ws"), allowedPaths: [join(tmp, "ws")] },
-  };
-  const budget: Record<string, unknown> = {};
-  if (task.fault === "step-limit") budget.maxSteps = 1;
-  if (task.maxTokens !== undefined) budget.maxTokens = task.maxTokens;
-  if (task.compactTokens !== undefined) budget.compactTokens = task.compactTokens;
-  if (Object.keys(budget).length > 0) patch.budget = budget;
-  return patch as unknown as Partial<RuntimeConfig>;
-}
-
-/** ablation 配置合并：policy/budget 可覆盖，隔离路径强制由评测器最后钉死。 */
-function mergeConfigForEval(
-  base: Partial<RuntimeConfig>,
-  override?: Partial<RuntimeConfig>,
-): Partial<RuntimeConfig> {
-  if (!override) return base;
-  const b = base as Record<string, unknown>;
-  const o = override as Record<string, unknown>;
-  return {
-    ...b,
-    ...o,
-    storage: b.storage,
-    permission: b.permission,
-    budget: { ...((b.budget as object) ?? {}), ...((o.budget as object) ?? {}) },
-  } as Partial<RuntimeConfig>;
+  /** 任务开始前铺环境（v2：把 fixture 仓库复制进隔离工作区）。抛错即该任务失败。 */
+  prepareWorkspace?: (task: EvalTask, workspace: string) => void | Promise<void>;
+  /** 任务结束后的额外验收（v2：跑隐藏测试）。返回的每条原因都会导致该任务不通过。 */
+  verifyWorkspace?: (task: EvalTask, workspace: string) => string[] | Promise<string[]>;
 }
 
 async function runOne(os: AgentOS, task: EvalTask, workspace: string, repeat: number): Promise<EvalRunMetrics> {
@@ -518,15 +352,18 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
   // 逐任务累加推理效率指标（每个任务重建 AgentOS，需手动求和）
   let inference = EMPTY_STATS;
 
-  const active = options.tasks.filter((t) => !(mode === "live" && t.deterministicOnly));
+  const active = options.tasks.filter((t) =>
+    !(mode === "live" && t.deterministicOnly) && !(mode === "deterministic" && t.liveOnly));
   skipped = options.tasks.length - active.length;
 
   for (const task of active) {
     for (let repeat = 0; repeat < k; repeat += 1) {
       const tmp = mkdtempSync(join(tmpdir(), "agentos-eval-"));
       const workspace = join(tmp, "ws");
+      mkdirSync(workspace, { recursive: true });
       let os: AgentOS | undefined;
       try {
+        await options.prepareWorkspace?.(task, workspace);
         os = createAgentOS({
           root,
           autoApprove: task.fault !== "approval-deny",
@@ -544,6 +381,18 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
           os.approvals.onRequest((req) => { os?.approvals.resolve(req.id, ApprovalDecision.Deny); });
         }
         const r = await runOne(os, task, workspace, repeat);
+        if (options.verifyWorkspace) {
+          try {
+            const extra = await options.verifyWorkspace(task, workspace);
+            if (extra.length > 0) {
+              r.reasons.push(...extra);
+              r.ok = false;
+            }
+          } catch (err) {
+            r.reasons.push(`隐藏验收执行失败: ${err instanceof Error ? err.message : String(err)}`);
+            r.ok = false;
+          }
+        }
         runs.push(r);
         const s = os.router.inferenceStats();
         inference = {
@@ -557,6 +406,12 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
           `  ${r.ok ? "✓" : "✗"} ${task.id.padEnd(8)} [${task.category.padEnd(11)}] ` +
             `${r.steps}步/${r.toolCalls}工具/${r.latencyMs}ms ${r.ok ? "" : `→ ${r.reasons.join("; ")}`}`,
         );
+      } catch (err) {
+        // 环境准备/执行抛错：记为该任务失败，不让整轮评测崩掉（否则一个坏 fixture 会掩盖其余全部结果）
+        const msg = err instanceof Error ? err.message : String(err);
+        const r = emptyRun(task, repeat, [`评测环境异常: ${msg}`]);
+        runs.push(r);
+        options.onProgress?.(`  ✗ ${task.id.padEnd(8)} [${task.category.padEnd(11)}] → ${msg}`);
       } finally {
         if (os) await os.shutdown();
         rmSync(tmp, { recursive: true, force: true });

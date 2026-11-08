@@ -2,3 +2,7 @@
 {"at":"2026-11-08T12:00:07.492Z","id":"W1-01","event":"done","evidence":"v2.3.1 bench:v2 --layer l1 = 19/19，指纹 d1419b1efaa7","loc":336,"note":"超预算: 实估仅 schema+loader，实际含分层评测 CLI 与分层门禁参数化"}
 {"at":"2026-11-08T12:00:12.262Z","id":"W1-02","event":"start"}
 {"at":"2026-11-08T12:20:06.001Z","id":"W1-02","event":"done","evidence":"v2.3.2 fixture:check --run = 3/3 通过，7585 字节","loc":150,"note":"超预算: 估 60 实际含 --run/--update 双模式与排除规则"}
+{"at": "2026-11-08T12:45:00.000Z", "id": "W1-04", "event": "start"}
+{"at": "2026-11-08T12:45:00.000Z", "id": "W1-04", "event": "done", "loc": 250, "evidence": "task:check --layer l2 = 18/18 双态成立；hidden.test.ts 6/6；eval.ts 拆出 eval-grade.ts 后 516 行", "note": "超预算: 含 stageRepo/超时强杀/双态校准脚本与夹具测试"}
+{"at": "2026-11-08T12:45:00.000Z", "id": "W1-03", "event": "start"}
+{"at": "2026-11-08T12:45:00.000Z", "id": "W1-03", "event": "done", "loc": 60, "evidence": "data/tasks/v2/l2.jsonl 18 个任务（3 repo × 6），全部 repo+hiddenTests+reference，liveOnly", "note": "任务为数据不计源码行；loc 记 JSONL 生成与校验成本"}

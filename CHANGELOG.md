@@ -10,6 +10,55 @@
 
 ---
 
+## [2.4.0] — 2026-11-08 · W1-03/04：L2 真实工程任务与隐藏验收（MINOR）
+
+> 类型：**MINOR · 新能力域**。
+> 从这一版起，bro2 的评测不再只有「脚本化回归」，而是能在**真实仓库快照**上
+> 用隐藏测试判定「改没改对」。这是 W1「让 harness 有地方使劲」的关键一步。
+
+### 新增（Added）
+- `src/bench/runner.ts` — 隐藏测试执行器：
+  - `stageRepo()` 把 fixture 铺进隔离工作区，排除 `node_modules` / `.git` / 缓存；
+  - `runHiddenTests()` 顺序跑内联断言，**超时强杀**，失败输出截尾回传；
+  - `hiddenReasons()` 只把失败转成判分原因，通过不产生噪声。
+  - 隐藏断言以命令形式存在任务 JSON 里，**不落盘到工作区**，被测 agent 读不到。
+- `src/observability/eval.ts` — 两个最小钩子：`prepareWorkspace` / `verifyWorkspace`。
+  执行与判分仍由 `runEval` 唯一负责，v2 只注入环境与额外验收，不复制评测器。
+- `liveOnly` 任务语义：真实能力任务在 deterministic 模式下**跳过**，
+  既不用 mock 伪造通过，也不会把「没测」判成「0 分」。
+- `data/tasks/v2/l2.jsonl` — 18 个 L2 真实工程任务（3 个仓库 × 6）：
+
+  | 仓库 | 任务类型 | 例子 |
+  | --- | --- | --- |
+  | `ts-strkit` | 缺陷修复 / 新增导出 | `truncate` 边界、CRLF 分行、`wrap` / `escapeHtml` / `pad` |
+  | `py-dates` | 半开区间语义 / 新增函数 | `overlaps` 相接误判、`merge_ranges` / `month_bounds` / `each_day` |
+  | `js-cart` | 金额取整 / 输入校验 | `total` 分位取整、`applyCoupon` / `taxTotal`、越界抛 `RangeError` |
+
+- `scripts/task-check.ts` — **双态校准**门禁，回答两个必须回答的问题：
+  1. 原始快照上隐藏测试**必须失败**（否则不修也能过，白送分）；
+  2. 应用任务自带的参考解后**必须通过**（否则任务不可解）。
+  参考解只存在于任务 JSON，`toEvalTask()` 会剥离，绝不下发。
+- `src/observability/eval-grade.ts` — 判分逻辑拆出，`eval.ts` 从 697 行降到 516 行，
+  守住「单文件 ≤ 700 行」预算门禁。
+
+### 变更（Changed）
+- `bench:v2` 分层表新增「待 live」列；某层全为 live 任务时，门禁阈值按「未测」处理并明确打印，
+  不把跳过包装成通过。
+- `tests/bench-v2.test.ts` 不再写死任务总数，改为「合并后不丢不重 + l2 ≥ 18 + 全部绑定仓库」。
+- 移除 l2 的格式样例任务（已被 18 个真实任务取代）。
+
+### 证据（v2.4.0 发布时）
+- `npm run task:check -- --layer l2` → **18/18 双态成立**（快照必失败、参考解必通过）。
+- `npm test` → **196/196 通过**。
+- `npm run project:status` → 全部阻断门禁通过（新增 `taskcheck` 一道）。
+
+### 诚实边界（Unchanged）
+- 这 18 个任务仍由本项目自建，**不构成外部有效性**；`leadership.verdict` 保持 `not-proven`。
+- 尚未用真实模型跑过 L2（`--mode live` 属 W1-05），因此**没有任何 L2 能力分数**可引用。
+- fixture 只有 3 个仓库、每个 6 个任务，规模不足以支撑「L2 ≥ 60」的目标（W1-06）。
+
+---
+
 ## [2.3.2] — 2026-11-08 · W1-02：三个 fixture 仓库快照（PATCH）
 
 > 类型：**PATCH · 战役内步骤**。

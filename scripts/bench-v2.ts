@@ -15,8 +15,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadLayers, LAYER_FILES } from "../src/bench/loader.ts";
-import { LAYERS, type TaskLayer } from "../src/bench/schema.ts";
+import { loadLayers, LAYER_FILES, FIXTURE_ROOT } from "../src/bench/loader.ts";
+import { LAYERS, type TaskLayer, type TaskV2 } from "../src/bench/schema.ts";
+import { hiddenReasons, runHiddenTests, stageRepo } from "../src/bench/runner.ts";
 import { DEFAULT_THRESHOLDS, runEval } from "../src/observability/eval.ts";
 import type { EvalThresholds } from "../src/observability/eval.ts";
 
@@ -71,6 +72,10 @@ if (present.length === 0) {
 const layerOf = new Map<string, TaskLayer>();
 for (const l of present) for (const t of l.v2) layerOf.set(t.id, l.layer);
 
+/** v2 原始任务（含 repo/hiddenTests），执行层只看到压平后的 EvalTask。 */
+const v2ById = new Map<string, TaskV2>();
+for (const l of present) for (const t of l.v2) v2ById.set(t.id, t);
+
 /**
  * 分层门禁：全量阈值假设每个类别都有任务，单层跑时缺失类别会被判 0 分而误红。
  * 这里只把**本层不存在**的类别断言降为 0，其余阈值与判定逻辑完全复用默认口径
@@ -82,11 +87,32 @@ if (!presentCategories.has("safety")) thresholds.minSafety = 0;
 if (!presentCategories.has("robustness")) thresholds.minRobustness = 0;
 if (!presentCategories.has("tool-use")) thresholds.minToolUse = 0;
 
+/**
+ * 某层若全是 live 任务（无脚本可依），deterministic 模式下没有任何可执行证据。
+ * 此时「0 分」不是能力差，而是没测——把阈值归零并在输出里明确写出来，
+ * 绝不把「跳过」包装成「通过」。
+ */
+const deterministicTasks = loaded.tasks.filter((t) => !t.liveOnly).length;
+const noDeterministic = deterministicTasks === 0;
+if (noDeterministic) {
+  Object.assign(thresholds, { minOverall: 0, minToolUse: 0, minSafety: 0, minRobustness: 0, maxToolErrorRate: 1 });
+}
+
 const report = await runEval({
   tasks: loaded.tasks,
   mode: "deterministic",
   root: ROOT,
   thresholds,
+  // 只铺环境、只跑隐藏命令；判分仍由 runEval 唯一完成。
+  prepareWorkspace: (task, workspace) => {
+    const v = v2ById.get(task.id);
+    if (v?.repo) stageRepo(join(ROOT, FIXTURE_ROOT), v.repo, workspace);
+  },
+  verifyWorkspace: async (task, workspace) => {
+    const v = v2ById.get(task.id);
+    if (!v?.hiddenTests?.length) return [];
+    return hiddenReasons(await runHiddenTests(workspace, v.hiddenTests));
+  },
   onProgress: quiet ? undefined : (line) => process.stdout.write(line + "\n"),
 });
 
@@ -94,7 +120,8 @@ const rows = present.map((l) => {
   const runs = report.runs.filter((r) => layerOf.get(r.taskId) === l.layer);
   const ok = runs.filter((r) => r.ok).length;
   const samples = l.v2.filter((t) => t.sample).length;
-  return { layer: l.layer, total: runs.length, ok, file: LAYER_FILES[l.layer], samples, hash: l.hash };
+  const live = l.v2.filter((t) => t.liveOnly).length;
+  return { layer: l.layer, total: runs.length, ok, file: LAYER_FILES[l.layer], samples, live, hash: l.hash };
 });
 
 const savePath = flag("save");
@@ -113,16 +140,19 @@ if (json) {
     saved: savePath ? resolve(ROOT, savePath) : null,
   }, null, 2) + "\n");
 } else {
-  process.stdout.write("\n层    任务   通过      样例   文件\n");
+  process.stdout.write("\n层    任务   通过      样例   待live  文件\n");
   for (const r of rows) {
     process.stdout.write(
       `${r.layer.padEnd(5)} ${String(r.total).padEnd(6)} ${`${r.ok}/${r.total}`.padEnd(9)} ` +
-      `${String(r.samples).padEnd(6)} ${r.file}\n`,
+      `${String(r.samples).padEnd(6)} ${String(r.live).padEnd(7)} ${r.file}\n`,
     );
   }
   const total = rows.reduce((a, r) => a + r.total, 0);
   const ok = rows.reduce((a, r) => a + r.ok, 0);
-  process.stdout.write(`${"合计".padEnd(5)} ${String(total).padEnd(6)} ${`${ok}/${total}`.padEnd(9)}\n`);
+  const live = rows.reduce((a, r) => a + r.live, 0);
+  process.stdout.write(`${"合计".padEnd(5)} ${String(total).padEnd(6)} ${`${ok}/${total}`.padEnd(9)} ${"".padEnd(6)} ${String(live).padEnd(7)}\n`);
+  if (live > 0) process.stdout.write(`待 live 任务 ${live} 个：deterministic 模式不执行，需 bench:v2 --mode live。\n`);
+  if (noDeterministic) process.stdout.write("本层无确定性任务，门禁阈值按「未测」处理（不等同于通过）。\n");
   process.stdout.write(`\n任务集指纹: ${report.taskSetHash}\n`);
   if (report.gate.violations.length) {
     process.stdout.write(`门禁违规: ${report.gate.violations.join("; ")}\n`);

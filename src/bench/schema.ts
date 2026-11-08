@@ -21,6 +21,16 @@ export const CATEGORIES: readonly EvalCategory[] = [
 
 export const LAYERS: readonly TaskLayer[] = ["l1", "l2", "l3"];
 
+/** 参考解：只用于校准任务「可解且非白送」，**绝不下发给被测 agent**。 */
+export interface TaskReference {
+  file: string;
+  /** 精确替换（与 file_edit 同语义） */
+  find?: string;
+  replace?: string;
+  /** 追加到文件末尾（新增导出时使用） */
+  append?: string;
+}
+
 /** v2 任务：在既有 EvalTask 之上只加必要字段。 */
 export interface TaskV2 extends EvalTask {
   schema: typeof TASK_SCHEMA;
@@ -35,6 +45,10 @@ export interface TaskV2 extends EvalTask {
   budget?: { maxSteps?: number; maxTokens?: number };
   /** 格式样例任务：能跑通，但不计入真实工程通过率 */
   sample?: boolean;
+  /** 真实能力任务：deterministic 模式无脚本可依，跳过而不是伪造通过 */
+  liveOnly?: boolean;
+  /** 参考解（仅校准用） */
+  reference?: TaskReference[];
 }
 
 /** 旧任务升格：幂等，已有 v2 字段则原样保留。 */
@@ -75,6 +89,19 @@ export function validateTaskV2(t: TaskV2): string[] {
   if (t.repo !== undefined && (typeof t.repo !== "string" || !t.repo.trim())) {
     p.push(`${label}: repo 必须是非空字符串`);
   }
+  if (t.liveOnly !== undefined && typeof t.liveOnly !== "boolean") {
+    p.push(`${label}: liveOnly 必须是布尔值`);
+  }
+  if (t.liveOnly === true && (t.script?.length ?? 0) > 0) {
+    p.push(`${label}: liveOnly 任务不得内置脚本（否则测的是脚本不是模型）`);
+  }
+  for (const [i, r] of (t.reference ?? []).entries()) {
+    if (!r.file?.trim()) p.push(`${label}: reference[${i}].file 不能为空`);
+    const replaceMode = typeof r.find === "string" && typeof r.replace === "string";
+    const appendMode = typeof r.append === "string";
+    if (!replaceMode && !appendMode) p.push(`${label}: reference[${i}] 需提供 find+replace 或 append`);
+    if (replaceMode && appendMode) p.push(`${label}: reference[${i}] 不能同时替换与追加`);
+  }
   return p;
 }
 
@@ -83,8 +110,8 @@ export function validateTaskV2(t: TaskV2): string[] {
  * 这是 v2 → 执行的**唯一**转换点。
  */
 export function toEvalTask(t: TaskV2): EvalTask {
-  const { schema, layer, repo, commit, hiddenTests, budget, sample, ...rest } = t;
-  void schema; void layer; void repo; void commit; void hiddenTests; void sample;
+  const { schema, layer, repo, commit, hiddenTests, budget, sample, reference, ...rest } = t;
+  void schema; void layer; void repo; void commit; void hiddenTests; void sample; void reference;
   return {
     ...rest,
     maxSteps: rest.maxSteps ?? budget?.maxSteps,

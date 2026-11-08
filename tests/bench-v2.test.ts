@@ -86,10 +86,13 @@ test("loadLayer(l1)：读出 19 条旧任务、零问题、指纹与既有评测
 test("loadLayers：跨层合并后 id 唯一，且 l2 以 v2 原生格式装载", () => {
   const all = loadLayers(ROOT, ["l1", "l2"]);
   assert.deepEqual(all.problems, []);
-  assert.equal(all.tasks.length, 20);
-  assert.equal(new Set(all.tasks.map((t) => t.id)).size, 20);
   const l2 = all.layers.find((x) => x.layer === "l2")!;
+  // 不写死总数：任务集会增长，但「合并后不丢不重」必须始终成立。
+  assert.equal(all.tasks.length, 19 + l2.v2.length);
+  assert.equal(new Set(all.tasks.map((t) => t.id)).size, all.tasks.length);
+  assert.ok(l2.v2.length >= 18, `l2 任务不少于 18 个，实际 ${l2.v2.length}`);
   assert.ok(l2.v2.every((t) => t.schema === TASK_SCHEMA && t.layer === "l2"));
+  assert.ok(l2.v2.every((t) => t.repo && t.hiddenTests?.length), "l2 真实任务必须绑定仓库与隐藏验收");
 });
 
 function withTempRepo(files: Record<string, string>): string {

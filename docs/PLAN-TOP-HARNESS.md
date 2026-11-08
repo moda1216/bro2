@@ -214,8 +214,10 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 **目标**：建立三层任务集，让"harness 差异"能被测出来。
 
 > **进度**：`W1-01` ✅（v2.3.1）任务集可装载、可校验、可复跑，l1 指纹与既有评测一致（`d1419b1efaa7`）；
-> `W1-02` ✅（v2.3.2）3 个 fixture 仓库快照已就位（各埋 1 个真缺陷，可见测试 16 项全绿，内容指纹钉住）。
-> 下一步 `W1-03`：基于快照写首批 18 个 L2 真实工程任务。
+> `W1-02` ✅（v2.3.2）3 个 fixture 仓库快照已就位（各埋 1 个真缺陷，可见测试 16 项全绿，内容指纹钉住）；
+> `W1-04` ✅（v2.4.0）隐藏测试执行器 + 双态校准：任务在原始快照上必失败、应用参考解后必通过，18/18 成立；
+> `W1-03` ✅（v2.4.0）首批 18 个 L2 真实工程任务（3 仓库 × 6），全部绑定 `repo` + `hiddenTests`，`liveOnly` 不掺确定性分。
+> 下一步 `W1-05`：最小 harness vs bro2 双跑校准——**受真实端点可用性约束**，无可用上游时如实停在该处，不估算。
 
 | 层 | 用途 | 规模 | 判定方式 |
 | --- | --- | --- | --- |
@@ -232,7 +234,9 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 | `data/fixtures/repos/` ◐ | 3 个快照已交付（**v2.3.2**，指纹钉住）；W1-06 扩到 6–8 个 |
 | `src/bench/schema.ts` ✅ | `bro2.task/2` 契约 + 幂等升格 + `toEvalTask` 唯一转换点（**已交付 v2.3.1**） |
 | `src/bench/loader.ts` ✅ | 分层装载 + 重复 id / 坏行 / fixture 引用校验（**已交付 v2.3.1**） |
-| `scripts/bench-v2.ts` ✅ | 跑分入口：`npm run bench:v2 -- --layer l1\|l2\|all`（**已交付 v2.3.1**；`--model/--repeat` 与隐藏测试执行器待 W1-04） |
+| `scripts/bench-v2.ts` ✅ | 跑分入口：`npm run bench:v2 -- --layer l1\|l2\|all`（**v2.3.1 交付**；v2.4.0 接入隐藏验收与环境铺设；`--mode live` 待 W1-05） |
+| `src/bench/runner.ts` ✅ | 隐藏测试执行器：fixture 铺设、超时强杀、失败输出回传（**v2.4.0**） |
+| `scripts/task-check.ts` ✅ | 双态校准门禁：原始快照必失败 + 参考解必通过（**v2.4.0**，纳入发布阻断） |
 | `docs/BENCH-v2.md` | 任务来源、判定口径、如何新增任务、如何复现 |
 
 **验收**
