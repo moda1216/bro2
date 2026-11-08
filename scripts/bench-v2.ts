@@ -2,22 +2,24 @@
 /**
  * bench:v2 · 分层任务评测入口（W1）
  * ----------------------------------------------------------
- *   npm run bench:v2                      全层（l1 + l2）
- *   npm run bench:v2 -- --layer l1        只跑旧集（迁移回归，验收 19/19）
- *   npm run bench:v2 -- --layer l2        只跑 v2 原生层
- *   npm run bench:v2 -- --json            机器可读
- *   npm run bench:v2 -- --save data/bench/l1.json
+ *   npm run bench:v2                                  全层确定性回归（l1）
+ *   npm run bench:v2 -- --layer l2                    只跑 l2（默认跳过 live 任务）
+ *   npm run bench:v2 -- --layer l2 --mode live        真实模型跑 l2（先过 live 预检）
+ *   npm run bench:v2 -- --layer l2 --mode live --sample 3 --repeat 2
+ *   npm run bench:v2 -- --json | --save data/bench/x.json
  *
  * 边界：本入口**只做装载与执行编排**，判分与指标抽取完全复用
- * observability/eval.ts（唯一口径）。live 模式含预检门禁，走 `npm run eval:live`，
- * 本入口遇到 `--mode live` 会明确拒绝而不是绕开预检。
+ * observability/eval.ts（唯一口径）；live 预检复用 models/live-gate.ts（唯一门禁）。
+ * live 分数是**测量**，不是发布门禁——只有协议违规（未配对 tool_call）才判失败。
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createAgentOS } from "../src/index.ts";
 import { loadLayers, LAYER_FILES, FIXTURE_ROOT } from "../src/bench/loader.ts";
 import { LAYERS, type TaskLayer, type TaskV2 } from "../src/bench/schema.ts";
 import { hiddenReasons, runHiddenTests, stageRepo } from "../src/bench/runner.ts";
+import { liveGate } from "../src/models/live-gate.ts";
 import { DEFAULT_THRESHOLDS, runEval } from "../src/observability/eval.ts";
 import type { EvalThresholds } from "../src/observability/eval.ts";
 
@@ -36,27 +38,26 @@ const layerArg = flag("layer") ?? "all";
 const json = has("json");
 const quiet = has("quiet") || json;
 const mode = flag("mode") ?? "deterministic";
-
-if (mode !== "deterministic") {
-  process.stderr.write(
-    `bench:v2 只负责确定性层（回归口径）。live 评测含预检门禁，请用 npm run eval:live，\n` +
-    `或 npm run eval:live -- --tasks <file>。\n`,
-  );
+if (mode !== "deterministic" && mode !== "live") {
+  process.stderr.write(`未知模式 "${mode}"，可选：deterministic / live\n`);
   process.exit(2);
 }
+const live = mode === "live";
+const k = Math.max(1, Number(flag("repeat") ?? flag("k") ?? 1) || 1);
+const sampleN = flag("sample") ? Math.max(1, Number(flag("sample")) || 1) : 0;
+const only = flag("only");
+/** 同模型、同任务，换 harness 预设——这是「harness 差异」对照的唯一变量。 */
+const presetName = flag("preset");
 
 const selected: TaskLayer[] = layerArg === "all"
-  ? LAYERS.filter((l) => l !== "l3") // l3 长程层尚未建立，全量默认不拉
+  ? LAYERS.filter((l) => l !== "l3")
   : LAYERS.filter((l) => l === layerArg);
-
 if (selected.length === 0) {
   process.stderr.write(`未知层 "${layerArg}"，可选：${LAYERS.join(" / ")} / all\n`);
   process.exit(2);
 }
 
 const loaded = loadLayers(ROOT, selected);
-
-// 装载问题即失败：宁可拒绝评测，也不拿残缺任务集产出分数。
 if (loaded.problems.length > 0) {
   process.stderr.write(`任务集装载失败（${loaded.problems.length} 项）：\n`);
   for (const p of loaded.problems) process.stderr.write(`  ✗ ${p}\n`);
@@ -76,31 +77,56 @@ for (const l of present) for (const t of l.v2) layerOf.set(t.id, l.layer);
 const v2ById = new Map<string, TaskV2>();
 for (const l of present) for (const t of l.v2) v2ById.set(t.id, t);
 
+// 模式与任务类型必须匹配：拿 mock 跑真实任务、或拿真实模型跑脚本任务，都是自欺。
+let runnable = loaded.tasks.filter((t) => (live ? !t.deterministicOnly : !t.liveOnly));
+if (only) runnable = runnable.filter((t) => t.id === only);
+if (sampleN > 0) runnable = runnable.slice(0, sampleN);
+if (runnable.length === 0) {
+  process.stderr.write(
+    live
+      ? `没有可跑的 live 任务（${loaded.tasks.length} 个任务中 live 可用 0 个）。\n`
+      : `没有可跑的确定性任务（${loaded.tasks.length} 个任务全部为 liveOnly）。\n`,
+  );
+  process.exit(live ? 1 : 0);
+}
+
 /**
- * 分层门禁：全量阈值假设每个类别都有任务，单层跑时缺失类别会被判 0 分而误红。
- * 这里只把**本层不存在**的类别断言降为 0，其余阈值与判定逻辑完全复用默认口径
- * （仍在 runEval 内部执行，不产生第二套门禁实现）。
+ * 阈值口径：
+ *  - deterministic：沿用默认能力阈值，但把「本层没有的类别」降为 0，避免误红；
+ *  - live：分数是测量不是门禁，只保留协议零违规（其余阈值归零）。
  */
-const presentCategories = new Set(loaded.tasks.map((t) => t.category));
+const presentCategories = new Set(runnable.map((t) => t.category));
 const thresholds: Partial<EvalThresholds> = { ...DEFAULT_THRESHOLDS };
 if (!presentCategories.has("safety")) thresholds.minSafety = 0;
 if (!presentCategories.has("robustness")) thresholds.minRobustness = 0;
 if (!presentCategories.has("tool-use")) thresholds.minToolUse = 0;
+if (live) {
+  Object.assign(thresholds, { minOverall: 0, minToolUse: 0, minSafety: 0, minRobustness: 0, maxToolErrorRate: 1, maxAvgSteps: 999 });
+}
 
-/**
- * 某层若全是 live 任务（无脚本可依），deterministic 模式下没有任何可执行证据。
- * 此时「0 分」不是能力差，而是没测——把阈值归零并在输出里明确写出来，
- * 绝不把「跳过」包装成「通过」。
- */
-const deterministicTasks = loaded.tasks.filter((t) => !t.liveOnly).length;
-const noDeterministic = deterministicTasks === 0;
-if (noDeterministic) {
-  Object.assign(thresholds, { minOverall: 0, minToolUse: 0, minSafety: 0, minRobustness: 0, maxToolErrorRate: 1 });
+// live 预检：与 eval --mode live 共用同一实现，杜绝两个入口判定分叉。
+const providerName = flag("model") ?? process.env.AGENTOS_LIVE_PROVIDER ?? (live ? "keyless" : "mock");
+if (live && !has("skip-preflight")) {
+  const os = createAgentOS({ root: ROOT, plugins: [] });
+  try {
+    const gate = await liveGate(os.providers.get(providerName), providerName);
+    if (!quiet && gate.probed) process.stdout.write(`预检: ${gate.reason}\n`);
+    if (!gate.ready) {
+      process.stderr.write(`已拒绝运行 live 评测：${gate.reason}\n`);
+      for (const pf of gate.results.at(-1)?.blockers ?? []) process.stderr.write(`  ✗ ${pf}\n`);
+      process.exit(1);
+    }
+    if (!gate.probed) process.stdout.write(`预检未探测端点：${gate.reason}（按配置放行）\n`);
+  } finally {
+    await os.shutdown();
+  }
 }
 
 const report = await runEval({
-  tasks: loaded.tasks,
-  mode: "deterministic",
+  tasks: presetName ? runnable.map((t) => ({ ...t, preset: presetName })) : runnable,
+  mode,
+  ...(live ? { providerName } : {}),
+  k,
   root: ROOT,
   thresholds,
   // 只铺环境、只跑隐藏命令；判分仍由 runEval 唯一完成。
@@ -119,45 +145,46 @@ const report = await runEval({
 const rows = present.map((l) => {
   const runs = report.runs.filter((r) => layerOf.get(r.taskId) === l.layer);
   const ok = runs.filter((r) => r.ok).length;
-  const samples = l.v2.filter((t) => t.sample).length;
-  const live = l.v2.filter((t) => t.liveOnly).length;
-  return { layer: l.layer, total: runs.length, ok, file: LAYER_FILES[l.layer], samples, live, hash: l.hash };
+  const inLayer = l.v2.filter((t) => (live ? !t.deterministicOnly : !t.liveOnly));
+  return {
+    layer: l.layer, tasks: inLayer.length, ran: runs.length, ok,
+    pending: l.v2.length - inLayer.length,
+    samples: l.v2.filter((t) => t.sample).length,
+    file: LAYER_FILES[l.layer], hash: l.hash,
+  };
 });
 
-const savePath = flag("save");
+const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+const savePath = flag("save") ?? (live ? `data/bench/v2-${providerName}-${stamp}.json` : undefined);
 if (savePath) {
   const out = resolve(ROOT, savePath);
   mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, JSON.stringify({ ...report, layers: rows }, null, 2) + "\n");
+  writeFileSync(out, JSON.stringify({ ...report, layers: rows, providerName, k, preset: presetName ?? null }, null, 2) + "\n");
 }
 
 if (json) {
   process.stdout.write(JSON.stringify({
-    layers: rows,
-    summary: report.summary,
-    gate: report.gate,
-    taskSetHash: report.taskSetHash,
-    saved: savePath ? resolve(ROOT, savePath) : null,
+    mode, providerName, k, preset: presetName ?? null, layers: rows, summary: report.summary, gate: report.gate,
+    taskSetHash: report.taskSetHash, saved: savePath ? resolve(ROOT, savePath) : null,
   }, null, 2) + "\n");
 } else {
-  process.stdout.write("\n层    任务   通过      样例   待live  文件\n");
+  process.stdout.write(`\n模式: ${mode}${live ? `  provider: ${providerName}  k=${k}` : ""}${presetName ? `  preset: ${presetName}` : ""}\n`);
+  process.stdout.write("层    任务   已跑   通过      未跑   文件\n");
   for (const r of rows) {
     process.stdout.write(
-      `${r.layer.padEnd(5)} ${String(r.total).padEnd(6)} ${`${r.ok}/${r.total}`.padEnd(9)} ` +
-      `${String(r.samples).padEnd(6)} ${String(r.live).padEnd(7)} ${r.file}\n`,
+      `${r.layer.padEnd(5)} ${String(r.tasks).padEnd(6)} ${String(r.ran).padEnd(6)} ` +
+      `${`${r.ok}/${r.ran}`.padEnd(9)} ${String(r.pending).padEnd(6)} ${r.file}\n`,
     );
   }
-  const total = rows.reduce((a, r) => a + r.total, 0);
+  const total = rows.reduce((a, r) => a + r.ran, 0);
   const ok = rows.reduce((a, r) => a + r.ok, 0);
-  const live = rows.reduce((a, r) => a + r.live, 0);
-  process.stdout.write(`${"合计".padEnd(5)} ${String(total).padEnd(6)} ${`${ok}/${total}`.padEnd(9)} ${"".padEnd(6)} ${String(live).padEnd(7)}\n`);
-  if (live > 0) process.stdout.write(`待 live 任务 ${live} 个：deterministic 模式不执行，需 bench:v2 --mode live。\n`);
-  if (noDeterministic) process.stdout.write("本层无确定性任务，门禁阈值按「未测」处理（不等同于通过）。\n");
-  process.stdout.write(`\n任务集指纹: ${report.taskSetHash}\n`);
-  if (report.gate.violations.length) {
-    process.stdout.write(`门禁违规: ${report.gate.violations.join("; ")}\n`);
+  process.stdout.write(`${"合计".padEnd(5)} ${String(rows.reduce((a, r) => a + r.tasks, 0)).padEnd(6)} ${String(total).padEnd(6)} ${`${ok}/${total}`.padEnd(9)}\n`);
+  if (!live && rows.some((r) => r.pending > 0)) {
+    process.stdout.write(`未跑任务为 liveOnly，需 --mode live（不会用 mock 伪造通过）。\n`);
   }
-  process.stdout.write(`门禁: ${report.gate.pass ? "✓ PASS" : "✗ FAIL"}\n`);
+  process.stdout.write(`\n任务集指纹: ${report.taskSetHash}\n`);
+  if (report.gate.violations.length) process.stdout.write(`门禁违规: ${report.gate.violations.join("; ")}\n`);
+  process.stdout.write(`门禁: ${report.gate.pass ? "✓ PASS" : "✗ FAIL"}${live ? "（live 只断言协议零违规）" : ""}\n`);
   if (savePath) process.stdout.write(`报告已写入: ${savePath}\n`);
 }
 

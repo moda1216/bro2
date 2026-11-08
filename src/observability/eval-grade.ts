@@ -19,6 +19,7 @@ import type { EvalRunMetrics, EvalTask } from "./eval.ts";
 export interface Extracted {
   toolCalls: number;
   toolNames: Set<string>;
+  toolUsage: Record<string, number>;
   toolErrors: number;
   guards: number;
   compactions: number;
@@ -36,6 +37,7 @@ export function extract(events: readonly Event[]): Extracted {
   const out: Extracted = {
     toolCalls: 0,
     toolNames: new Set<string>(),
+    toolUsage: {},
     toolErrors: 0,
     guards: 0,
     compactions: 0,
@@ -57,6 +59,7 @@ export function extract(events: readonly Event[]): Extracted {
         out.toolCalls += calls.length;
         for (const c of calls) {
           out.toolNames.add(c.name);
+          out.toolUsage[c.name] = (out.toolUsage[c.name] ?? 0) + 1;
           requested.add(c.id);
         }
         break;
@@ -193,6 +196,6 @@ export function emptyRun(task: EvalTask, repeat: number, reasons: string[]): Eva
     taskId: task.id, category: task.category, repeat, ok: false, reasons, stoppedBy: "error",
     steps: 0, toolCalls: 0, toolErrors: 0, guards: 0, approvalsDenied: 0, compactions: 0,
     protocolViolations: 0, repairs: 0, groundingRejects: 0, loopAdvisories: 0, compactionEvidence: 0,
-    tokens: 0, latencyMs: 0, provider: "unknown", answer: "",
+    tools: {}, tokens: 0, latencyMs: 0, provider: "unknown", answer: "",
   };
 }

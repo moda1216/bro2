@@ -265,6 +265,10 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 
 **目标**：把通用文件工具升级为**代码感知的 Agent-Computer Interface**，直接提升编辑成功率与 token 效率。
 
+> **进度（v2.5.0）**：`W2-01` repomap ✅（预算受限的符号索引，入度排序）；`W2-02` apply_patch ✅（多文件/多块、行号漂移可定位、失败零写入）；
+> `W2-03` diagnostics ✅（node:test / unittest / tsc 三类输出结构化）；`W2-04` 编辑降级链 ✅（精确 → 空白归一化 → 去缩进，**只在唯一命中时降级**）；
+> `W2-05` aci:check ✅（策略级 7/7：改对、该拒就拒、零半成品）。**尚未证明**这些改进提升了 L2 通过率——需要同模型 A/B，属 W2-06。
+
 **交付物**
 
 | 文件 | 内容 | 关键设计 |

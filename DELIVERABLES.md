@@ -11,7 +11,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.4.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.5.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
@@ -43,6 +43,7 @@
 | **v2 分层任务装载** | `npm run bench:v2 -- --layer l1` | 19/19 通过，指纹 `d1419b1efaa7` 与既有评测一致 | 迁移回归门禁（第 14 道） |
 | **fixture 快照** | `npm run fixture:check -- --run` | 3 仓库结构完整 · 7,585 / 3,145,728 字节 · 离线测试 3/3 通过 | fixture 门禁（第 15 道） |
 | **L2 任务双态校准** | `npm run task:check -- --layer l2 --quiet` | 18/18：原始快照必失败、参考解必通过 | 任务有效性门禁 |
+| **编辑接口指标** | `npm run aci:check` | 7/7：精确/空白/缩进可改对，多处命中拒绝，补丁零半成品 | ACI 门禁 |
 | 远程同步一致性（防漏推，纯只读） | `npm run push:check` | `✓ 远程已同步`，main 与本地一致、最新 tag 已推送 | 信息展示门禁 |
 | 改进同步闭环（提交 + 唯一通道推送 + 自检） | `npm run ship` | 复用仓库外 600 权限 PAT，凭证不入库、不回显 | 发布流程 |
 | 元 RSI 写保护 + 冻结 fitness | `npm run meta:check` | 25 项 PASS | 元层门禁 |
@@ -108,6 +109,7 @@
 | **plan**（v2.3.0） | `backlog.ts`（只增账本读写 + 事件折叠）/ `select.ts`（任务调度 + 教训检索）/ `bin/autopilot.ts`（CLI，不实现不联网）/ `scripts/loc-budget.ts` | `tests/plan.test.ts` (12) / `npm run auto:status` / `npm run budget:check` |
 | **bench**（v2.3.1） | `schema.ts`（`bro2.task/2` 契约 + 幂等升格 + 唯一转换点）/ `loader.ts`（分层装载 + 去重 + fixture 引用校验）/ `scripts/bench-v2.ts`（分层评测入口，复用 `runEval`） | `tests/bench-v2.test.ts` (10) / `npm run bench:v2` |
 | **fixtures**（v2.3.2） | `data/fixtures/repos/` 3 个快照（ts-strkit / py-dates / js-cart，各埋 1 真缺陷）/ `manifest.json`（内容指纹）/ `scripts/fixture-check.ts`（`--run` / `--update`） | `tests/fixture.test.ts` (4) / `npm run fixture:check -- --run` |
+| **ACI**（v2.5.0） | `context/repomap.ts`（预算受限符号索引）/ `tools/patch.ts`（多文件 diff、失败零写入）/ `tools/diagnostics.ts`（三类测试输出结构化）/ `tools/edit-strategy.ts`（唯一命中才降级的编辑链）/ `tools/builtins/code.ts`（`repo_map` `search_symbol` `apply_patch` `diagnostics`） | `tests/repomap.test.ts` (8) / `tests/patch.test.ts` (7) / `tests/diagnostics.test.ts` (5) / `tests/edit.test.ts` (6) / `npm run aci:check` |
 | **l2 任务**（v2.4.0） | `data/tasks/v2/l2.jsonl` 18 个真实工程任务（3 仓库 × 6，`repo` + `hiddenTests` + 参考解）/ `src/bench/runner.ts`（fixture 铺设 + 隐藏断言执行 + 超时强杀）/ `scripts/task-check.ts`（双态校准） | `tests/hidden.test.ts` (6) / `npm run task:check` / `npm run bench:v2 -- --layer all` |
 | interfaces | `cli` `api` `web/index.html` | `npm run verify` |
 
@@ -267,7 +269,8 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.4.0**（W1-03/04：18 个 L2 真实工程任务 + 隐藏测试执行器 + 双态校准门禁；`task:check` 18/18 成立，`npm test` 196/196，`project:status` 全部阻断门禁通过；**尚无任何 L2 能力分数**——live 校准属 W1-05，未跑就不报）。
+- 当前最新：**v2.5.0**（W2 编码 ACI + 首次真实 L2 跑分：`npm test` 222/222、`aci:check` 7/7、L2 live 17/18；**负结果**：同模型下 minimal 也 17/18，差距 0pp，说明这批任务测不出 harness 差异）。
+- 上版：**v2.4.0**（W1-03/04：18 个 L2 任务 + 隐藏测试执行器 + 双态校准；`npm test` 196/196）。
 - 上版：**v2.3.2**（W1-02：3 个 fixture 仓库快照，各埋 1 个可证实的真缺陷，可见测试 16 项全绿）。
 - 上版：**v2.3.1**（W1-01：v2 任务 schema `bro2.task/2` + 分层装载器 + `bench:v2` 入口；l1 零漂移迁移 19/19）。
 - 上版：**v2.3.0**（自治执行机制：计划账本三件套 + `auto:next` 调度 + 教训检索；「少而精」工程宪法：第 13 道代码预算门禁）。

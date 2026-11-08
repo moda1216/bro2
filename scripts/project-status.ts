@@ -37,6 +37,7 @@ const GATES: Gate[] = [
   { id: "benchv2", label: "v2 分层装载 + l1 迁移回归（19/19）", cmd: "npm run bench:v2", args: ["--layer", "all", "--quiet"], timeoutMs: 120_000, gate: true },
   { id: "fixture", label: "fixture 快照完整性 + 离线测试可跑", cmd: "npm run fixture:check", args: ["--run"], timeoutMs: 180_000, gate: true },
   { id: "taskcheck", label: "L2 任务双态校准（快照必失败 / 参考解必通过）", cmd: "npm run task:check", args: ["--layer", "l2", "--quiet"], timeoutMs: 180_000, gate: true },
+  { id: "aci", label: "编辑接口指标（改对 / 该拒就拒 / 零半成品）", cmd: "npm run aci:check", timeoutMs: 60_000, gate: true },
   { id: "meta", label: "元 RSI 写保护 + 冻结 fitness", cmd: "npm run meta:check", timeoutMs: 60_000, gate: true },
   { id: "benchmark", label: "基准诚实性测量", cmd: "npm run benchmark:check", timeoutMs: 60_000, gate: true },
   { id: "external", label: "外部证据防伪造", cmd: "npm run external:check", timeoutMs: 60_000, gate: true },

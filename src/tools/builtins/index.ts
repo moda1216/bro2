@@ -7,12 +7,14 @@ import { FILE_TOOLS } from "./files.ts";
 import { SYSTEM_TOOLS } from "./system.ts";
 import { COGNITION_TOOLS } from "./cognition.ts";
 import { ORCHESTRATION_TOOLS } from "./orchestration.ts";
+import { CODE_TOOLS } from "./code.ts";
 
 export const ALL_BUILTIN_TOOLS: readonly ToolDef[] = [
   ...FILE_TOOLS,
   ...SYSTEM_TOOLS,
   ...COGNITION_TOOLS,
   ...ORCHESTRATION_TOOLS,
+  ...CODE_TOOLS,
 ];
 
 export function registerBuiltinTools(_runtime: Runtime, registry: ToolRegistry): () => void {
@@ -24,4 +26,4 @@ export function registerBuiltinTools(_runtime: Runtime, registry: ToolRegistry):
   };
 }
 
-export { FILE_TOOLS, SYSTEM_TOOLS, COGNITION_TOOLS, ORCHESTRATION_TOOLS };
+export { FILE_TOOLS, SYSTEM_TOOLS, COGNITION_TOOLS, ORCHESTRATION_TOOLS, CODE_TOOLS };

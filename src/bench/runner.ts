@@ -40,10 +40,13 @@ export function stageRepo(fixtureRoot: string, repo: string, dest: string): void
 /** 跑一条命令；超时强杀，绝不留下悬挂进程。 */
 function runOne(cwd: string, command: string, timeoutMs: number): Promise<HiddenResult> {
   return new Promise((resolve) => {
+    // 与 diagnostics 同因：不能把父测试的 NODE_TEST_CONTEXT 传给被测命令。
+    const env: Record<string, string> = { ...process.env, PYTHONDONTWRITEBYTECODE: "1", NO_COLOR: "1" } as Record<string, string>;
+    delete env.NODE_TEST_CONTEXT;
     const child = spawn("sh", ["-c", command], {
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1", NO_COLOR: "1" },
+      env,
     });
     let out = "";
     const append = (d: Buffer) => { if (out.length < 8000) out += d.toString(); };

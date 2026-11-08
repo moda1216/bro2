@@ -21,8 +21,8 @@ import { isCompositeProvider } from "../src/models/cache.ts";
 import { isMeshProvider } from "../src/models/keyless.ts";
 import type { LLMProvider } from "../src/models/base.ts";
 import { runPreflight, formatPreflight } from "../src/models/preflight.ts";
-import type { PreflightResult } from "../src/models/preflight.ts";
 import { probeTargets } from "../src/models/resolve.ts";
+import { liveGate } from "../src/models/live-gate.ts";
 import { runEval, loadTasks, loadBaseline, saveReport, formatReport } from "../src/observability/eval.ts";
 import { runEvolve, formatEvolveReport, runMetaEvolve, formatMetaReport } from "../src/rsi/index.ts";
 import { runBenchmark, formatBenchmarkReport } from "../src/benchmark/index.ts";
@@ -208,32 +208,20 @@ else if (flags.mode === "eval") {
 
   // live 预检门禁：端点未就绪时拒绝开跑，避免产出会被误读成「能力差」的低分报告。
   if (mode === "live" && !flags.skipPreflight) {
-    const provider = os.providers.get(providerName);
-    if (!provider || providerName === "mock") {
-      process.stderr.write(`预检失败：provider "${providerName}" 是离线 Mock，live 评测禁止使用 Mock。\n`);
+    const gate = await liveGate(os.providers.get(providerName), providerName);
+    for (const pf of gate.results) {
+      if (!flags.json) process.stdout.write(formatPreflight(pf) + "\n");
+    }
+    if (!gate.probed) {
+      process.stderr.write(`预检${gate.ready ? "跳过" : "失败"}：${gate.reason}。\n`);
+    }
+    if (!gate.ready) {
+      if (flags.json) {
+        process.stdout.write(JSON.stringify({ error: "preflight-blocked", preflight: gate.results.at(-1) ?? null }, null, 2) + "\n");
+      }
+      process.stderr.write("已拒绝运行 live 评测：先修复上述阻断项；确需跳过用 --skip-preflight（不建议）。\n");
       await os.shutdown();
       process.exit(1);
-    }
-    // 组合/网状 provider（hybrid→keyless→各上游）递归穿透到真实端点，
-    // 任一远端上游 ready 即放行（聚合器的故障转移保证可用）。
-    const targets = probeTargets(provider);
-    if (targets.length === 0) {
-      process.stderr.write(`预检跳过：provider "${providerName}" 没有可探测的 OpenAI 兼容底层端点。\n`);
-    } else {
-      let anyReady = false;
-      let last: PreflightResult | undefined;
-      for (const t of targets) {
-        const pf = await runPreflight(t);
-        last = pf;
-        if (!flags.json) process.stdout.write(formatPreflight(pf) + "\n");
-        if (pf.ready) { anyReady = true; break; } // 网状命中一个健康上游即可
-      }
-      if (!anyReady) {
-        if (flags.json) process.stdout.write(JSON.stringify({ error: "preflight-blocked", preflight: last }, null, 2) + "\n");
-        process.stderr.write("已拒绝运行 live 评测：所有上游端点均未就绪；先修复上述阻断项；确需跳过用 --skip-preflight（不建议）。\n");
-        await os.shutdown();
-        process.exit(1);
-      }
     }
   }
 

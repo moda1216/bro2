@@ -10,6 +10,56 @@
 
 ---
 
+## [2.5.0] — 2026-11-08 · W2 编码 ACI 与首次真实 L2 跑分（MINOR）
+
+> 类型：**MINOR · 新能力域**。
+> 把「改文件」从精确字符串替换升级为代码感知的编辑接口；同时第一次用真实模型跑完 L2，
+> 得到一个**负结果**：这批任务测不出 harness 差异。两个交付一起看才有意义。
+
+### 新增（Added）
+- `src/context/repomap.ts` — 零依赖符号索引：导出符号、相对导入边、被引用次数，
+  输出**预算受限**（默认 1200 tokens，超了先丢低入度文件）。
+- `src/tools/patch.ts` + `apply_patch` 工具 — unified diff：
+  多文件/多块、行号漂移按内容定位、**失败零写入**（两阶段计算后才落盘）、
+  失败返回最接近行号与「下一步」。
+- `src/tools/diagnostics.ts` + `diagnostics` 工具 — 把 `node:test` / `unittest` / `tsc`
+  三类输出解析成「哪个测试、哪一行、什么错」；自动识别项目类型，识别不了就明说。
+- `src/tools/edit-strategy.ts` — 编辑降级链：精确 → 空白归一化 → 去缩进。
+  **只在唯一命中时降级**；多处命中一律拒绝并报位置（错改比不改更难发现）。
+- `scripts/aci-check.ts` — 编辑接口指标门禁：改对 / 该拒就拒 / 零半成品，7/7。
+- `bench:v2 --mode live`：`--model` / `--preset` / `--repeat` / `--sample` / `--only`，
+  报告默认落 `data/bench/v2-<provider>-<ts>.json`，逐任务含 `tools` 分布（ACI 归因用）。
+- `src/models/live-gate.ts` — 预检唯一实现，`eval` 与 `bench:v2` 共用，杜绝两个入口判定分叉。
+- `docs/BENCH-v2.md` — 任务来源、判定口径、复现命令、**不能下的结论**。
+
+### 变更（Changed）
+- `file_edit` 语义收紧：`old_text` 在文件中出现多次时**拒绝执行**（原为替换第一处）。
+  这是一次有意的安全变更——静默改错位置的代价远高于让模型补一行上下文。
+- `EvalRunMetrics` 增加 `tools`（工具使用分布），不参与判分，只用于归因。
+
+### 证据（v2.5.0 发布时）
+- `npm test` → **222/222 通过**。
+- `npm run aci:check` → **7/7**；`project:status` 全部阻断门禁通过（新增 `aci`）。
+- L2 真实跑分（kilo，k=1）：**standard 17/18（94.4%）**，平均 7.39 步 / 12.06 次工具。
+
+### 负结果（Negative Result · 必须保留）
+同模型同任务，只换 harness 预设：
+
+| harness | 通过率 | 平均步数 | 平均工具调用 |
+| --- | --- | --- | --- |
+| standard | 17/18 | 7.39 | 12.06 |
+| minimal | 17/18 | 6.94 | 9.72 |
+
+**0pp 差距，成本高 24%。** 说明这 18 个单文件任务测不出 harness 差异：
+可见测试已指明行为，7 步内完成，`repo_map` / `diagnostics` / 压缩 / 纠错都没被触发。
+区分度必须来自 L3 长程与多约束任务（W1-07）——在那之前，
+「bro2 比最小 harness 强」**没有证据**。
+
+### 诚实边界（Unchanged）
+- 任务、fixture、隐藏断言均为自建，不构成外部有效性；`leadership.verdict` 仍为 `not-proven`。
+- 18 个任务、k=1，单题权重 5.6pp，一次波动即可改变结论。
+- L3 为空：长程压缩与纠错能力**从未被测过**。
+
 ## [2.4.0] — 2026-11-08 · W1-03/04：L2 真实工程任务与隐藏验收（MINOR）
 
 > 类型：**MINOR · 新能力域**。

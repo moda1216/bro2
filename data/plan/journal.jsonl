@@ -6,3 +6,15 @@
 {"at": "2026-11-08T12:45:00.000Z", "id": "W1-04", "event": "done", "loc": 250, "evidence": "task:check --layer l2 = 18/18 双态成立；hidden.test.ts 6/6；eval.ts 拆出 eval-grade.ts 后 516 行", "note": "超预算: 含 stageRepo/超时强杀/双态校准脚本与夹具测试"}
 {"at": "2026-11-08T12:45:00.000Z", "id": "W1-03", "event": "start"}
 {"at": "2026-11-08T12:45:00.000Z", "id": "W1-03", "event": "done", "loc": 60, "evidence": "data/tasks/v2/l2.jsonl 18 个任务（3 repo × 6），全部 repo+hiddenTests+reference，liveOnly", "note": "任务为数据不计源码行；loc 记 JSONL 生成与校验成本"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W1-05", "event": "start"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W1-05", "event": "done", "loc": 90, "evidence": "kilo/standard 17/18（7.39 步）vs kilo/minimal 17/18（6.94 步）：差距 0pp，验收要求 ≥20pp 未达成", "note": "负结果：L2 单点任务无区分度；区分度须来自 L3 长程任务。已写入 BENCH-v2 §5.1"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W2-01", "event": "start"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W2-01", "event": "done", "loc": 170, "evidence": "tests/repomap.test.ts 8/8；fixture 骨架与入度排序可读"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W2-02", "event": "start"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W2-02", "event": "done", "loc": 230, "evidence": "tests/patch.test.ts 7/7：多文件、行号漂移、失败零写入、/dev/null 新建"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W2-03", "event": "start"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W2-03", "event": "done", "loc": 150, "evidence": "tests/diagnostics.test.ts 5/5；改坏代码可定位到具体测试名"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W2-04", "event": "start"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W2-04", "event": "done", "loc": 130, "evidence": "tests/edit.test.ts 6/6；多处命中一律拒绝"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W2-05", "event": "start"}
+{"at": "2026-11-08T13:40:00.000Z", "id": "W2-05", "event": "done", "loc": 100, "evidence": "aci:check 7/7 接入发布门禁；报告记录工具分布"}

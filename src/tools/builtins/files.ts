@@ -7,6 +7,7 @@ import { dirname, join, relative } from "node:path";
 import { defineTool, RiskLevel } from "../registry.ts";
 import type { ToolDef } from "../registry.ts";
 import type { PermissionPolicy } from "../../governance/permissions.ts";
+import { applyEdit, formatEditFailure } from "../edit-strategy.ts";
 
 function resolveSafe(ctx: { runtime: import("../../kernel/runtime.ts").Runtime }, p: string): string {
   const policy = ctx.runtime.require<PermissionPolicy>("permissions");
@@ -110,9 +111,10 @@ export const fileEdit = defineTool({
     const p = resolveSafe(ctx, args.path);
     if (!existsSync(p)) return `文件不存在: ${args.path}`;
     const text = readFileSync(p, "utf8");
-    if (!text.includes(args.old_text)) return `未找到要替换的文本: ${args.old_text.slice(0, 80)}`;
-    writeFileSync(p, text.replace(args.old_text, args.new_text));
-    return `已替换 ${args.path} 中的文本`;
+    const r = applyEdit(text, args.old_text, args.new_text);
+    if (!r.ok) return formatEditFailure(r);
+    writeFileSync(p, r.text);
+    return `已替换 ${args.path} 中的文本${r.note}`;
   },
 });
 

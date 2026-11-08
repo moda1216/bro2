@@ -90,6 +90,8 @@ export interface EvalRunMetrics {
   groundingRejects: number;
   loopAdvisories: number;
   compactionEvidence: number;
+  /** 工具使用分布：名字 → 次数（用于 ACI 归因，不参与判分） */
+  tools: Record<string, number>;
   tokens: number;
   latencyMs: number;
   provider: string;
@@ -197,7 +199,7 @@ async function runOne(os: AgentOS, task: EvalTask, workspace: string, repeat: nu
       reasons: [`运行抛异常: ${msg}`], stoppedBy: "exception", steps: 0, toolCalls: 0,
       toolErrors: 0, guards: 0, approvalsDenied: 0, compactions: 0,
       protocolViolations: 0, repairs: 0, groundingRejects: 0, loopAdvisories: 0,
-      compactionEvidence: 0, tokens: 0, latencyMs: Date.now() - started,
+      compactionEvidence: 0, tools: {}, tokens: 0, latencyMs: Date.now() - started,
       provider: "unknown", answer: "",
     };
   }
