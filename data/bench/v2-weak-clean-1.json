@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-08T23:47:43.577Z",
+  "mode": "live",
+  "providerName": "pollinations",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "c8333c77aef8",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "v2-ts-01",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "停止原因 provider_error ≠ completed",
+        "隐藏测试失败 (exit=1): node --experimental-strip-types --no-warnings --input-type=module -e \"const m=await import('./src/index.ts');for(const max of [0,1,2,3]){const s=m.truncate('abcdefghij',max);if(s.length>max){console.error('max='+max+' len='+s.length);process.exit(1)}}\" → max=0 len=10"
+      ],
+      "stoppedBy": "provider_error",
+      "steps": 3,
+      "toolCalls": 1,
+      "toolErrors": 2,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "file_list": 2
+      },
+      "providerRetries": 3,
+      "faultsInjected": 0,
+      "emptyGuardHits": 4,
+      "tokens": 4651,
+      "latencyMs": 52530,
+      "provider": "pollinations",
+      "answer": "模型调用失败：全部模型均不可用 → pollinations: empty response from provider (possible truncated stream)"
+    }
+  ],
+  "summary": {
+    "overall": 0,
+    "byCategory": {
+      "multi-step": 0
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 0,
+    "avgSteps": 3,
+    "avgToolCalls": 1,
+    "avgLatencyMs": 52530,
+    "totalTokens": 4651,
+    "toolErrorRate": 2,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 0,
+    "total": 1,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": false,
+    "violations": [
+      "工具错误率 2 > 1"
+    ]
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  },
+  "layers": [
+    {
+      "layer": "l2",
+      "tasks": 18,
+      "ran": 1,
+      "ok": 0,
+      "pending": 0,
+      "samples": 0,
+      "file": "data/tasks/v2/l2.jsonl",
+      "hash": "96a830ee92b8"
+    }
+  ],
+  "preset": null
+}

@@ -35,6 +35,8 @@ export interface RuntimeConfig {
     providers: Record<string, Record<string, unknown>>;
     /** 路由层瞬时故障重试（429/5xx/网络）。attempts=0 关闭，用于消融对照。 */
     retry?: { attempts: number; baseMs: number };
+    /** 空/半截响应守卫，默认开；false 用于消融对照。 */
+    emptyGuard?: boolean;
   };
   server: { host: string; port: number };
   /** 行为策略分派层；缺省时由 parsePolicy 回退到保守默认。 */

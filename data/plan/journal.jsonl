@@ -24,3 +24,6 @@
 {"at": "2026-11-09T00:20:00.000Z", "id": "W3-F1", "event": "done", "loc": 260, "evidence": "flaky 8/8 单测；路由重试 attempts=0 时零重试（消融变量成立）；isTransientError 与适配器同口径"}
 {"at": "2026-11-09T00:20:00.000Z", "id": "W3-F2", "event": "start"}
 {"at": "2026-11-09T00:20:00.000Z", "id": "W3-F2", "event": "done", "loc": 30, "evidence": "retry on 3/3（5 次重试全恢复）vs no-retry 0/2（provider_error）；repair 3步/repairs=1 vs fail 8步/1错误", "note": "首个正向 harness 增益证据；malformed-args 初版是哑弹（见 lessons），改参数名拼写后可归因"}
+{"at": "2026-11-09T00:10:00.000Z", "id": "W3-F3", "event": "done", "loc": 180, "evidence": "3 类脏故障 + emptyGuard 守卫；flaky.test 15/15；kilo 三组对照：retry 5/5 vs 0/5、guard 2/2 vs 0/2、repair 效率级", "note": "顺手修 runOne 漏 tools 字段的潜伏 bug"}
+{"at": "2026-11-09T00:10:00.000Z", "id": "W3-F4", "event": "done", "loc": 30, "evidence": "6 个新故障任务 f04–f09，故障任务 3→9，task:check --layer all 10/10", "note": "f08 隐藏断言初版算错 doneCount 期望，双态校准拦下后修正——校准门禁有效"}
+{"at": "2026-11-09T00:10:00.000Z", "id": "W3-WEAK", "event": "done", "evidence": "严格模式实测 4 端点：pollinations 无故障基线也 provider_error（工具错误率 2–3），其余 3 个预检未就绪；本地 0.5b 未启动", "note": "负结果：拿不到可信弱模型对照，证据缺口如实保留，不写『弱模型增益更大』"}

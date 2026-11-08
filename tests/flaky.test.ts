@@ -3,12 +3,14 @@
  * 1. flaky 包装器前 N 次注入、之后透传，injected 计数准确；
  * 2. 路由层对瞬时故障（429/5xx）原地退避重试，非瞬时故障不重试；
  * 3. attempts=0 时一次都不重试（消融对照的「唯一变量」成立）；
- * 4. malformed-args 只污染标量参数类型，工具调用结构保持完整。
+ * 4. malformed-args 拼错首个长参数名（命中 repair 分支）；
+ * 5. 脏故障：timeout / retry-after / empty-response，及空响应守卫的消融唯一变量。
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { wrapFlaky, isTransientError } from "../src/models/router.ts";
-import { ProviderRouter } from "../src/models/router.ts";
+import {
+  wrapFlaky, isTransientError, isEmptyResponse, EmptyResponseError, ProviderRouter,
+} from "../src/models/router.ts";
 import type { LLMProvider, LLMRequest, LLMResponse } from "../src/models/base.ts";
 
 function stub(name: string, failTimes: number, msg = "HTTP 429: rate limit exceeded"): LLMProvider & { calls: number } {
@@ -129,4 +131,81 @@ test("router：非瞬时故障（400）不重试，直接计入熔断", async ()
   await assert.rejects(() => router.complete({ messages: [] }), /400/);
   assert.equal(p.calls, 1); // 不重试
   assert.equal(router.retryAttempts, 0);
+});
+
+// ---------------------------------------------------------------- 脏故障形态（v2.8.0）
+const okRes = (content = "ok"): LLMResponse => ({
+  content, toolCalls: [],
+  usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+  model: "base", durationMs: 1, provider: "base",
+});
+
+test("timeout：短 stall 后抛与真实超时同构的错误，可被瞬态判定识别", async () => {
+  const base: LLMProvider = { name: "base", async complete() { return okRes(); } };
+  const f = wrapFlaky(base, { kind: "timeout", times: 1, stallMs: 5 });
+  await assert.rejects(() => f.complete({ messages: [] }), /ETIMEDOUT.*timed out/);
+  assert.ok(isTransientError(new Error("fetch failed: ETIMEDOUT connection timed out")));
+  assert.equal((await f.complete({ messages: [] })).content, "ok");
+  assert.equal(f.injected, 1);
+});
+
+test("retry-after：错误携带 retryAfterMs 供路由层尊重", async () => {
+  const base: LLMProvider = { name: "base", async complete() { return okRes(); } };
+  const f = wrapFlaky(base, { kind: "retry-after", times: 1, retryAfterMs: 7 });
+  await assert.rejects(() => f.complete({ messages: [] }), (e: unknown) => {
+    assert.match((e as Error).message, /Retry-After/);
+    assert.equal((e as { retryAfterMs?: number }).retryAfterMs, 7);
+    return true;
+  });
+  assert.equal(f.injected, 1);
+});
+
+test("empty-response：返回 200 但空内容，不抛错；isEmptyResponse 为真", async () => {
+  const base: LLMProvider = { name: "base", async complete() { return okRes(); } };
+  const f = wrapFlaky(base, { kind: "empty-response", times: 2 });
+  const r1 = await f.complete({ messages: [] });
+  assert.ok(isEmptyResponse(r1), "半截响应必须能被守卫识别");
+  await f.complete({ messages: [] });
+  assert.ok(!isEmptyResponse(await f.complete({ messages: [] })), "times 之后必须透传");
+  assert.equal(f.injected, 2);
+});
+
+test("isEmptyResponse：content 或 toolCalls 任一非空即不算半截", () => {
+  assert.ok(isEmptyResponse({ ...okRes(""), toolCalls: [] }));
+  assert.ok(!isEmptyResponse(okRes("hi")));
+  assert.ok(!isEmptyResponse({ ...okRes(""), toolCalls: [{ id: "c", name: "calc", arguments: {} }] }));
+});
+
+test("router：emptyGuard 默认拦半截响应并重试恢复", async () => {
+  const router = new ProviderRouter("p");
+  router.register("p", wrapFlaky({ name: "p", async complete() { return okRes("done"); } }, { kind: "empty-response", times: 2 }));
+  router.setStrict(true);
+  router.setRetry({ attempts: 3, baseMs: 1 });
+  const r = await router.complete({ messages: [] });
+  assert.equal(r.content, "done");
+  assert.equal(router.emptyGuardHitCount, 2);
+  assert.equal(router.retryAttempts, 2);
+});
+
+test("router：emptyGuard=false 时半截响应冒充合法终答返回（消融唯一变量）", async () => {
+  const router = new ProviderRouter("p");
+  router.register("p", wrapFlaky({ name: "p", async complete() { return okRes("done"); } }, { kind: "empty-response", times: 2 }));
+  router.setStrict(true);
+  router.setRetry({ attempts: 3, baseMs: 1 });
+  router.setEmptyGuard(false);
+  const r = await router.complete({ messages: [] });
+  assert.equal(r.content, "", "守卫关闭 → 空响应直接返回");
+  assert.equal(router.emptyGuardHitCount, 0);
+});
+
+test("router：retry-after 尊重服务端等待（等待时长被 clamp 不拖慢）", async () => {
+  const router = new ProviderRouter("p");
+  const p = stub("p", 1, "HTTP 429: rate limit");
+  router.register("p", p);
+  router.setStrict(true);
+  router.setRetry({ attempts: 2, baseMs: 1 });
+  const t0 = Date.now();
+  const r = await router.complete({ messages: [] });
+  assert.equal(r.content, "ok");
+  assert.ok(Date.now() - t0 < 1000, "退避不应拖慢评测");
 });

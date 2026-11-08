@@ -10,6 +10,59 @@
 
 ---
 
+## [2.8.0] — 2026-11-09 · 脏故障形态、空响应守卫与弱模型证据缺口（MINOR）
+
+> 类型：**MINOR · 新故障形态 + 新恢复机制 + 任务集扩容**。
+> 把 v2.7.0 的「立刻报错」型故障扩展为真实端点更常见的脏形态，
+> 并把故障任务从 3 个扩到 9 个；同时如实记录一次**弱模型对照的证据缺口**。
+
+### 新增（Added）
+- `src/models/router.ts` · 三类真实脏故障（确定性注入，前 N 次生效后透传）：
+  - `timeout` — 端点挂起后 ETIMEDOUT（短 stall，上限 1s，不拖慢评测）；
+  - `retry-after` — 429 带 `Retry-After`，错误对象携带 `retryAfterMs`；
+  - `empty-response` — **200 但半截/空响应，不抛错**，绕过所有 catch 型重试。
+- **空响应守卫**（`emptyGuard`，默认开）：`content` 与 `toolCalls` 皆空即视为半截响应，
+  主动转 `EmptyResponseError` 再重试；`emptyGuardHitCount` 计数器供归因。
+  `--no-empty-guard` 为消融对照的唯一变量。
+- 路由退避**尊重 Retry-After**：带 `retryAfterMs` 的错误用其指示值，否则指数退避。
+- `EvalRunMetrics.emptyGuardHits`：证明「守卫真的动了」，不是哑弹故障。
+- 6 个新 L3 故障任务（f04–f09）：timeout / retry-after / empty-response / 多文件协作 / 参数拼写，
+  故障任务 3 → **9 个**，每类机制 ≥2 独立样本，双态校准 **10/10**（含 l3-01）。
+- `tests/flaky.test.ts` 8 → **15** 项；顺手修复 `runOne` 返回对象漏 `tools` 字段的潜伏 bug
+  （此前 ACI 工具分布一直是 undefined）。
+
+### 证据（kilo，k=1，2026-11-09）
+| 机制组 | 任务 | 机制开 | 机制关 | 稳定信号 |
+| --- | --- | --- | --- | --- |
+| 路由重试（429/500/timeout/retry-after） | f01/f02/f04/f05/f07 | **5/5** | **0/5** 第 1 步 `provider_error` | 10 次注入 → 10 次重试全恢复 |
+| 空响应守卫（empty-response） | f06/f09 | **2/2**，`emptyGuardHits` 2/1 | **0/2** 静默空终答 | 3 次拦截 |
+| repair 策略 | f03/f08 | 2/2，repairs 2/1，0 工具错误 | 2/2，工具错误 1/0 | **效率级**，步数方向不一致 |
+
+证据：`data/bench/v2-kilo-{retry9,guard9,repair9}-{on,off}.json`。
+**半截响应不开守卫时会伪装成 `stoppedBy=completed` 但终答为空**——比显式 `provider_error` 更危险，
+这是本版补上的真实盲区。
+
+### 负结果 · 弱模型对照证据缺口（必须保留）
+严格模式（禁止 mock 降级）实测全部免 Key 端点：
+
+| 端点 | 预检 | 真实跑分 | 判定 |
+| --- | --- | --- | --- |
+| `pollinations` | 就绪 | 无故障基线也 `provider_error`、工具错误率 2–3 | **链路抖动**，非能力弱 |
+| `opencode-zen` / `llm7` | 未就绪 | 拒绝（SSE / 原生 tool_calls 缺失） | 链路故障 |
+| `keylessai` | 未就绪 | 拒绝（连接失败） | 链路故障 |
+| 本地 `qwen2.5:0.5b` | — | Ollama 未启动 | 不可用 |
+
+`run` 命令里 llm7/opencode-zen 输出的「离线 Mock 模型驱动」正是**静默降级到 Mock**，
+严格模式已挡掉。**「预检就绪」≠「能跑分」，「provider_error」≠「能力弱」。**
+补齐条件：一个链路稳定、能力明显低于 kilo 的真实端点。在此之前不写「弱模型下增益更大」。
+
+### 诚实边界（累计）
+- 全部 kilo 单模型、k=1；9 任务仍不足以做统计显著性检验；
+- repair 组步数方向不一致（f08 开 5 步 vs 关 3 步），只有 `repairs`/`toolErrors` 是稳定信号；
+- 半截响应只模拟「整段为空」，未覆盖「半句文本 + 截断 tool_call JSON」；
+- 证明的是「**对应恢复机制有价值**」，不改变无故障场景 0pp（§5.1/§5.2）；
+- `leadership.verdict` 仍为 `not-proven`（外部有效性未建立）。
+
 ## [2.7.0] — 2026-11-09 · 故障注入场景与第一组正证据（MINOR）
 
 > 类型：**MINOR · 新测量能力 + 首个正向 harness 增益证据**。

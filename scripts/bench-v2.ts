@@ -50,6 +50,8 @@ const only = flag("only"); // 支持逗号分隔多任务
 const presetName = flag("preset");
 /** 消融开关：关闭路由层瞬时重试（故障任务的唯一变量） */
 const noRetry = has("no-retry");
+/** 消融开关：关闭空/半截响应守卫（empty-response 故障的唯一变量） */
+const noEmptyGuard = has("no-empty-guard");
 /** 消融开关：畸形参数策略 fail（默认 repair 见 agentos.config.json / policy） */
 const policyArg = flag("policy"); // 形如 malformedArgs=fail
 
@@ -130,7 +132,10 @@ if (live && !has("skip-preflight")) {
 }
 
 const configOverride: Record<string, unknown> = {};
-if (noRetry) configOverride.model = { retry: { attempts: 0, baseMs: 0 } };
+const modelOverride: Record<string, unknown> = {};
+if (noRetry) modelOverride.retry = { attempts: 0, baseMs: 0 };
+if (noEmptyGuard) modelOverride.emptyGuard = false;
+if (Object.keys(modelOverride).length > 0) configOverride.model = modelOverride;
 if (policyArg) {
   const [k2, v2] = policyArg.split("=");
   configOverride.policy = { [k2!]: v2 };
@@ -183,12 +188,13 @@ if (json) {
     taskSetHash: report.taskSetHash, saved: savePath ? resolve(ROOT, savePath) : null,
   }, null, 2) + "\n");
 } else {
-  process.stdout.write(`\n模式: ${mode}${live ? `  provider: ${providerName}  k=${k}` : ""}${presetName ? `  preset: ${presetName}` : ""}${noRetry ? "  [no-retry]" : ""}${policyArg ? `  [policy ${policyArg}]` : ""}\n`);
+  process.stdout.write(`\n模式: ${mode}${live ? `  provider: ${providerName}  k=${k}` : ""}${presetName ? `  preset: ${presetName}` : ""}${noRetry ? "  [no-retry]" : ""}${noEmptyGuard ? "  [no-empty-guard]" : ""}${policyArg ? `  [policy ${policyArg}]` : ""}\n`);
   if (live) {
     const retries = report.runs.reduce((a, r) => a + (r.providerRetries ?? 0), 0);
     const injected = report.runs.reduce((a, r) => a + (r.faultsInjected ?? 0), 0);
-    if (retries > 0 || injected > 0) {
-      process.stdout.write(`故障注入: ${injected} 次 · 路由重试: ${retries} 次\n`);
+    const guards = report.runs.reduce((a, r) => a + (r.emptyGuardHits ?? 0), 0);
+    if (retries > 0 || injected > 0 || guards > 0) {
+      process.stdout.write(`故障注入: ${injected} 次 · 路由重试: ${retries} 次 · 空响应拦截: ${guards} 次\n`);
     }
   }
   process.stdout.write("层    任务   已跑   通过      未跑   文件\n");

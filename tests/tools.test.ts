@@ -122,7 +122,9 @@ test("Preset：4 个内置预设 + 工具白名单", () => {
 test("模型路由：首个 provider 失败时降级到备用", async () => {
   const router = new ProviderRouter("a");
   router.register("a", { name: "a", complete: async () => { throw new Error("boom"); } });
-  router.register("b", { name: "b", complete: async () => emptyResponse("b", "m") });
+  // 备用必须返回「合法终答」：content 空 + 无 toolCalls 会被空响应守卫正确识别为半截响应
+  // 并重试，无法作为降级成功的结果（见 tests/flaky.test.ts emptyGuard 用例）。
+  router.register("b", { name: "b", complete: async () => ({ ...emptyResponse("b", "m"), content: "fallback ok" }) });
   const res = await router.complete({ messages: [] });
   assert.ok(res.provider.startsWith("b"));
   assert.equal(router.list().find((x) => x.name === "a")?.failures, 1);

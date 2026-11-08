@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-08T23:42:07.370Z",
+  "mode": "live",
+  "providerName": "pollinations",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "7704dc940acc",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "v2-l3-f01",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "停止原因 provider_error ≠ completed",
+        "隐藏测试失败 (exit=1): node --input-type=module -e \"const {createStore}=await import('./src/store.js');const s=createStore();const a=s.add('a');s.add('b');if(typeof s.remove!=='function')process.exit(1);if(s.remove(a.id)!==true)process.exit(1);if(s.remove(999)!==false)process.exit(1);if(s.all().length!==1)process.exit(1);if(s.add('c').id!==3)process.exit(1)\" → "
+      ],
+      "stoppedBy": "provider_error",
+      "steps": 4,
+      "toolCalls": 1,
+      "toolErrors": 3,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "file_list": 3
+      },
+      "providerRetries": 5,
+      "faultsInjected": 2,
+      "emptyGuardHits": 4,
+      "tokens": 7071,
+      "latencyMs": 57591,
+      "provider": "pollinations",
+      "answer": "模型调用失败：全部模型均不可用 → pollinations: empty response from provider (possible truncated stream)"
+    }
+  ],
+  "summary": {
+    "overall": 0,
+    "byCategory": {
+      "multi-step": 0
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 0,
+    "avgSteps": 4,
+    "avgToolCalls": 1,
+    "avgLatencyMs": 57591,
+    "totalTokens": 7071,
+    "toolErrorRate": 3,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 0,
+    "total": 1,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": false,
+    "violations": [
+      "工具错误率 3 > 1"
+    ]
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  },
+  "layers": [
+    {
+      "layer": "l3",
+      "tasks": 10,
+      "ran": 1,
+      "ok": 0,
+      "pending": 0,
+      "samples": 0,
+      "file": "data/tasks/v2/l3.jsonl",
+      "hash": "363230b44d05"
+    }
+  ],
+  "preset": null
+}

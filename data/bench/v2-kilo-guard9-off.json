@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-08T23:43:42.127Z",
+  "mode": "live",
+  "providerName": "kilo",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "8d953fd9cc72",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "v2-l3-f06",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "终答为空",
+        "注入故障未全部触发（1/2）：任务太短或提前终止，本结果不可用于恢复力结论",
+        "隐藏测试失败 (exit=1): node --input-type=module -e \"const {openItems}=await import('./src/query.js');if(typeof openItems!=='function')process.exit(1);const items=[{id:1,title:'a',priority:2,done:false},{id:2,title:'b',priority:2,done:true},{id:3,title:'c',priority:2,done:false}];const r=openItems(items);if(r.length!==2||r[0].id!==1||r[1].id!==3)process.exit(1);if(items.length!==3)process.exit(1)\" → "
+      ],
+      "stoppedBy": "completed",
+      "steps": 1,
+      "toolCalls": 0,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {},
+      "providerRetries": 0,
+      "faultsInjected": 1,
+      "emptyGuardHits": 0,
+      "tokens": 0,
+      "latencyMs": 17,
+      "provider": "kilo",
+      "answer": ""
+    },
+    {
+      "taskId": "v2-l3-f09",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "终答为空",
+        "隐藏测试失败 (exit=1): node --input-type=module -e \"const {createStore}=await import('./src/store.js');const {distinctPriorities}=await import('./src/query.js');const s=createStore();s.add('a',3);s.add('b',1);s.add('c',3);if(typeof s.findByTitle!=='function'||typeof distinctPriorities!=='function')process.exit(1);if(s.findByTitle('b').id!==2)process.exit(1);if(s.findByTitle('zzz')!==null)process.exit(1);const p=distinctPriorities(s.all());if(p.join(',')!=='1,3')process.exit(1)\" → "
+      ],
+      "stoppedBy": "completed",
+      "steps": 1,
+      "toolCalls": 0,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {},
+      "providerRetries": 0,
+      "faultsInjected": 1,
+      "emptyGuardHits": 0,
+      "tokens": 0,
+      "latencyMs": 14,
+      "provider": "kilo",
+      "answer": ""
+    }
+  ],
+  "summary": {
+    "overall": 0,
+    "byCategory": {
+      "multi-step": 0
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 0,
+    "avgSteps": 1,
+    "avgToolCalls": 0,
+    "avgLatencyMs": 16,
+    "totalTokens": 0,
+    "toolErrorRate": 0,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 0,
+    "total": 2,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": true,
+    "violations": []
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  },
+  "layers": [
+    {
+      "layer": "l3",
+      "tasks": 10,
+      "ran": 2,
+      "ok": 0,
+      "pending": 0,
+      "samples": 0,
+      "file": "data/tasks/v2/l3.jsonl",
+      "hash": "363230b44d05"
+    }
+  ],
+  "preset": null
+}

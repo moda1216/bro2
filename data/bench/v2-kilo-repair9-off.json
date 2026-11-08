@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-08T23:45:30.996Z",
+  "mode": "live",
+  "providerName": "kilo",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "47698fcf8e5e",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "v2-l3-f03",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": true,
+      "reasons": [],
+      "stoppedBy": "completed",
+      "steps": 5,
+      "toolCalls": 9,
+      "toolErrors": 1,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "file_read": 3,
+        "file_list": 1,
+        "repo_map": 2,
+        "search_files": 1,
+        "file_edit": 1,
+        "shell": 1
+      },
+      "providerRetries": 0,
+      "faultsInjected": 1,
+      "emptyGuardHits": 0,
+      "tokens": 16000,
+      "latencyMs": 27624,
+      "provider": "kilo",
+      "answer": "已在 [src/query.js](src/query.js) 中新增导出函数 `search(items, text)`，未改动 `list` / `sortBy` / `stats`。\n\n实现行为：\n- 返回 `title` 包含 `text` 的待办**副本**（`{ ...x }`），不修改入参数组或原对象。\n"
+    },
+    {
+      "taskId": "v2-l3-f08",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": true,
+      "reasons": [],
+      "stoppedBy": "completed",
+      "steps": 3,
+      "toolCalls": 7,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "file_list": 1,
+        "file_read": 2,
+        "todo_write": 2,
+        "file_edit": 2
+      },
+      "providerRetries": 0,
+      "faultsInjected": 1,
+      "emptyGuardHits": 0,
+      "tokens": 10285,
+      "latencyMs": 18777,
+      "provider": "kilo",
+      "answer": "已完成两处修改，未改动其它已有行为：\n\n**1) `src/store.js` — `createStore()` 返回对象新增 `setDone(id, done)`**\n- 按 `id` 查找项，若不存在返回 `null`。\n- 存在时将 `done` 置为布尔值（`Boolean(done)`），并返回更新后的副"
+    }
+  ],
+  "summary": {
+    "overall": 1,
+    "byCategory": {
+      "multi-step": 1
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 1,
+    "avgSteps": 4,
+    "avgToolCalls": 8,
+    "avgLatencyMs": 23201,
+    "totalTokens": 26285,
+    "toolErrorRate": 0.063,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 2,
+    "total": 2,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": true,
+    "violations": []
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  },
+  "layers": [
+    {
+      "layer": "l3",
+      "tasks": 10,
+      "ran": 2,
+      "ok": 2,
+      "pending": 0,
+      "samples": 0,
+      "file": "data/tasks/v2/l3.jsonl",
+      "hash": "363230b44d05"
+    }
+  ],
+  "preset": null
+}

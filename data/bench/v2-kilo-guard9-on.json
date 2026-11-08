@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-08T23:43:37.593Z",
+  "mode": "live",
+  "providerName": "kilo",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "8d953fd9cc72",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "v2-l3-f06",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": true,
+      "reasons": [],
+      "stoppedBy": "completed",
+      "steps": 5,
+      "toolCalls": 9,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "file_list": 2,
+        "file_read": 4,
+        "file_edit": 1,
+        "search_files": 1,
+        "shell": 1
+      },
+      "providerRetries": 2,
+      "faultsInjected": 2,
+      "emptyGuardHits": 2,
+      "tokens": 14974,
+      "latencyMs": 26793,
+      "provider": "kilo",
+      "answer": "已在 `src/query.js` 中新增导出函数 `openItems(items)`（`src/query.js:27`），未改动 `list` / `sortBy` / `stats`。\n\n实现：\n```js\n/** Return copies of all incomplete (done === false)"
+    },
+    {
+      "taskId": "v2-l3-f09",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": true,
+      "reasons": [],
+      "stoppedBy": "completed",
+      "steps": 5,
+      "toolCalls": 10,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "todo_write": 2,
+        "file_list": 1,
+        "file_read": 2,
+        "file_edit": 2,
+        "shell": 3
+      },
+      "providerRetries": 1,
+      "faultsInjected": 1,
+      "emptyGuardHits": 1,
+      "tokens": 18769,
+      "latencyMs": 25946,
+      "provider": "kilo",
+      "answer": "已按要求修改两个文件，未改动其它已有行为。\n\n## 1) `src/store.js`\n在 `createStore()` 返回对象中新增 `findByTitle(text)`：\n- 使用严格相等 `x.title === text` 查找\n- 返回**第一个**匹配待办的副本（`{ ...found }`，与现有 "
+    }
+  ],
+  "summary": {
+    "overall": 1,
+    "byCategory": {
+      "multi-step": 1
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 1,
+    "avgSteps": 5,
+    "avgToolCalls": 9.5,
+    "avgLatencyMs": 26370,
+    "totalTokens": 33743,
+    "toolErrorRate": 0,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 2,
+    "total": 2,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": true,
+    "violations": []
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  },
+  "layers": [
+    {
+      "layer": "l3",
+      "tasks": 10,
+      "ran": 2,
+      "ok": 2,
+      "pending": 0,
+      "samples": 0,
+      "file": "data/tasks/v2/l3.jsonl",
+      "hash": "363230b44d05"
+    }
+  ],
+  "preset": null
+}

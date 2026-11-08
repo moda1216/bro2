@@ -65,7 +65,12 @@ export interface EvalTask {
   /** 通过配置/监听注入的故障 */
   fault?: "malformed-args" | "unknown-tool" | "approval-deny" | "step-limit" | "deny-path";
   /** 真实 provider 故障注入（仅 live 生效）：前 times 次调用注入限流/5xx/畸形参数 */
-  faults?: { provider?: { kind: "rate-limit" | "server-error" | "malformed-args"; times: number } };
+  faults?: { provider?: {
+    kind: "rate-limit" | "server-error" | "malformed-args" | "timeout" | "retry-after" | "empty-response";
+    times: number;
+    stallMs?: number;
+    retryAfterMs?: number;
+  } };
   maxTokens?: number;
   /** 上下文压缩阈值（独立于 Guards 硬预算） */
   compactTokens?: number;
@@ -99,6 +104,8 @@ export interface EvalRunMetrics {
   providerRetries: number;
   /** 实际注入的 provider 故障次数；< faults.provider.times 说明故障没打完，结论不可信 */
   faultsInjected: number;
+  /** 空/半截响应守卫实际拦下的次数（归因：证明机制真的动了） */
+  emptyGuardHits: number;
   tokens: number;
   latencyMs: number;
   provider: string;
@@ -206,7 +213,7 @@ async function runOne(os: AgentOS, task: EvalTask, workspace: string, repeat: nu
       reasons: [`运行抛异常: ${msg}`], stoppedBy: "exception", steps: 0, toolCalls: 0,
       toolErrors: 0, guards: 0, approvalsDenied: 0, compactions: 0,
       protocolViolations: 0, repairs: 0, groundingRejects: 0, loopAdvisories: 0,
-      compactionEvidence: 0, tools: {}, providerRetries: 0, faultsInjected: 0, tokens: 0, latencyMs: Date.now() - started,
+      compactionEvidence: 0, tools: {}, providerRetries: 0, faultsInjected: 0, emptyGuardHits: 0, tokens: 0, latencyMs: Date.now() - started,
       provider: "unknown", answer: "",
     };
   }
@@ -238,6 +245,11 @@ async function runOne(os: AgentOS, task: EvalTask, workspace: string, repeat: nu
     groundingRejects: ex.groundingRejects,
     loopAdvisories: ex.loopAdvisories,
     compactionEvidence: ex.compactionEvidence,
+    tools: ex.toolUsage,
+    // 以下三项由 runEval 主循环用运行时计数器回填（需要 os 上下文，runOne 拿不到）。
+    providerRetries: 0,
+    faultsInjected: 0,
+    emptyGuardHits: 0,
     tokens: run.usage.totalTokens,
     latencyMs: Date.now() - started,
     provider: ex.providers.at(-1) ?? "unknown",
@@ -399,6 +411,7 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
         }
         const r = await runOne(os, task, workspace, repeat);
         r.providerRetries = os.router.retryAttempts;
+        r.emptyGuardHits = os.router.emptyGuardHitCount;
         if (flaky) {
           r.faultsInjected = flaky.injected;
           // 防自欺：声明了故障就必须真的打进去，否则「恢复成功」无从谈起

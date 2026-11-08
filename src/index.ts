@@ -207,6 +207,7 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
   // 本地 Ollama 只是 baseUrl / 认证策略不同，内核不感知差异。
   const router = new ProviderRouter(config.model.default);
   if (config.model.retry) router.setRetry(config.model.retry);
+  if (config.model.emptyGuard === false) router.setEmptyGuard(false);
   const providers = new Map<string, LLMProvider>();
   const mock = new MockProvider(options.mockScript ? { script: options.mockScript } : { strategy: "heuristic" });
   router.register("mock", mock);
