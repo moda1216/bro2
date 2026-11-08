@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522.6-339933.svg)](https://nodejs.org)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-orange.svg)](./package.json)
-[![Version](https://img.shields.io/badge/version-2.0.6-blueviolet.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.2.2-blueviolet.svg)](./CHANGELOG.md)
 
 bro2 不是聊天机器人，也不是固定功能的助手。它把**模型、工具、工作区、权限、会话记忆与任务循环**装配成一个可运行的 Agent 内核：模型可换、工具可插、行为可审、每一步都可回溯。在上面挂不同的 Preset / Skill / Connector，就得到不同形态的 Agent。
 
@@ -105,7 +105,7 @@ npm run cli -- run --task "计算 sum([12,18,25,31,14]) 并写入 notes.md" --pr
 | `npm run meta` | meta RSI：改进改进机制自身 |
 | `npm run benchmark` | 能力基准：ablation + 证据阶梯 + 领先度声明 |
 | `npm run project:status` | 聚合全部发布阻断门禁，CI 友好 |
-| `npm test` | 全量单元测试（131 项） |
+| `npm test` | 全量单元测试（164 项） |
 
 子命令：`run` · `web` · `eval` · `doctor` · `preflight` · `evolve` · `meta` · `benchmark`；全局 `--json` 输出机器可读结果。
 
@@ -224,6 +224,7 @@ bro2 对自身能力保持可证伪的诚实标注：
 - **设计与架构** — [DESIGN.md](./DESIGN.md) · [docs/API.md](./docs/API.md)
 - **评测与基准** — [EVAL.md](./EVAL.md) · [BENCHMARK.md](./BENCHMARK.md)
 - **自我改进** — [RSI.md](./RSI.md) · [META-RSI.md](./META-RSI.md) · [docs/RSI-NEXT.md](./docs/RSI-NEXT.md) · [ITERATIONS.md](./ITERATIONS.md)
+- **竞争计划** — [docs/PLAN-TOP-HARNESS.md](./docs/PLAN-TOP-HARNESS.md)：同模型增益（HLR）与成本前沿路线、W1–W5 战役、13 周里程碑
 - **接入与运维** — [docs/FREE-LLM-APIS.md](./docs/FREE-LLM-APIS.md) · [docs/LOCAL-LLM.md](./docs/LOCAL-LLM.md) · [docs/TAKEOVER.md](./docs/TAKEOVER.md)
 - **工程管理** — [CHANGELOG.md](./CHANGELOG.md) · [ROADMAP.md](./ROADMAP.md) · [DELIVERABLES.md](./DELIVERABLES.md)
 

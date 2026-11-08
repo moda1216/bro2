@@ -170,6 +170,7 @@
 | 免费 API | `docs/FREE-LLM-APIS.md` | OpenRouter/NIM/... 实测可达性 |
 | RSI 演进 | `docs/RSI-NEXT.md` | 对齐 4 篇论文 → P0–P5 |
 | 复利中枢 | `docs/COMPOUND-LOOP.md` | 两大设计目标 → 经验层 / 冻结速度尺子 / 治理红线 |
+| **竞争计划** | `docs/PLAN-TOP-HARNESS.md` | 九维差距矩阵、HLR/CAS 北极星、W1–W5 战役、13 周里程碑 |
 | **本项目** | `DELIVERABLES.md` `CHANGELOG.md` `ROADMAP.md` | 产出物管理三件套 |
 
 ### 3.7 数据证据产物（Data / Evidence Artifacts）— ✅

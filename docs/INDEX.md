@@ -22,6 +22,7 @@
 | [docs/RSI-NEXT.md](./RSI-NEXT.md) | RSI 演进路线图：对齐 HARNESS²/Evo²/RRSI/OO-Harness，逐篇映射到 bro2 下一步 | 想推进"业界水平"、理解演进方向 |
 | [docs/ITERATION-WATERMARK.md](./ITERATION-WATERMARK.md) | 迭代水位：在哪里看、逐轮变化、如何推进、诚实边界（自动生成） | 想看「越用越快」是否真的发生 |
 | [docs/COMPOUND-LOOP.md](./COMPOUND-LOOP.md) | 复利闭环：经验库 + 冻结速度尺子 + 学习型路由的设计与边界 | 理解两大设计目标的共享底座 |
+| [docs/PLAN-TOP-HARNESS.md](./PLAN-TOP-HARNESS.md) | **竞争顶级 Agent Harness 作战计划书**：九维差距矩阵、HLR/CAS 北极星指标、W1–W5 五大战役、13 周里程碑、风险与退出条件 | 想知道「bro2 凭什么竞争、下一步做什么」 |
 | [docs/INDEX.md](./INDEX.md) | 本文件 | 找文档 |
 
 运行产物（非文档，但常被引用，均在 `data/`）：
@@ -62,6 +63,7 @@
 | 零本地部署跑真实强模型 | docs/FREE-LLM-APIS.md | `npm run free:probe` → 填 Key → `AGENTOS_LIVE_PROVIDER=openrouter npm run eval:live` |
 | 推进 RSI 演进路线 | docs/RSI-NEXT.md | 读路线图 → 落 P0–P5 |
 | 查看 / 推进迭代水位 | docs/ITERATION-WATERMARK.md → `data/rsi/watermark.html` | `npm run watermark` → `npm run evolve:tick -- --rounds 8` |
+| 规划「如何竞争顶级 harness」 | docs/PLAN-TOP-HARNESS.md | 先读 §1 现状体检 → §4 W1 基准重建 → §9 本周第一步 |
 | 改进后同步 GitHub 远程 | 发布流程见 CHANGELOG v2.2.1 | `npm run ship`（提交 + 推送 + 自检）→ `npm run push:check` |
 | 提交前全量回归 | 本页 §3 | `npm test && npm run verify && ...` |
 
