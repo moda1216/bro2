@@ -271,7 +271,8 @@ export function renderWatermarkHtml(report: WatermarkReport): string {
   .card .d{color:var(--muted);font-size:11px;margin-top:2px}
   .banner{background:var(--card);border:1px solid var(--line);border-left:4px solid ${trendColor};border-radius:10px;padding:14px 18px;margin-bottom:20px}
   .banner b{color:${trendColor}} .banner .reason{color:var(--muted);font-size:12px;margin-top:6px;font-variant-numeric:tabular-nums}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin-bottom:20px}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:20px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px 6px}
   .panel h2{font-size:14px;margin:0 0 6px;color:var(--muted);font-weight:600}
   .axis{font-size:10px;fill:var(--muted)}
