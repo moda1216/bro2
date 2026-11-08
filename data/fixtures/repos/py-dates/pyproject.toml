@@ -1,0 +1,9 @@
+[project]
+name = "dates"
+version = "0.1.0"
+description = "Small date-range helpers (fixture repo for bro2 bench v2)"
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,3 +1,4 @@
 {"at":"2026-11-08T11:30:14.780Z","id":"W1-01","event":"start"}
 {"at":"2026-11-08T12:00:07.492Z","id":"W1-01","event":"done","evidence":"v2.3.1 bench:v2 --layer l1 = 19/19，指纹 d1419b1efaa7","loc":336,"note":"超预算: 实估仅 schema+loader，实际含分层评测 CLI 与分层门禁参数化"}
 {"at":"2026-11-08T12:00:12.262Z","id":"W1-02","event":"start"}
+{"at":"2026-11-08T12:20:06.001Z","id":"W1-02","event":"done","evidence":"v2.3.2 fixture:check --run = 3/3 通过，7585 字节","loc":150,"note":"超预算: 估 60 实际含 --run/--update 双模式与排除规则"}

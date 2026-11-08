@@ -1,0 +1,9 @@
+{
+  "name": "cart",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Shopping cart pricing (fixture repo for bro2 bench v2)",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

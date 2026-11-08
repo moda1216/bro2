@@ -1,0 +1,9 @@
+{
+  "name": "strkit",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Small string utilities (fixture repo for bro2 bench v2)",
+  "scripts": {
+    "test": "node --experimental-strip-types --no-warnings --test test/*.test.ts"
+  }
+}

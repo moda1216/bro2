@@ -1,0 +1,52 @@
+{
+  "schema": "bro2.fixture/1",
+  "root": "data/fixtures/repos",
+  "totalBytesLimit": 3145728,
+  "repos": [
+    {
+      "name": "ts-strkit",
+      "language": "ts",
+      "projectFile": "package.json",
+      "test": [
+        "npm",
+        "test"
+      ],
+      "hiddenDefect": "truncate(text, max) 在 max < 4 时返回长度 8 的字符串，违反『结果不超过 max』契约（text.slice(0, max-3) 对非正数退化为从尾部切）",
+      "files": 4,
+      "bytes": 2572,
+      "hash": "151bb580117f"
+    },
+    {
+      "name": "py-dates",
+      "language": "py",
+      "projectFile": "pyproject.toml",
+      "test": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-t",
+        "."
+      ],
+      "hiddenDefect": "overlaps 对半开区间用 <= 比较，导致首尾相接的区间 [1/1,1/31) 与 [1/31,2/10) 被判为重叠",
+      "files": 5,
+      "bytes": 3103,
+      "hash": "6a31b77a817e"
+    },
+    {
+      "name": "js-cart",
+      "language": "js",
+      "projectFile": "package.json",
+      "test": [
+        "npm",
+        "test"
+      ],
+      "hiddenDefect": "total 未按分取整，小计为浮点时返回 0.30000000000000004 这类不可用作金额的值",
+      "files": 4,
+      "bytes": 1910,
+      "hash": "df348e545f92"
+    }
+  ]
+}

@@ -213,8 +213,9 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 
 **目标**：建立三层任务集，让"harness 差异"能被测出来。
 
-> **进度**：`W1-01` ✅ 已交付（v2.3.1）——三层任务集已可装载、可校验、可复跑；
-> l1 指纹与既有评测报告一致（`d1419b1efaa7`），迁移零漂移。下一步 `W1-02` 建 fixture 仓库快照。
+> **进度**：`W1-01` ✅（v2.3.1）任务集可装载、可校验、可复跑，l1 指纹与既有评测一致（`d1419b1efaa7`）；
+> `W1-02` ✅（v2.3.2）3 个 fixture 仓库快照已就位（各埋 1 个真缺陷，可见测试 16 项全绿，内容指纹钉住）。
+> 下一步 `W1-03`：基于快照写首批 18 个 L2 真实工程任务。
 
 | 层 | 用途 | 规模 | 判定方式 |
 | --- | --- | --- | --- |
@@ -228,7 +229,7 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 | --- | --- |
 | `data/tasks/v2/l2.jsonl` | 60+ 真实工程任务（`repo`、`commit`、`issue`、`hiddenTests`、`budget`） |
 | `data/tasks/v2/l3.jsonl` | 12+ 长程任务（含人为注入的失败点，测纠错） |
-| `data/fixtures/repos/` | 6–8 个小型真实仓库快照（TS/Python，每个 < 2MB），固定 commit |
+| `data/fixtures/repos/` ◐ | 3 个快照已交付（**v2.3.2**，指纹钉住）；W1-06 扩到 6–8 个 |
 | `src/bench/schema.ts` ✅ | `bro2.task/2` 契约 + 幂等升格 + `toEvalTask` 唯一转换点（**已交付 v2.3.1**） |
 | `src/bench/loader.ts` ✅ | 分层装载 + 重复 id / 坏行 / fixture 引用校验（**已交付 v2.3.1**） |
 | `scripts/bench-v2.ts` ✅ | 跑分入口：`npm run bench:v2 -- --layer l1\|l2\|all`（**已交付 v2.3.1**；`--model/--repeat` 与隐藏测试执行器待 W1-04） |

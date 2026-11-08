@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522.6-339933.svg)](https://nodejs.org)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-orange.svg)](./package.json)
-[![Version](https://img.shields.io/badge/version-2.3.1-blueviolet.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.3.2-blueviolet.svg)](./CHANGELOG.md)
 
 bro2 不是聊天机器人，也不是固定功能的助手。它把**模型、工具、工作区、权限、会话记忆与任务循环**装配成一个可运行的 Agent 内核：模型可换、工具可插、行为可审、每一步都可回溯。在上面挂不同的 Preset / Skill / Connector，就得到不同形态的 Agent。
 
@@ -108,9 +108,10 @@ npm run cli -- run --task "计算 sum([12,18,25,31,14]) 并写入 notes.md" --pr
 | `npm run auto:next` | 读计划账本，给出下一个任务卡（含验收标准与命中的历史教训） |
 | `npm run auto:status` | 五个战役进度、阻塞项、已用 LOC |
 | `npm run bench:v2` | 分层任务评测：`--layer l1\|l2\|all`，判分复用唯一评测器 |
+| `npm run fixture:check` | fixture 快照校验：结构 / 体积 / 内容指纹，`--run` 真实跑离线测试 |
 | `npm run budget:check` | 代码预算门禁：行数 / 文件数 / 单文件 / 测试比 / 运行时依赖 |
 | `npm run project:status` | 聚合全部发布阻断门禁，CI 友好 |
-| `npm test` | 全量单元测试（186 项） |
+| `npm test` | 全量单元测试（190 项） |
 
 子命令：`run` · `web` · `eval` · `doctor` · `preflight` · `evolve` · `meta` · `benchmark`；全局 `--json` 输出机器可读结果。
 
@@ -196,6 +197,7 @@ PRE_STEP Hooks → ContextBuilder → 预算压缩 → LLM(stream, tool_calls)
 
 | 版本 | 日期 | 要点 |
 | --- | --- | --- |
+| **2.3.2** | 2026-11-08 | W1-02：3 个 fixture 仓库快照（各埋 1 个真缺陷），内容指纹钉住快照（第 15 道门禁） |
 | **2.3.1** | 2026-11-08 | W1-01：v2 任务 schema 与分层装载器（l1 零漂移迁移、19/19；第 14 道门禁） |
 | **2.3.0** | 2026-11-08 | 自治执行机制（计划账本 + `auto:next` 调度 + 教训检索）与「少而精」工程宪法（第 13 道代码预算门禁） |
 | **2.2.2** | 2026-11-08 | 修复 CI 验收门禁失败：移除测试对本机凭证的路径依赖，新增 CI 可移植性门禁 |
