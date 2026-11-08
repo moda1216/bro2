@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522.6-339933.svg)](https://nodejs.org)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-orange.svg)](./package.json)
-[![Version](https://img.shields.io/badge/version-2.2.2-blueviolet.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.3.0-blueviolet.svg)](./CHANGELOG.md)
 
 bro2 不是聊天机器人，也不是固定功能的助手。它把**模型、工具、工作区、权限、会话记忆与任务循环**装配成一个可运行的 Agent 内核：模型可换、工具可插、行为可审、每一步都可回溯。在上面挂不同的 Preset / Skill / Connector，就得到不同形态的 Agent。
 
@@ -35,6 +35,7 @@ bro2 不是聊天机器人，也不是固定功能的助手。它把**模型、�
 | **多 Agent 协作** | 子 Agent 派生、并行执行与结果汇总，隔离上下文与预算，深度限制防递归膨胀。 |
 | **治理与可观测** | 三级沙箱、HITL 审批、Guards（步数 / token / 时长 / 死循环）、密钥脱敏与审计；轨迹视图、实时指标、结构化日志。 |
 | **三套入口** | 流式 CLI、Web UI（轨迹视图 + 审批弹窗）、REST + SSE API，覆盖交互、演示与集成。 |
+| **自治推进与工程预算** | `auto:next` 从只增账本选出下一个任务并注入历史教训，状态不留在对话里；`budget:check` 用行数 / 文件数 / 单文件 / 测试比 / 运行时依赖五项卡住代码膨胀。 |
 | **有界可验证自我改进** | 能力面 RSI 用 train/holdout 双门禁迭代真实代码行为；meta RSI 用冻结 fitness 改进「如何找改进」。验证器写保护、单调晋升、只增账本、防 reward hacking。 |
 | **复利式自我改进** | `ExperienceBank` 按失败模式沉淀已验证的有效解，Propose 阶段直接命中，收敛所需探测次数随使用递减；`VelocityLedger` 用冻结尺子度量改进速度，样本不足不宣称加速。经验只裁剪探测集、绝不绕过行为判定。 |
 | **可证伪的能力基准** | 5 级证据阶梯、7 变体 ablation、冻结评分面、外部证据校验；领先度结论如实标注而非自评。 |
@@ -104,8 +105,11 @@ npm run cli -- run --task "计算 sum([12,18,25,31,14]) 并写入 notes.md" --pr
 | `npm run push:check` | 只读检查本地是否已全部同步到远程，漏推即报错 |
 | `npm run meta` | meta RSI：改进改进机制自身 |
 | `npm run benchmark` | 能力基准：ablation + 证据阶梯 + 领先度声明 |
+| `npm run auto:next` | 读计划账本，给出下一个任务卡（含验收标准与命中的历史教训） |
+| `npm run auto:status` | 五个战役进度、阻塞项、已用 LOC |
+| `npm run budget:check` | 代码预算门禁：行数 / 文件数 / 单文件 / 测试比 / 运行时依赖 |
 | `npm run project:status` | 聚合全部发布阻断门禁，CI 友好 |
-| `npm test` | 全量单元测试（164 项） |
+| `npm test` | 全量单元测试（176 项） |
 
 子命令：`run` · `web` · `eval` · `doctor` · `preflight` · `evolve` · `meta` · `benchmark`；全局 `--json` 输出机器可读结果。
 
@@ -191,6 +195,7 @@ PRE_STEP Hooks → ContextBuilder → 预算压缩 → LLM(stream, tool_calls)
 
 | 版本 | 日期 | 要点 |
 | --- | --- | --- |
+| **2.3.0** | 2026-11-08 | 自治执行机制（计划账本 + `auto:next` 调度 + 教训检索）与「少而精」工程宪法（第 13 道代码预算门禁） |
 | **2.2.2** | 2026-11-08 | 修复 CI 验收门禁失败：移除测试对本机凭证的路径依赖，新增 CI 可移植性门禁 |
 | **2.2.1** | 2026-11-08 | 改进即推送：唯一推送通道 + 一键 `ship` 闭环 + 防漏推门禁，复用持久化 PAT 凭证 |
 | **2.2.0** | 2026-11-08 | 进化启动器 + 迭代水位看板：真实评测驱动、跨会话只增账本、水位变化可视化 |

@@ -10,6 +10,45 @@
 
 ---
 
+## [2.3.0] — 2026-11-08 · 自治执行机制与「少而精」工程宪法（MINOR）
+
+> 类型：**MINOR · 新增能力域**。解决两个真实断点：
+> ① 持续改进的状态留在对话里，会话一断就归零；
+> ② "代码量要少、质量要高"只停留在口头，没有任何机制拦得住膨胀。
+
+### 新增（Added）
+- **计划账本三件套**（`src/plan/`、`data/plan/`）：
+  - `backlog.jsonl` 任务定义（31 项，覆盖 W1–W5 五个战役）；
+  - `journal.jsonl` 尝试事件（`start/done/fail/block/unblock`，只增）；
+  - `lessons.jsonl` 可复用工程教训（`trigger/action/evidence/confidence`）。
+  - **状态不单独存储**，由 journal 折叠得出——与 `Trajectory` 是唯一真相源同一哲学，
+    不存在"状态文件与实际不一致"的可能。
+- **`bin/autopilot.ts`**：`auto:next`（下一个任务卡 + 命中教训）/ `auto:status`（战役进度 + 已用 LOC）/
+  `auto:done` / `auto:fail` / `auto:block` / `auto:unblock`。刻意只做调度与记账，
+  **不做实现、不跑门禁、不联网**——边界写死，避免"看起来自动其实不可信"。
+- **`scripts/loc-budget.ts` + 第 13 道阻断门禁 `budget`**：把「少而精」变成可执行约束。
+  四项硬指标：源代码行 ≤ 16,500、源文件 ≤ 90、单文件 ≤ 700 行、测试/源 ≥ 0.15，
+  外加运行时依赖恒为 0。当前 13,694 行 / 76 文件 / 最大 661 行（`observability/eval.ts`）/ 测试比 0.21。
+- **`tests/plan.test.ts`**（12 项）：折叠语义（`done` 终态、`blocked` 只能 `unblock` 解除、
+  `fail` 可重试）、调度（跳过依赖未满足、不重复选 in-progress）、教训检索（置信 0 失效、不相关不命中）。
+
+### 变更（Changed）
+- **`tests/remote-sync.test.ts` 去硬编码版本**：原断言 `pkg.version === "2.2.2"` 会让每次发版都改测试，
+  属于脆弱断言。改为校验「semver 格式 + CHANGELOG 存在同版本条目」这一**不变量**，
+  发版只需写发布记录，测试自动对齐。
+
+### 文档（Docs）
+- 新增 [`docs/PLAN-TOP-HARNESS.md`](./docs/PLAN-TOP-HARNESS.md)：
+  九维差距矩阵、HLR/CAS 北极星指标、W1–W5 五大战役、13 周里程碑、风险与退出条件；
+  §3.4 工程宪法（少而精）、§11 自治执行（三阶段 + tick 协议 + 四条红线）。
+
+### 验证
+- `npm test` **176/176**；`npm run project:status` **13/13** 阻断门禁 + 2 项信息展示；
+- `npm run budget:check` 四项全绿（83% / 84% / 94% / 100%）；
+- `npm run auto:status` 输出五战役进度，`npm run auto:next` 正确选中 `W1-01`。
+
+---
+
 ## [2.2.2] — 2026-11-08 · 修复 CI 验收门禁失败（PATCH）
 
 > 类型：**PATCH · 回归修复**。v2.2.1 引入的 `tests/remote-sync.test.ts` 中有一条断言

@@ -1,0 +1,23 @@
+{
+  "baseline": {
+    "sourceFiles": 72,
+    "sourceLines": 13288,
+    "testLines": 2791,
+    "maxFileLines": 661
+  },
+  "limits": {
+    "sourceFiles": 90,
+    "sourceLines": 16500,
+    "maxFileLines": 700,
+    "minTestToSourceRatio": 0.15
+  },
+  "runtimeDependencies": 0,
+  "battles": {
+    "W1": 700,
+    "W2": 900,
+    "W3": 350,
+    "W4": 600,
+    "W5": 450
+  },
+  "note": "阈值只允许在 docs/BENCH-v2.md 记录理由后上调；下调随时允许。运行时依赖恒为 0。"
+}

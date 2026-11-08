@@ -67,12 +67,17 @@ test("防漏推检查对网络抖动加固，且「不可达」不等于「已�
   assert.match(ts, /process\.exit\(1\)/, "确认漏推仍必须阻断");
 });
 
-test("package.json 注册了完整的同步命令，且版本号一致", () => {
+test("package.json 注册了完整的同步命令，版本号与 CHANGELOG 一致", () => {
   const pkg = JSON.parse(read("package.json"));
   for (const cmd of ["ship", "push:remote", "push:check"]) {
     assert.ok(pkg.scripts[cmd], `缺少 npm run ${cmd}`);
   }
-  assert.equal(pkg.version, "2.2.2");
+  // 不硬编码版本号（那会让每次发版都改测试）；校验的是「版本与发布记录一致」这一不变量
+  assert.match(pkg.version, /^\d+\.\d+\.\d+$/, "版本号必须是 semver");
+  assert.ok(
+    read("CHANGELOG.md").includes(`## [${pkg.version}]`),
+    `CHANGELOG 缺少 ${pkg.version} 条目：发版必须同时写发布记录`,
+  );
 });
 
 test("凭证设计位于仓库外，缺失时明确失败，仓库内零明文", () => {

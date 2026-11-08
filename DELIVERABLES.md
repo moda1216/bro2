@@ -11,14 +11,14 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.2.2**（语义化，见 CHANGELOG） |
+| 版本 | **v2.3.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
 | 架构 | 8 层：kernel / models / context / tools / memory / cognition / delegation / governance / observability / interfaces |
 | 唯一真相源 | `Trajectory`（每次运行的轨迹日志，不可变追加） |
-| 源代码规模 | 63 个 `.ts` 源文件 + 1 个 Web 入口 HTML + 1 个 Python 本地推理服务 |
-| 测试规模 | 19 个测试文件；`npm test` **164** 项全绿 |
+| 源代码规模 | 68 个 `src/*.ts` + 4 个入口/脚本 `.ts` + 1 个 Web 入口 HTML + 1 个 Python 本地推理服务 |
+| 测试规模 | 20 个测试文件；`npm test` **176** 项全绿 |
 | 诚实判定 | `leadership.verdict = not-proven`；证据阶梯 L4 = `not-achieved`（不伪造外部基准） |
 | 仓库状态 | 已初始化 git，初始提交 `v2.0.0` tag；`.gitignore` 隔离运行时产物 |
 | 版本控制 | git（提交粒度 = 逻辑交付单元；发布 = tag + CHANGELOG 条目） |
@@ -31,14 +31,15 @@
 
 | 验收项 | 命令 | 当前结果 | 性质 |
 | --- | --- | --- | --- |
-| 单元测试 + e2e + 故障注入 | `npm test` | **164 / 164 PASS** | 交付门禁 |
+| 单元测试 + e2e + 故障注入 | `npm test` | **176 / 176 PASS** | 交付门禁 |
 | CI 可移植性（测试不得依赖本机环境事实） | `npm test` → `tests/remote-sync.test.ts` 第 6 项 | 有/无凭证两环境均 6/6 | 防复发门禁 |
 | 能力矩阵结构自检 | `npm run verify` | 23 项 PASS | 结构门禁 |
 | 行为策略代码分支实证 | `npm run policy:check` | 19 项 PASS | 策略门禁 |
 | RSI 端到端 + 恶意候选注入 | `npm run rsi:check` | **22 / 22 PASS** | RSI 门禁 |
 | 对比式改进 live 闭环（防 reward hacking） | `npm run contrast:live` | 完整性 ✓ OK，2 晋升 / 2 拦截 | P1 门禁 |
 | 复利中枢（越用越快 / 越用越省） | `npm run compound:demo` | 10/10 断言，trend=accelerating，remoteAvoided=6 | 两大目标门禁 |
-| 迭代水位（唯一尺子 / 只增账本 / 只读投影） | `npm run watermark:check` | 13/13 项，账本 11 轮 `trend=accelerating` | 水位门禁（第 12 道） |
+| 迭代水位（唯一尺子 / 只增账本 / 只读投影） | `npm run watermark:check` | 13/13 项，账本 14 轮 `trend=accelerating` | 水位门禁（第 12 道） |
+| **代码预算（少而精）** | `npm run budget:check` | 13,694 / 16,500 行 · 76 / 90 文件 · 最大 661 行 · 测试比 0.21 · 依赖 0 | 体积门禁（第 13 道） |
 | 远程同步一致性（防漏推，纯只读） | `npm run push:check` | `✓ 远程已同步`，main 与本地一致、最新 tag 已推送 | 信息展示门禁 |
 | 改进同步闭环（提交 + 唯一通道推送 + 自检） | `npm run ship` | 复用仓库外 600 权限 PAT，凭证不入库、不回显 | 发布流程 |
 | 元 RSI 写保护 + 冻结 fitness | `npm run meta:check` | 25 项 PASS | 元层门禁 |
@@ -101,6 +102,7 @@
 | observability | `tracing` `eval` | `npm run eval` |
 | benchmark | `ladder` `ablation` `scoring` `external` `index` | `npm run benchmark:check` (21) |
 | **rsi** | `types` `ledger` `guardrails` `miner` `operators` `shadow` `loop` `meta` `contrast` `live-contrast` `experience` `velocity` `compound` `index` | `npm run rsi:check` (22) / `meta:check` (25) / `contrast.test.ts` (9) / `contrast-live.test.ts` (9) / `compound.test.ts` (18) / `npm run contrast:live` / `compound:demo` |
+| **plan**（v2.3.0） | `backlog.ts`（只增账本读写 + 事件折叠）/ `select.ts`（任务调度 + 教训检索）/ `bin/autopilot.ts`（CLI，不实现不联网）/ `scripts/loc-budget.ts` | `tests/plan.test.ts` (12) / `npm run auto:status` / `npm run budget:check` |
 | interfaces | `cli` `api` `web/index.html` | `npm run verify` |
 
 ### 3.2 配置与入口 — ✅
@@ -151,7 +153,8 @@
 | Ollama | `tests/ollama.test.ts` | 协议兼容 | — |
 | 无 Key 聚合 | `tests/keyless.test.ts` | 聚合/故障转移/能力感知/统计 | — |
 | 缓存 / 混合推理 | `tests/cache.test.ts` / `tests/hybrid.test.ts` | 缓存优先 / 路由 / 限流降级 | — |
-| **合计** | 17 文件 | — | **149** |
+| **计划账本 / 调度** | `tests/plan.test.ts` | 事件折叠 / 依赖调度 / 教训检索 | 12 |
+| **合计** | 20 文件 | — | **176** |
 
 ### 3.6 文档 — ✅
 | 产出物 | 路径 | 受众 / 用途 |
@@ -258,6 +261,7 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.2.2**（修复 CI 验收门禁失败：移除测试对本机凭证路径的依赖，新增 CI 可移植性防复发门禁；`npm test` 164/164，`project:status` 12/12 阻断门禁 + 2 项信息展示；迭代水位已连续推进 14 轮，第 6 轮起 `trend=accelerating`）。
+- 当前最新：**v2.3.0**（自治执行机制：计划账本三件套 + `auto:next` 调度 + 教训检索；「少而精」工程宪法：第 13 道代码预算门禁；`npm test` 176/176，`project:status` 13/13 阻断门禁 + 2 项信息展示；迭代水位 14 轮，第 6 轮起 `trend=accelerating`）。
+- 上版：**v2.2.2**（修复 CI 验收门禁失败：移除测试对本机凭证路径依赖，新增 CI 可移植性门禁与网络抖动加固）。
 - 上版：**v2.2.1**（改进即推送：唯一推送通道 + 一键 `ship` 闭环 + 防漏推门禁，复用仓库外持久化 PAT 凭证）。
 - 更早：**v2.2.0**（进化启动器 + 迭代水位看板：真实评测驱动、跨会话只增账本、冻结尺子逐轮前缀投影）。

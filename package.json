@@ -1,14 +1,21 @@
 {
   "name": "bro2",
-  "version": "2.2.2",
+  "version": "2.3.0",
   "type": "module",
   "description": "bro2 · 通用 Agent 运行时（含 RSI 有界可验证自我改进）— 零第三方依赖",
   "license": "MIT",
   "author": "moda1216",
-  "repository": { "type": "git", "url": "git+https://github.com/moda1216/bro2.git" },
-  "bugs": { "url": "https://github.com/moda1216/bro2/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moda1216/bro2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/moda1216/bro2/issues"
+  },
   "homepage": "https://github.com/moda1216/bro2#readme",
-  "engines": { "node": ">=22.6.0" },
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "scripts": {
     "cli": "node --experimental-strip-types --no-warnings bin/agentos.ts",
     "web": "node --experimental-strip-types --no-warnings bin/agentos.ts web",
@@ -44,7 +51,23 @@
     "benchmark:check": "node --experimental-strip-types --no-warnings examples/benchmark-check.ts",
     "external:check": "node --experimental-strip-types --no-warnings examples/external-check.ts",
     "project:status": "node --experimental-strip-types --no-warnings scripts/project-status.ts",
-    "test": "node --experimental-strip-types --no-warnings --test tests/*.test.ts"
+    "test": "node --experimental-strip-types --no-warnings --test tests/*.test.ts",
+    "auto:next": "node --experimental-strip-types --no-warnings bin/autopilot.ts next",
+    "auto:status": "node --experimental-strip-types --no-warnings bin/autopilot.ts status",
+    "auto:done": "node --experimental-strip-types --no-warnings bin/autopilot.ts done",
+    "auto:fail": "node --experimental-strip-types --no-warnings bin/autopilot.ts fail",
+    "budget:check": "node --experimental-strip-types --no-warnings scripts/loc-budget.ts"
   },
-  "keywords": ["bro2", "agent", "harness", "agent-os", "rsi", "meta-rsi", "self-improvement", "benchmark", "tool-use", "mcp"]
+  "keywords": [
+    "bro2",
+    "agent",
+    "harness",
+    "agent-os",
+    "rsi",
+    "meta-rsi",
+    "self-improvement",
+    "benchmark",
+    "tool-use",
+    "mcp"
+  ]
 }

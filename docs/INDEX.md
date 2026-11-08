@@ -83,7 +83,7 @@ npm run live:smoke             # live 全链路自检（仿真端点，明确非
 #   LOCAL_MAX_TOKENS=128 python3 tools/local-llm-server.py --threads 4 --stats-file data/local-llm-stats.json
 
 # 评测与验证
-npm test                       # 单元 + 端到端 + 故障注入（87 项）
+npm test                       # 单元 + 端到端 + 故障注入（176 项）
 npm run verify                 # L0–L7 能力矩阵结构自检（23 项）
 npm run eval                   # 确定性行为回归（19 任务 + 门禁）
 npm run eval:live              # 真实模型端到端（内置 preflight 门禁，需自备端点）
@@ -99,6 +99,11 @@ npm run rsi:check              # RSI 端到端 + 恶意候选注入（22 项）
 npm run meta                   # meta RSI（改进机制自身）
 npm run meta:dry               # 只诊断不写回
 npm run meta:check             # 元层写保护 / 冻结 fitness（25 项）
+
+# 自治推进与工程预算
+npm run auto:status            # 五战役进度 / 阻塞项 / 已用 LOC
+npm run auto:next              # 下一个任务卡（含验收标准与命中的历史教训）
+npm run budget:check           # 代码预算门禁（行数 / 文件数 / 依赖 / 测试比）
 
 # 能力基准
 npm run benchmark              # ablation + 证据阶梯 + 领先度声明
