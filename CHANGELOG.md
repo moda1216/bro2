@@ -10,6 +10,41 @@
 
 ---
 
+## [2.2.1] — 2026-11-08 · 改进即推送：远程同步闭环（PATCH）
+
+> 类型：**PATCH · 发布流程 / 验收脚本补齐**。v2.2.0 的进化启动器把「越用越快」写进了
+> 本地只增账本，但发布动作仍依赖人工执行 `git push`——出现过「本地已提交、远程未同步」的断点。
+> 本版把「每次改进都推送 GitHub 远程」固化为**机制**：唯一推送通道、一键闭环、防漏推门禁，
+> 并复用此前持久化的 fine-grained PAT 凭证（仓库外 600 权限文件，绝不入库、绝不回显）。
+
+### 新增（Added）
+- **`scripts/push-remote.sh` · 唯一推送通道**：从 `BRO2_GITHUB_PAT_FILE`（默认
+  `$HOME/.codebuddy/credentials/bro2-github-pat`）读取凭证，用一次性 `GIT_ASKPASS`
+  交给 git；显式屏蔽全局/系统 `credential.helper`，避免误用此前写操作 403 的 App 令牌；
+  临时 askpass 用 `trap` 清除。凭证不回显、不写入仓库、不进 `.git/config`。
+- **`scripts/ship.sh` · 改进同步闭环**：`npm run ship` = 还原运行时噪声 → `git add -A`
+  → 干净身份提交 → 唯一通道推送 → 同步自检；`npm run ship -- --rounds 8 "<msg>"`
+  先推进 8 轮真实迭代再提交推送。迭代本身离线可复现，网络只出现在最后一步。
+- **`scripts/remote-check.ts` · 防漏推门禁**：纯只读 `ls-remote` / `rev-list`，
+  核对本地 HEAD 是否等于远程 main、本地最新 tag 是否已推送；不一致即 `EXIT=1`
+  并提示 `npm run ship`。`npm run push:check` 单独可跑，也作为 `project:status`
+  第 2 项信息展示门禁。
+- **`tests/remote-sync.test.ts`**：5 项结构不变量测试，守住「凭证绝不入库」、
+  「推送只走唯一通道」、「防漏推检查纯只读」三条红线。
+
+### 变更（Changed）
+- `package.json`：版本 `2.2.1`；新增 `ship` / `push:remote` / `push:check`。
+- `scripts/project-status.ts`：信息展示区新增 `pushcheck` 远程同步一致性项。
+- 私有技能 `bro2-self-iteration` 升级 `1.3.0`：新增「每次改进必推」红线与
+  `references/remote-sync.md`，`release-playbook.md` 补 §8 复用持久化凭证。
+
+### 验证
+- `npm test` **162/162**；`npm run project:status` **12/12** 阻断门禁全绿、信息展示 2 项；
+- `npm run push:check` → `✓ 远程已同步`；`npm run ship` 端到端闭环通过；
+- 远程 `github.com/moda1216/bro2`：`main` 与本地一致，`v2.2.0` / `v2.2.1` tag 齐全。
+
+---
+
 ## [2.2.0] — 2026-11-08 · 进化启动器与迭代水位看板（MINOR）
 
 > 类型：**MINOR · 新增能力域**。v2.1.0 造好了冻结速度尺子，但真实账本 0 条记录、

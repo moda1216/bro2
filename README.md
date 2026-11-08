@@ -99,6 +99,9 @@ npm run cli -- run --task "计算 sum([12,18,25,31,14]) 并写入 notes.md" --pr
 | `npm run evolve` | 能力面 RSI 自我改进 |
 | `npm run evolve:tick -- --rounds 8` | 推进 8 轮真实迭代，把「越用越快」写进跨会话只增账本 |
 | `npm run watermark` | 查看迭代水位（趋势 / 探测成本 / 经验复用），打开 `data/rsi/watermark.html` 看曲线 |
+| `npm run ship` | **改进即同步**：提交全部改动 + 推送 GitHub 远程 + 同步自检（复用仓库外 PAT 凭证） |
+| `npm run ship -- --rounds 8 "<msg>"` | 先推进 8 轮真实迭代，再提交并推送 |
+| `npm run push:check` | 只读检查本地是否已全部同步到远程，漏推即报错 |
 | `npm run meta` | meta RSI：改进改进机制自身 |
 | `npm run benchmark` | 能力基准：ablation + 证据阶梯 + 领先度声明 |
 | `npm run project:status` | 聚合全部发布阻断门禁，CI 友好 |
@@ -188,6 +191,7 @@ PRE_STEP Hooks → ContextBuilder → 预算压缩 → LLM(stream, tool_calls)
 
 | 版本 | 日期 | 要点 |
 | --- | --- | --- |
+| **2.2.1** | 2026-11-08 | 改进即推送：唯一推送通道 + 一键 `ship` 闭环 + 防漏推门禁，复用持久化 PAT 凭证 |
 | **2.2.0** | 2026-11-08 | 进化启动器 + 迭代水位看板：真实评测驱动、跨会话只增账本、水位变化可视化 |
 | **2.1.0** | 2026-11-08 | 复利中枢：跨会话经验库、冻结速度尺子、学习型路由（越用越快 / 越用越省） |
 | **2.0.6** | 2026-11-08 | 打通 OpenRouter 免费 550B 强模型的真实评测通路，取得首份真实模型分数 |
@@ -230,4 +234,4 @@ bro2 对自身能力保持可证伪的诚实标注：
 
 第三方模型服务（OpenAI 兼容端点 / 免费 LLM API）各有独立的服务条款与额度政策，接入时请遵守对应服务方条款；bro2 本身不含任何模型权重或凭据。
 
-欢迎通过 Issue / Pull Request 参与。提交前请运行 `npm run project:status`，确保全部发布门禁仍为绿色；CI 会对每次 push / PR 复跑同一套离线验收门禁。
+欢迎通过 Issue / Pull Request 参与。提交前请运行 `npm run project:status`，确保全部发布门禁仍为绿色；CI 会对每次 push / PR 复跑同一套离线验收门禁。项目维护者可用 `npm run ship` 一次性完成「提交 + 推送 + 同步自检」，避免本地已提交但远程未同步。

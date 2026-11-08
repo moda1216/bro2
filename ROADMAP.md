@@ -83,7 +83,22 @@ v2.0.6 之前，P0 / P0.5 / P1 已把「能不能跑真模型」「能不能省�
 这仍是**同类失败模式内的搜索成本**证据，不是能力分数；P3 OOD 泛化与 P4 异步按需探测
 未实现，`leadership.verdict` 保持 `not-proven`、L4 保持 `not-achieved`。
 
-### 0.5 诚实边界
+### 0.5 发布闭环：每次改进都推送远程（v2.2.1 交付）
+
+水位看板解决「看得到进化」，但发布动作仍靠人工 `git push`，出现过本地已提交、远程未同步的断点。
+v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者记忆：
+
+- **唯一通道** `scripts/push-remote.sh`：复用仓库外 600 权限 fine-grained PAT，
+  一次性 askpass 传凭证、屏蔽系统 App helper；凭证不回显、不入库、不进 `.git/config`。
+- **一键闭环** `npm run ship`：还原运行时噪声 → 干净身份提交 → 唯一通道推送 → 同步自检。
+  `npm run ship -- --rounds 8 "<msg>"` 可先推进真实迭代再发布；迭代本身仍离线可复现。
+- **防漏推门禁** `npm run push:check`：纯只读核对本地 HEAD 与远程 main、最新 tag 是否已推送，
+  不一致即 `EXIT=1`；同时作为 `project:status` 信息展示项，本地领先远程会当场暴露。
+- **红线测试** `tests/remote-sync.test.ts`：守住「凭证绝不入库 / 推送只走唯一通道 / 防漏推纯只读」。
+
+这属于**发布流程保障**，不改变能力判定；`leadership.verdict` 与证据阶梯口径不变。
+
+### 0.6 诚实边界
 
 - 复利在**同一失败模式类内**成立；跨失败模式的泛化属于 P3 OOD 通道 / P4 HarnessRouter，尚未实现。
 - `VelocityLedger` 判定的是**搜索成本下降**，不是能力分数提升；`leadership.verdict` 仍为 `not-proven`、L4 仍 `not-achieved`。

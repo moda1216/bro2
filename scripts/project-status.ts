@@ -41,6 +41,7 @@ const GATES: Gate[] = [
 // 信息展示类（依赖网络 / 真实端点，不阻断发布）
 const INFO: Gate[] = [
   { id: "freeprobe", label: "免费 API 可达性探针", cmd: "npm run free:probe", timeoutMs: 120_000, gate: false },
+  { id: "pushcheck", label: "远程同步一致性（防漏推，只读）", cmd: "npm run push:check", timeoutMs: 60_000, gate: false },
 ];
 
 function lastMeaningfulLine(out: string): string {
@@ -105,7 +106,7 @@ function section(title: string, gates: Gate[]) {
 console.log("\x1b[1m════════════════════════════════════════════════════════════\x1b[0m");
 console.log("\x1b[1m  bro2 · 产出物健康度报告 (npm run project:status)\x1b[0m");
 console.log("\x1b[1m════════════════════════════════════════════════════════════\x1b[0m");
-console.log(`版本: v2.2.0   判定: leadership.verdict = not-proven   证据阶梯 L4 = not-achieved`);
+console.log(`版本: v2.2.1   判定: leadership.verdict = not-proven   证据阶梯 L4 = not-achieved`);
 
 const gateRes = section("A. 发布阻断门禁（全绿方可发布）", GATES);
 const infoRes = section("B. 信息展示（不阻断发布）", INFO);

@@ -1,6 +1,6 @@
 {
   "name": "bro2",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "type": "module",
   "description": "bro2 · 通用 Agent 运行时（含 RSI 有界可验证自我改进）— 零第三方依赖",
   "license": "MIT",
@@ -33,6 +33,9 @@
     "evolve:tick": "node --experimental-strip-types --no-warnings bin/evolve-loop.ts",
     "watermark": "node --experimental-strip-types --no-warnings bin/evolve-loop.ts --view",
     "watermark:check": "node --experimental-strip-types --no-warnings scripts/watermark-check.ts",
+    "ship": "sh scripts/ship.sh",
+    "push:remote": "sh scripts/push-remote.sh",
+    "push:check": "node --experimental-strip-types --no-warnings scripts/remote-check.ts",
     "policy:check": "node --experimental-strip-types --no-warnings examples/policy-check.ts",
     "meta": "node --experimental-strip-types --no-warnings bin/agentos.ts meta --rounds 3 --generations 6",
     "meta:dry": "node --experimental-strip-types --no-warnings bin/agentos.ts meta --dry-run --rounds 1 --generations 6",

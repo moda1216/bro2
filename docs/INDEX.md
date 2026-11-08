@@ -62,6 +62,7 @@
 | 零本地部署跑真实强模型 | docs/FREE-LLM-APIS.md | `npm run free:probe` → 填 Key → `AGENTOS_LIVE_PROVIDER=openrouter npm run eval:live` |
 | 推进 RSI 演进路线 | docs/RSI-NEXT.md | 读路线图 → 落 P0–P5 |
 | 查看 / 推进迭代水位 | docs/ITERATION-WATERMARK.md → `data/rsi/watermark.html` | `npm run watermark` → `npm run evolve:tick -- --rounds 8` |
+| 改进后同步 GitHub 远程 | 发布流程见 CHANGELOG v2.2.1 | `npm run ship`（提交 + 推送 + 自检）→ `npm run push:check` |
 | 提交前全量回归 | 本页 §3 | `npm test && npm run verify && ...` |
 
 ---
