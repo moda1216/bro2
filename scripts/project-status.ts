@@ -103,7 +103,7 @@ function section(title: string, gates: Gate[]) {
 console.log("\x1b[1m════════════════════════════════════════════════════════════\x1b[0m");
 console.log("\x1b[1m  bro2 · 产出物健康度报告 (npm run project:status)\x1b[0m");
 console.log("\x1b[1m════════════════════════════════════════════════════════════\x1b[0m");
-console.log(`版本: v2.0.5   判定: leadership.verdict = not-proven   证据阶梯 L4 = not-achieved`);
+console.log(`版本: v2.0.6   判定: leadership.verdict = not-proven   证据阶梯 L4 = not-achieved`);
 
 const gateRes = section("A. 发布阻断门禁（全绿方可发布）", GATES);
 const infoRes = section("B. 信息展示（不阻断发布）", INFO);

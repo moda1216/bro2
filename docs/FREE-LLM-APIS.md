@@ -262,3 +262,26 @@ npm run free:probe       # 查看聚合器纳入了哪些上游及其健康度
 - 不要为"刷分"滥用免费额度；bro2 的 `preflight` 门禁会在端点故障时 `EXIT=1` 并拒绝写低分报告，
   避免把"配额耗尽 / 网络抖动"误判成"模型/ harness 弱"。
 - 免费 API **不**改变 bro2 的治理不变式：协议违规零容忍、holdout 严格提升、只增账本——见 `RSI.md`。
+
+---
+
+## 十、v2.0.6 实测记录：OpenRouter 免费 550B 强模型
+
+`agentos.config.json` 早已预留 `openrouter`（`apiKeyEnv: OPENROUTER_API_KEY`、`model: ${OPENROUTER_MODEL}`），
+凭据只走环境变量，不写进配置、不落进报告与提交记录。
+
+```bash
+export OPENROUTER_API_KEY=<你的免费 Key>
+export OPENROUTER_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free
+AGENTOS_LIVE_PROVIDER=openrouter npm run preflight   # 六项门禁：配置 / 端点 / 认证 / 模型 / SSE / 原生 tool_calls
+AGENTOS_LIVE_PROVIDER=openrouter npm run eval:live   # 报告写 data/eval-live-report.json
+```
+
+实测（2026-11-08，免费层 550B 模型、k=1、12 个 live 任务）：总体 **41.7%（5/12）**，
+`tool-use 50% / grounding 0% / context 33.3% / multi-step 66.7%`，**协议违规 0、工具错误率 0**，
+平均延迟 9.3s、总 token 128413。
+
+> 诚实边界：这是**单模型、单任务集、k=1** 的真实分数。报告内部 `gate.pass=false` 是相对确定性 mock 基线（1.0）的对比结果，
+> 不是发布阻断门禁（`npm run project:status` 仍 10/10 全绿）。41.7% 不构成「领先」证据，
+> `leadership.verdict = not-proven`、L4 `not-achieved` 不变；失败集中在 grounding / 上下文锚定 / 多步工具编排，
+> 为 P1 对比式改进与 P3 OOD 通道提供真实失败模式输入。

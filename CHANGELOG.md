@@ -10,6 +10,25 @@
 
 ---
 
+## [2.0.6] — 2026-11-08 · P0 真实强模型评测通路打通（OpenRouter 免费 550B）（PATCH）
+
+> 类型：**PATCH · 证据更新 + 路线图推进**。用 OpenRouter 免费层的 120B+ 强模型跑通 `eval:live`，拿到 bro2 在真实强模型上的第一份有效分数，兑现 ROADMAP P0 的核心目标。
+
+### 新增（Added）
+- **P0 强模型接入实证**：`AGENTOS_LIVE_PROVIDER=openrouter OPENROUTER_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free npm run eval:live` 一行命令跑通；`preflight` 六项门禁全绿（配置 / 端点 / 认证 / 模型可用 / SSE 流式 / 原生 `tool_calls`）。
+- **第一份真实强模型分数** `data/eval-live-report.json`：12 个 live 任务通过 5 个，总体 **41.7%**；分类 `tool-use 50% / grounding 0% / context 33.3% / multi-step 66.7%`；**协议违规 0、工具错误率 0**，平均延迟 9.3s、总 token 128413。
+- **配置零改动**：`agentos.config.json` 早已预留 `openrouter`（`apiKeyEnv: OPENROUTER_API_KEY`、`model: ${OPENROUTER_MODEL}`），凭据只走环境变量，不入库、不落报告、不进提交记录。
+
+### 验证（Verification）
+- `npm run project:status` 仍 **10/10** 发布门禁通过；`npm test` **131/131**（本轮无代码改动）。
+- live 报告内部 `gate.pass=false` 属预期：它对比的是确定性 mock 基线（1.0），不是发布阻断门禁；恰好实证「不能把仿真分当真实能力分」。
+
+### 诚实边界（不变）
+- `leadership.verdict = not-proven`、证据阶梯 L4 = `not-achieved` 不变。41.7% 是**单模型、单任务集、k=1** 的实测，未做多模型横向对比、未做 OOD、未对齐公开基准，不据此宣称领先。
+- 失败集中在 grounding / 上下文锚定 / 多步工具编排，为 P1 对比式改进与 P3 OOD 通道提供了真实失败模式输入。
+
+---
+
 ## [2.0.5] — 2026-11-08 · 双层叠加（免 Key 网状 + 本地协同）+ P1 对比式改进 live 闭环（PATCH）
 
 > 类型：**PATCH · 能力增强 + 路线图推进**。把 `hybrid.remote` 指向 `keyless`，形成「聚合器管可用性 / hybrid 管开销」的正交双层；并按 ROADMAP 推进 **P1**（对比式改进接入 live RSI）。

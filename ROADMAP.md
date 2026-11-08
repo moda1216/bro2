@@ -21,8 +21,12 @@
 - **验收标准**：
   - `AGENTOS_LIVE_PROVIDER=<某免费API> npm run eval:live` 跑通，preflight 门禁 6/6 通过。
   - 报告字段完整、`protocolViolations` 记录真实、不出现 `verdict=proven`。
-- **依赖**：用户提供一个免费 API Key（沙箱已验证网络可达，只差 Key）。
-- **状态**：🟡 **部分完成**——无 Key 通路已打通（`pollinations` 实测 25% / 0 协议违规；`kilo` 实测支持原生 tool_calls），但「带强 Key 的 120B+ 模型横向对比」仍待用户供 Key。
+- **已交付（v2.0.6 · OpenRouter 免费 550B 强模型实测，P0 核心目标达成）**：
+  - `preflight` 六项门禁全绿（配置 / 端点 / 认证 / 模型可用 / SSE 流式 / 原生 `tool_calls`），`AGENTOS_LIVE_PROVIDER=openrouter` 一行命令跑通 `eval:live`。
+  - 真实报告 `data/eval-live-report.json`：总体 **41.7%（5/12）**，`protocolViolations=0`、工具错误率 0；分类 `tool-use 50% / grounding 0% / context 33.3% / multi-step 66.7%`。
+  - 模型 `nvidia/nemotron-3-ultra-550b-a55b:free`（免费层 550B，远超 P0 设定的 120B+ 门槛），凭据只走环境变量 `OPENROUTER_API_KEY` / `OPENROUTER_MODEL`，配置与提交记录零凭据。
+- **依赖**：~~用户提供免费 API Key~~（v2.0.6 已兑现）；多模型横向对比仍待增加免费 provider 额度。
+- **状态**：🟢 **核心目标已交付（v2.0.6）**——已拿到真实强模型第一份有效分数；「≥3 个真实模型对比矩阵」与「付费强 Key 横向对比」仍待建（对齐 P5）。
 - **论文依据**：所有（这是验证"业界水平"的前提动作）。
 
 ```bash
@@ -164,14 +168,15 @@ P0.5(混合推理) 横切 P0–P4：用本地小模型承接便宜/重复调用�
 P0.5(统一聚合器 v2.0.4)：把多个免 Key 端点聚合成唯一高可用接口，故障转移吸收单点限流/宕机
 P0.5(双层叠加 v2.0.5)：hybrid.remote→keyless，聚合器管可用性 / hybrid 管开销，正交叠加
 P1(对比式改进 live 闭环 v2.0.5)：contrast 接入真实轨迹，scoreGain 不参与判定（防 reward hacking）
+P0(强模型实测 v2.0.6)：OpenRouter 免费 550B 跑通 eval:live，第一份强模型分数 41.7%（5/12，协议违规 0）
 依赖：P0(真实分数) → P1(live RSI) → P2(经验) / P3(OOD)
      P2+P3 → P4(类族) → P5(L4 升 partial)
-     P0.5-a/b/c 可独立于 P1–P4 推进（纯 harness 工程优化）；统一聚合器 + 双层叠加 + P1 闭环已交付
+     P0.5-a/b/c 可独立于 P1–P4 推进（纯 harness 工程优化）；统一聚合器 + 双层叠加 + P1 闭环 + P0 强模型实测已交付
 ```
 
 | 优先级 | 工作流 | 论文 | 状态 | 是否需外部数据 |
 | --- | --- | --- | --- | --- |
-| **P0** | 免费 API 真实评测（无 Key 通路已通） | 全部 | 🟡 无 Key 已跑通；强 Key 对比待供 | 无 Key 无需；强模型对比需 1 个免费 Key |
+| **P0** | 免费 API 真实评测（含免费强模型） | 全部 | 🟢 核心目标已交付（v2.0.6，550B 实测 41.7%）；多模型矩阵待建 | 免费层 Key 已够用；横向对比需更多 provider 额度 |
 | **P0.5** | 混合推理 + 无 Key 端点统一聚合 + 双层叠加 | HARNESS²/Evo²/KeylessAI·Zerogateway | 🟢 全链路已交付（hybrid v2.0.3 + keyless v2.0.4 + 双层叠加 v2.0.5） | 否（本地小模型 + 免 Key 端点即可） |
 | **P1** | live RSI（对比式改进 live 闭环） | HARNESS² | 🟢 核心闭环已交付（v2.0.5，防 reward hacking 实证） | 否（确定性轨迹已实证；强模型自动编排待 P0） |
 | **P2** | 经验库 EXPERIENCE.md | HARNESS² | 🔲 待建 | 否 |

@@ -11,7 +11,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.0.5**（语义化，见 CHANGELOG） |
+| 版本 | **v2.0.6**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
@@ -45,6 +45,7 @@
 | 确定性主评测 | `npm run eval` | overall **1.0**，19/19，协议违规 0 | 能力证据 L1 |
 | 第一份真实分数 | `npm run eval:live`（本地 qwen2.5:0.5b） | overall **0.0%**（0/12），协议违规 0 | 真实证据（诚实） |
 | **无 Key 真实分数** | `npm run eval:live`（Pollinations 匿名层 · gpt-oss-20b） | overall **25%（3/12）**，协议违规 **0**，零 Key | 真实证据（无 Key） |
+| **强模型真实分数** | `npm run eval:live`（OpenRouter · nemotron-3-ultra-550b-a55b:free） | overall **41.7%（5/12）**，协议违规 **0**，免费层 550B | 真实证据（强模型，v2.0.6） |
 
 ---
 
@@ -250,4 +251,4 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.0.5**（双层叠加 hybrid.remote→keyless + P1 对比式改进 live 闭环；`npm test` 131/131，`project:status` 10/10 门禁）。
+- 当前最新：**v2.0.6**（P0 真实强模型评测：OpenRouter 免费 550B 实测总体 41.7%（5/12 通过）、协议违规 0；`npm test` 131/131，`project:status` 10/10 门禁）。
