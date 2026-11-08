@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-08T13:43:24.073Z",
+  "mode": "live",
+  "providerName": "kilo",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "ad4a2d7df326",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "v2-l3-01",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": true,
+      "reasons": [],
+      "stoppedBy": "completed",
+      "steps": 12,
+      "toolCalls": 17,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tokens": 63513,
+      "latencyMs": 52168,
+      "provider": "kilo",
+      "answer": "所有能力已实现，`npm test` 全绿（6/6）。\n\n- `list(items, {done})`：`done` 省略返回全部；`true`/`false` 按状态过滤。\n- `sortBy(items)`：按 priority 升序稳定排序，不修改入参数组（DSU 保证稳定）。\n- `save(store, p"
+    }
+  ],
+  "summary": {
+    "overall": 1,
+    "byCategory": {
+      "multi-step": 1
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 1,
+    "avgSteps": 12,
+    "avgToolCalls": 17,
+    "avgLatencyMs": 52168,
+    "totalTokens": 63513,
+    "toolErrorRate": 0,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 1,
+    "total": 1,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": true,
+    "violations": []
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  },
+  "layers": [
+    {
+      "layer": "l3",
+      "tasks": 1,
+      "ran": 1,
+      "ok": 1,
+      "pending": 0,
+      "samples": 0,
+      "file": "data/tasks/v2/l3.jsonl",
+      "hash": "ad4a2d7df326"
+    }
+  ],
+  "preset": null
+}

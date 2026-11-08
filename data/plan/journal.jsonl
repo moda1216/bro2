@@ -18,3 +18,5 @@
 {"at": "2026-11-08T13:40:00.000Z", "id": "W2-04", "event": "done", "loc": 130, "evidence": "tests/edit.test.ts 6/6；多处命中一律拒绝"}
 {"at": "2026-11-08T13:40:00.000Z", "id": "W2-05", "event": "start"}
 {"at": "2026-11-08T13:40:00.000Z", "id": "W2-05", "event": "done", "loc": 100, "evidence": "aci:check 7/7 接入发布门禁；报告记录工具分布"}
+{"at": "2026-11-08T14:10:00.000Z", "id": "W1-07", "event": "start"}
+{"at": "2026-11-08T14:10:00.000Z", "id": "W1-07", "event": "done", "loc": 40, "evidence": "l3.jsonl 1 个任务（ts-todo，三文件 + 过时断言），task:check 1/1；live standard 1/1 vs minimal 1/1（0pp）", "note": "部分完成：目标 12 个，先交付 1 个验证机制；0pp 说明需先建可放大差异的场景，而非继续堆同质任务"}

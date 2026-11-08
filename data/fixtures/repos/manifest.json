@@ -47,6 +47,19 @@
       "files": 4,
       "bytes": 1910,
       "hash": "df348e545f92"
+    },
+    {
+      "name": "ts-todo",
+      "language": "js",
+      "projectFile": "package.json",
+      "test": [
+        "npm",
+        "test"
+      ],
+      "hiddenDefect": "L3 多约束任务：list 过滤与 sortBy 稳定排序未实现；persist.save/load 抛未实现；可见测试含一条旧行为断言（list 忽略选项）",
+      "files": 6,
+      "bytes": 4812,
+      "hash": "f51643752027"
     }
   ]
 }

@@ -1,0 +1,9 @@
+{
+  "name": "todo",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Minimal todo store (fixture repo for bro2 bench v2 L3)",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

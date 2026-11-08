@@ -10,6 +10,39 @@
 
 ---
 
+## [2.6.0] — 2026-11-08 · L3 首任务与「harness 增益未证实」（MINOR）
+
+> 类型：**MINOR · 新层 + 负结果**。
+> L3 层第一次有任务：三文件协作 + 旧断言识别 + 三约束同时满足。
+> 结果仍然是 0pp——这次连「步数预算」都没能拉开差距，原因值得完整记录。
+
+### 新增（Added）
+- `data/fixtures/repos/ts-todo/` — 第 4 个 fixture：`store` / `query` / `persist` 三文件，
+  可见测试含一条**描述旧行为**的断言（`list` 忽略选项），要求模型识别并更新。
+- `data/tasks/v2/l3.jsonl` — 首个 L3 任务 `v2-l3-01`（`liveOnly`，预算 30 步，权重 2）：
+  同时实现 `list` 过滤、`sortBy` 稳定排序、`save/load` 持久化，且不得削弱其余测试。
+- `manifest.json` 扩到 4 个仓库（12,397 字节），内容指纹重算。
+
+### 证据
+- `task:check --layer l3` → **1/1 双态成立**。
+- `fixture:check -- --run` → 4 仓库结构完整、测试可跑。
+- L3 live（kilo，k=1）：standard **1/1**（12 步 / 17 工具）；minimal **1/1**（10 步 / 15 工具）。
+
+### 负结果（必须保留）
+**L2 与 L3 都是 0pp，minimal 甚至更省。** 原因不是任务不够长，而是：
+
+> `minimal` 预设带 `shell`，shell 是图灵完备的。在单仓库、单进程、无故障的场景里，
+> 工具层的精巧程度会被 shell 抹平。
+
+harness 可能产生差异的条件至少需要一条：上下文超窗、故障恢复、多 Agent 协作、弱模型。
+弱模型对照试过一次：`pollinations` 端点全部 `provider_error`（链路故障，不是能力差异），
+**因此没有弱模型证据**。
+
+### 诚实边界
+- `leadership.verdict` 保持 `not-proven`；L4 未达成。
+- 任何「bro2 比最小 harness 强 X%」的说法，当前**没有证据支持**。
+- 下一步不应继续堆同质任务（只会得到更多 0pp），而应先建立能放大差异的场景（见 `BENCH-v2.md` §5.2）。
+
 ## [2.5.0] — 2026-11-08 · W2 编码 ACI 与首次真实 L2 跑分（MINOR）
 
 > 类型：**MINOR · 新能力域**。
