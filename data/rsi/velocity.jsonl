@@ -6,3 +6,6 @@
 {"seq":5,"ts":"2026-11-08T04:54:34.328Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
 {"seq":6,"ts":"2026-11-08T04:54:34.374Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
 {"seq":7,"ts":"2026-11-08T04:54:34.421Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
+{"seq":8,"ts":"2026-11-08T05:10:10.521Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
+{"seq":9,"ts":"2026-11-08T05:10:10.573Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
+{"seq":10,"ts":"2026-11-08T05:10:10.619Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
