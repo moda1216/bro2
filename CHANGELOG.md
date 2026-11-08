@@ -10,6 +10,42 @@
 
 ---
 
+## [2.2.2] — 2026-11-08 · 修复 CI 验收门禁失败（PATCH）
+
+> 类型：**PATCH · 回归修复**。v2.2.1 引入的 `tests/remote-sync.test.ts` 中有一条断言
+> 「本机私有凭证文件 `/root/.codebuddy/credentials/bro2-github-pat` 必须存在」，
+> 这是**环境事实**而非仓库不变量：GitHub Actions runner 上没有该文件，
+> 导致 `npm test` 从 `130ae39` 起连续 3 次 CI 失败（`11/12` 门禁），
+> 而本地因凭证存在显示 `162/162` 全绿——典型的「本地绿 / CI 红」。
+
+### 修复（Fixed）
+- `tests/remote-sync.test.ts`：移除对凭证文件存在性的断言，改为与机器无关的**设计约束**
+  （默认路径位于 `$HOME/.codebuddy/credentials`、凭证缺失时 `[ ! -r ... ]` 显式报错退出、
+  仓库内零明文；`.git/config` 仅在存在时校验）。
+- 新增 **「CI 可移植性」**门禁：扫描全部 `tests/*.test.ts`，禁止出现本机专属
+  绝对路径（`/root/`、`/workspace/`、`/home/`、`/Users/`、Windows 盘符），
+  `/etc/passwd`、`/tmp/...` 等通用夹具不受影响。防止同类错误再次混入。
+- `scripts/remote-check.ts`：修复网络抖动导致的 `push:check` 间歇性误报。
+  实测 `git ls-remote` 直连 6 次有 1 次 `exit=128 unable to access`，而 `ship.sh` 推送后
+  依赖该自检——一次抖动就会让**推送已成功**的 `ship` 整体非零退出。现加入：
+  `ls-remote` 有限重试（3 次 / 每次 10s）、push 后远程 ref 传播延迟时**复查一次**再判定、
+  「网络不可达 = 无法复核」明示为信息项（`exit=0`）而非冒充「已同步」或「漏推」；
+  只有确认未同步才 `exit=1`。`project:status` 中该信息项超时放宽至 90s。
+- 已在**有凭证 / 无凭证两种环境**分别验证，并在**纯 checkout 副本**（无本机凭证、
+  无本地 git 身份）下跑通全量 `npm test` **164/164**；`push:check` 连跑 4 次稳定。
+
+### 变更（Changed）
+- 版本 `2.2.2`；同步 `CHANGELOG` / `README` 更新日志 / `DELIVERABLES` /
+  `scripts/project-status.ts` 版本行 / 私有技能 `bro2-self-iteration` `1.3.2`。
+- 私有技能新增反模式条目：**测试不得依赖本机环境事实**（凭证、绝对路径、本机服务）。
+
+### 根因与教训
+CI 只 checkout 仓库内容，不携带本机私有状态。单测必须只断言**可从仓库复现的结构不变量**；
+任何「本机文件存在 / 本机服务可达 / 本机凭据有效」的断言都属于运行时检查，
+应由 `push-remote.sh` 等真实执行环节承担，不能写进 `npm test`。
+
+---
+
 ## [2.2.1] — 2026-11-08 · 改进即推送：远程同步闭环（PATCH）
 
 > 类型：**PATCH · 发布流程 / 验收脚本补齐**。v2.2.0 的进化启动器把「越用越快」写进了

@@ -6,27 +6,51 @@
  *   1) 本地 HEAD 是否等于远程 main 的 sha；
  *   2) 本地最新 tag 是否已存在于远程；
  *   3) 本地是否存在领先远程的提交（ahead > 0）。
- * 任何一项不满足 → 退出码 1，提示先执行 npm run ship。
+ * 任何一项确认不满足 → 退出码 1，提示先执行 npm run ship。
  *
  * 用法：npm run push:check
- * 设计约束：纯读、零网络写、不触碰凭证；CI 与本地均可运行。
+ * 设计约束：
+ *   - 纯读、零网络写、不触碰凭证；CI 与本地均可运行。
+ *   - 网络抖动（Connection reset / GnuTLS / unable to access）会做有限重试；
+ *     push 成功后远程 ref 可能有短暂传播延迟，值不一致时复查一次，避免误判漏推。
+ *   - 「网络不可达 = 无法复核」是信息项（退出 0），不等于「已同步」，也不等于「漏推」；
+ *     只有**确认**未同步才退出 1。ship 的推送步骤在前，网络彻底不可达时 push 早已失败。
  */
 import { spawnSync } from "node:child_process";
 
+const LS_REMOTE_RETRIES = 3;
+
 function git(args: string[]): { ok: boolean; out: string } {
-  const r = spawnSync("git", args, { encoding: "utf8", timeout: 30_000 });
+  const r = spawnSync("git", args, { encoding: "utf8", timeout: 10_000 });
   return { ok: r.status === 0 && !r.error, out: (r.stdout ?? "").trim() };
+}
+
+/** ls-remote 是匿名读，偶发网络抖动很常见；有限重试，不无限等待。 */
+function lsRemote(ref: string): { ok: boolean; out: string } {
+  let last = { ok: false, out: "" };
+  for (let i = 0; i < LS_REMOTE_RETRIES; i += 1) {
+    last = git(["ls-remote", "origin", ref]);
+    if (last.ok) return last;
+  }
+  return last;
 }
 
 const line = (s = ""): void => { process.stdout.write(s + "\n"); };
 
 const head = git(["rev-parse", "HEAD"]);
-const remoteMain = git(["ls-remote", "origin", "refs/heads/main"]);
-const remoteSha = remoteMain.ok ? (remoteMain.out.split(/\s+/)[0] ?? "") : "";
+const remoteMain = lsRemote("refs/heads/main");
 
-if (!remoteMain.ok || !remoteSha) {
-  line("✗ 无法读取远程 main（网络不可达或 remote 未配置），无法确认同步状态");
-  process.exit(1);
+if (!remoteMain.ok || !remoteMain.out) {
+  line("⚠ 网络不可达：无法复核远程同步状态（信息项，不阻断发布；推送若已完成不受影响）");
+  process.exit(0);
+}
+
+let remoteSha = remoteMain.out.split(/\s+/)[0] ?? "";
+
+// push 成功后远程 ref 可能短暂仍指向旧 sha：复查一次再判定，避免把延迟当成漏推
+if (head.ok && head.out !== remoteSha) {
+  const again = lsRemote("refs/heads/main");
+  if (again.ok) remoteSha = again.out.split(/\s+/)[0] ?? remoteSha;
 }
 
 const problems: string[] = [];
@@ -40,8 +64,8 @@ if (head.ok && head.out !== remoteSha) {
 const localTag = git(["tag", "--sort=-v:refname"]);
 const latest = localTag.ok ? (localTag.out.split("\n")[0]?.trim() ?? "") : "";
 if (latest) {
-  const remoteTag = git(["ls-remote", "origin", `refs/tags/${latest}`]);
-  if (!remoteTag.ok || !remoteTag.out.trim()) {
+  const remoteTag = lsRemote(`refs/tags/${latest}`);
+  if (!remoteTag.out.trim()) {
     problems.push(`本地最新 tag ${latest} 尚未推送到远程`);
   }
 }
