@@ -213,6 +213,9 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 
 **目标**：建立三层任务集，让"harness 差异"能被测出来。
 
+> **进度**：`W1-01` ✅ 已交付（v2.3.1）——三层任务集已可装载、可校验、可复跑；
+> l1 指纹与既有评测报告一致（`d1419b1efaa7`），迁移零漂移。下一步 `W1-02` 建 fixture 仓库快照。
+
 | 层 | 用途 | 规模 | 判定方式 |
 | --- | --- | --- | --- |
 | **L1 回归层** | 现有 19 任务，守协议与治理不回归 | 19（保留） | 脚本化，overall 必须 1.0 |
@@ -226,8 +229,9 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 | `data/tasks/v2/l2.jsonl` | 60+ 真实工程任务（`repo`、`commit`、`issue`、`hiddenTests`、`budget`） |
 | `data/tasks/v2/l3.jsonl` | 12+ 长程任务（含人为注入的失败点，测纠错） |
 | `data/fixtures/repos/` | 6–8 个小型真实仓库快照（TS/Python，每个 < 2MB），固定 commit |
-| `src/observability/task-v2.ts` | 任务 schema + 沙箱化 fixture 装载 + 隐藏测试执行器 |
-| `scripts/bench-v2.ts` | 跑分入口：`npm run bench:v2 -- --layer l2 --model <id> --repeat 3` |
+| `src/bench/schema.ts` ✅ | `bro2.task/2` 契约 + 幂等升格 + `toEvalTask` 唯一转换点（**已交付 v2.3.1**） |
+| `src/bench/loader.ts` ✅ | 分层装载 + 重复 id / 坏行 / fixture 引用校验（**已交付 v2.3.1**） |
+| `scripts/bench-v2.ts` ✅ | 跑分入口：`npm run bench:v2 -- --layer l1\|l2\|all`（**已交付 v2.3.1**；`--model/--repeat` 与隐藏测试执行器待 W1-04） |
 | `docs/BENCH-v2.md` | 任务来源、判定口径、如何新增任务、如何复现 |
 
 **验收**

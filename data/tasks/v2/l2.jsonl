@@ -1,0 +1,5 @@
+// v2 任务集 · l2 层（真实工程任务）
+// ------------------------------------------------------------
+// W1-03 负责填充 18 个真实仓库任务。此前先放 1 个 `"sample": true` 的格式样例：
+// 它证明 v2 schema 可被装载、可被执行、可被判分，但不计入真实工程通过率。
+{"schema":"bro2.task/2","layer":"l2","id":"v2-sample-01","category":"tool-use","input":"计算 sum([3,7,11]) 的结果","expectedTools":["calc"],"expectedAnswer":["21"],"budget":{"maxSteps":4},"sample":true,"script":[{"content":"","toolCalls":[{"name":"calc","arguments":{"expression":"sum([3,7,11])"}}]},{"content":"计算完成，总和是 21。"}]}

@@ -34,8 +34,8 @@ if [ -n "$ROUNDS" ]; then
   node --experimental-strip-types --no-warnings bin/evolve-loop.ts --rounds "$ROUNDS"
 fi
 
-# 2) 还原运行时噪声（这些文件会被验收脚本顺带改写时间戳）
-for f in data/evolve/incidents.jsonl data/evolve/ledger.jsonl data/live-link-smoke.json; do
+# 2) 还原运行时噪声（这些文件会被验收脚本顺带改写时间戳/延迟，提交它们只会制造假 diff）
+for f in data/evolve/incidents.jsonl data/evolve/ledger.jsonl data/live-link-smoke.json data/eval-report.json; do
   if [ -f "$f" ]; then git restore -- "$f" 2>/dev/null || true; fi
 done
 

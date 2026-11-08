@@ -83,9 +83,10 @@ npm run live:smoke             # live 全链路自检（仿真端点，明确非
 #   LOCAL_MAX_TOKENS=128 python3 tools/local-llm-server.py --threads 4 --stats-file data/local-llm-stats.json
 
 # 评测与验证
-npm test                       # 单元 + 端到端 + 故障注入（176 项）
+npm test                       # 单元 + 端到端 + 故障注入（186 项）
 npm run verify                 # L0–L7 能力矩阵结构自检（23 项）
 npm run eval                   # 确定性行为回归（19 任务 + 门禁）
+npm run bench:v2               # 分层任务评测（--layer l1|l2|all，判分复用唯一评测器）
 npm run eval:live              # 真实模型端到端（内置 preflight 门禁，需自备端点）
 npm run preflight:check        # 门禁防误判 / 证据面隔离（37 项）
 npm run policy:check           # 5 个策略代码分支实证（19 项）

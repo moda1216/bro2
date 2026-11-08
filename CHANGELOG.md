@@ -10,6 +10,47 @@
 
 ---
 
+## [2.3.1] — 2026-11-08 · W1-01：v2 任务 schema 与分层装载器（PATCH）
+
+> 类型：**PATCH · 战役内步骤**（W1 战役收口时才升 MINOR）。
+> 这是基准重建的第一步：没有可分层、可校验、可复现的任务装载层，
+> 后面所有「同模型增益（HLR）」都缺少可信的输入。
+
+### 新增（Added）
+- `src/bench/schema.ts` — v2 任务契约 `bro2.task/2`：
+  `layer`（l1/l2/l3）、`repo`/`commit`（fixture 绑定）、`hiddenTests`（隐藏验收）、
+  `budget`（成本上限）、`sample`（格式样例不计入真实通过率）。
+  `upgradeLegacy()` 幂等升格旧任务，`validateTaskV2()` **一次返回全部问题**，
+  `toEvalTask()` 是 v2 → 执行的**唯一**转换点。
+- `src/bench/loader.ts` — 分层装载：l1 直接读既有 `data/eval-tasks.jsonl`
+  （**不复制**，单一事实源），l2 读 `data/tasks/v2/l2.jsonl`；
+  重复 id、坏行、layer 声明不符、fixture 仓库缺失全部报告为装载失败。
+- `scripts/bench-v2.ts` + `npm run bench:v2` — 分层评测入口，
+  `--layer` / `--json` / `--save` / `--quiet`；判分与指标抽取**完全复用** `runEval`。
+- 第 14 道阻断门禁 `benchv2`：`bench:v2 -- --layer l1` 必须 19/19。
+
+### 修复（Fixed）
+- **分层评测误红**：全量阈值假设每个类别都有任务，单跑 l2 时因缺 safety/robustness
+  被判定 0 分而 FAIL。改为只把**本层不存在**的类别断言降为 0，其余阈值与判定逻辑
+  仍由 `runEval` 内部执行，不产生第二套门禁实现。
+- **指纹口径分叉**：装载器初版用文件内容 sha256，而 `runEval` 用
+  `sha1(JSON.stringify(tasks))`，两者永不相等，「指纹一致」形同虚设。
+  已改为复用同一算法——l1 指纹 `d1419b1efaa7` 与既有 `eval-report.json` 完全一致，
+  这才是「装载器交给评测器的是同一份任务」的硬证明。
+
+### 验证
+- `npm test` **186/186**（新增 `tests/bench-v2.test.ts` 10 项）。
+- `npm run bench:v2 -- --layer l1` → **19/19 PASS**，指纹 `d1419b1efaa7`。
+- `npm run bench:v2`（all）→ **20/20 PASS**（l1 19 + l2 样例 1）。
+- `npm run budget:check`：14,031 / 16,500 行、79 / 90 文件、零运行时依赖。
+
+### 诚实边界
+- l2 目前只有 1 个 `sample` 格式样例，**尚不代表真实工程能力**；
+  18 个真实仓库任务是 W1-03 的交付，fixture 快照是 W1-02。
+- `hiddenTests` 字段已定义并被校验，但**判分尚未执行**——执行器接入属于 W1-04。
+
+---
+
 ## [2.3.0] — 2026-11-08 · 自治执行机制与「少而精」工程宪法（MINOR）
 
 > 类型：**MINOR · 新增能力域**。解决两个真实断点：
