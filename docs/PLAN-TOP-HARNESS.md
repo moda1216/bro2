@@ -220,7 +220,8 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 > `W1-05` ✅（v2.5.0）双跑校准：kilo/standard 17/18 vs kilo/minimal 17/18，**差距 0pp**——负结果；
 > `W1-07` ◐（v2.6.0）L3 首个任务（`ts-todo`，三文件 + 过时断言）1/1，standard 12 步 vs minimal 10 步，**仍 0pp**。
 > **关键发现**：`minimal` 带 `shell`，在单仓库无故障场景下会被抹平差异；继续堆同质任务只会得到更多 0pp。
-> 下一步应先建立能放大差异的场景（上下文超窗 / 故障注入 / 多 Agent / 弱模型），见 `docs/BENCH-v2.md` §5.2。
+> 故障注入（v2.7.0）✅：第一个能放大差异的场景——429/500 注入下重试开 3/3 vs 关 0/2；参数名拼写下 repair 3步/0错误 vs fail 8步/1错误。
+> 首个正向 harness 增益证据，边界见 `docs/BENCH-v2.md` §5.3（不改变无故障 0pp 结论）。
 
 | 层 | 用途 | 规模 | 判定方式 |
 | --- | --- | --- | --- |

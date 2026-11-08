@@ -45,9 +45,13 @@ if (mode !== "deterministic" && mode !== "live") {
 const live = mode === "live";
 const k = Math.max(1, Number(flag("repeat") ?? flag("k") ?? 1) || 1);
 const sampleN = flag("sample") ? Math.max(1, Number(flag("sample")) || 1) : 0;
-const only = flag("only");
+const only = flag("only"); // 支持逗号分隔多任务
 /** 同模型、同任务，换 harness 预设——这是「harness 差异」对照的唯一变量。 */
 const presetName = flag("preset");
+/** 消融开关：关闭路由层瞬时重试（故障任务的唯一变量） */
+const noRetry = has("no-retry");
+/** 消融开关：畸形参数策略 fail（默认 repair 见 agentos.config.json / policy） */
+const policyArg = flag("policy"); // 形如 malformedArgs=fail
 
 const selected: TaskLayer[] = layerArg === "all"
   ? LAYERS.filter((l) => l !== "l3")
@@ -79,7 +83,10 @@ for (const l of present) for (const t of l.v2) v2ById.set(t.id, t);
 
 // 模式与任务类型必须匹配：拿 mock 跑真实任务、或拿真实模型跑脚本任务，都是自欺。
 let runnable = loaded.tasks.filter((t) => (live ? !t.deterministicOnly : !t.liveOnly));
-if (only) runnable = runnable.filter((t) => t.id === only);
+if (only) {
+  const ids = new Set(only.split(","));
+  runnable = runnable.filter((t) => ids.has(t.id));
+}
 if (sampleN > 0) runnable = runnable.slice(0, sampleN);
 if (runnable.length === 0) {
   process.stderr.write(
@@ -122,9 +129,17 @@ if (live && !has("skip-preflight")) {
   }
 }
 
+const configOverride: Record<string, unknown> = {};
+if (noRetry) configOverride.model = { retry: { attempts: 0, baseMs: 0 } };
+if (policyArg) {
+  const [k2, v2] = policyArg.split("=");
+  configOverride.policy = { [k2!]: v2 };
+}
+
 const report = await runEval({
   tasks: presetName ? runnable.map((t) => ({ ...t, preset: presetName })) : runnable,
   mode,
+  ...(Object.keys(configOverride).length > 0 ? { configOverride: configOverride as never } : {}),
   ...(live ? { providerName } : {}),
   k,
   root: ROOT,
@@ -168,7 +183,14 @@ if (json) {
     taskSetHash: report.taskSetHash, saved: savePath ? resolve(ROOT, savePath) : null,
   }, null, 2) + "\n");
 } else {
-  process.stdout.write(`\n模式: ${mode}${live ? `  provider: ${providerName}  k=${k}` : ""}${presetName ? `  preset: ${presetName}` : ""}\n`);
+  process.stdout.write(`\n模式: ${mode}${live ? `  provider: ${providerName}  k=${k}` : ""}${presetName ? `  preset: ${presetName}` : ""}${noRetry ? "  [no-retry]" : ""}${policyArg ? `  [policy ${policyArg}]` : ""}\n`);
+  if (live) {
+    const retries = report.runs.reduce((a, r) => a + (r.providerRetries ?? 0), 0);
+    const injected = report.runs.reduce((a, r) => a + (r.faultsInjected ?? 0), 0);
+    if (retries > 0 || injected > 0) {
+      process.stdout.write(`故障注入: ${injected} 次 · 路由重试: ${retries} 次\n`);
+    }
+  }
   process.stdout.write("层    任务   已跑   通过      未跑   文件\n");
   for (const r of rows) {
     process.stdout.write(

@@ -3,7 +3,10 @@
   "model": {
     "default": "mock",
     "providers": {
-      "mock": { "type": "mock", "strategy": "heuristic" },
+      "mock": {
+        "type": "mock",
+        "strategy": "heuristic"
+      },
       "openai": {
         "type": "openai",
         "baseUrl": "${OPENAI_BASE_URL}",
@@ -123,7 +126,9 @@
         "timeoutMs": 180000,
         "maxRetries": 2,
         "priority": 4,
-        "tags": ["unified-gateway"],
+        "tags": [
+          "unified-gateway"
+        ],
         "note": "KeylessAI：统一 OpenAI 兼容端点，聚合 Pollinations 等上游，自带故障转移/限流处理。模型以各家为准（可用 KEYLESSAI_MODEL 覆盖，默认 gpt-oss-20b）。"
       },
       "zerogateway": {
@@ -135,7 +140,10 @@
         "timeoutMs": 180000,
         "maxRetries": 2,
         "priority": 3,
-        "tags": ["unified-gateway", "zerogateway"],
+        "tags": [
+          "unified-gateway",
+          "zerogateway"
+        ],
         "note": "Zerogateway 风格的统一路由器（Python 库）思路：聚合多免费层、智能回退。填 ZEROGATEWAY_BASE_URL 即接入。"
       },
       "dsv41-flash": {
@@ -147,7 +155,10 @@
         "timeoutMs": 180000,
         "maxRetries": 2,
         "priority": 6,
-        "tags": ["harness-plugin", "deepseek-v4.1-flash"],
+        "tags": [
+          "harness-plugin",
+          "deepseek-v4.1-flash"
+        ],
         "note": "DeepSeek Harness 插件 pi/dsh-our-free-model 内置模型（DeepSeek V4.1 Flash 等），安装后免 Key。填 OUR_FREE_MODEL_BASE_URL 即接入。"
       },
       "kimi-k3": {
@@ -159,7 +170,10 @@
         "timeoutMs": 180000,
         "maxRetries": 2,
         "priority": 5,
-        "tags": ["harness-plugin", "kimi-k3"],
+        "tags": [
+          "harness-plugin",
+          "kimi-k3"
+        ],
         "note": "同上插件内置 Kimi K3 等模型。"
       },
       "glm-53": {
@@ -171,14 +185,20 @@
         "timeoutMs": 180000,
         "maxRetries": 2,
         "priority": 5,
-        "tags": ["harness-plugin", "glm-5.3"],
+        "tags": [
+          "harness-plugin",
+          "glm-5.3"
+        ],
         "note": "同上插件内置 GLM-5.3 等模型。"
       },
       "keyless": {
         "type": "keyless",
         "backends": [
           "kilo",
-          { "name": "keylessai", "priority": 4 },
+          {
+            "name": "keylessai",
+            "priority": 4
+          },
           "opencode-zen",
           "pollinations",
           "llm7"
@@ -199,12 +219,19 @@
         "fallback": true,
         "note": "双层叠加：remote 指向 keyless 聚合器（免 Key 网状，smart-fallback 故障转移），本地小模型承接便宜/重复调用并作限流兜底；聚合器管可用性、hybrid 管开销。"
       }
+    },
+    "retry": {
+      "attempts": 3,
+      "baseMs": 500
     }
   },
   "permission": {
     "level": "workspace-write",
     "workspace": "./data/workspace",
-    "allowedPaths": ["./data/workspace", "./data/scratch"],
+    "allowedPaths": [
+      "./data/workspace",
+      "./data/scratch"
+    ],
     "autoApproveSafe": true
   },
   "budget": {
@@ -216,6 +243,11 @@
     "loopDetectionThreshold": 3,
     "maxToolOutputChars": 12000
   },
-  "server": { "host": "127.0.0.1", "port": 3080 },
-  "storage": { "dir": "./data" }
+  "server": {
+    "host": "127.0.0.1",
+    "port": 3080
+  },
+  "storage": {
+    "dir": "./data"
+  }
 }

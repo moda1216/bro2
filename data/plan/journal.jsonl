@@ -20,3 +20,7 @@
 {"at": "2026-11-08T13:40:00.000Z", "id": "W2-05", "event": "done", "loc": 100, "evidence": "aci:check 7/7 接入发布门禁；报告记录工具分布"}
 {"at": "2026-11-08T14:10:00.000Z", "id": "W1-07", "event": "start"}
 {"at": "2026-11-08T14:10:00.000Z", "id": "W1-07", "event": "done", "loc": 40, "evidence": "l3.jsonl 1 个任务（ts-todo，三文件 + 过时断言），task:check 1/1；live standard 1/1 vs minimal 1/1（0pp）", "note": "部分完成：目标 12 个，先交付 1 个验证机制；0pp 说明需先建可放大差异的场景，而非继续堆同质任务"}
+{"at": "2026-11-09T00:20:00.000Z", "id": "W3-F1", "event": "start"}
+{"at": "2026-11-09T00:20:00.000Z", "id": "W3-F1", "event": "done", "loc": 260, "evidence": "flaky 8/8 单测；路由重试 attempts=0 时零重试（消融变量成立）；isTransientError 与适配器同口径"}
+{"at": "2026-11-09T00:20:00.000Z", "id": "W3-F2", "event": "start"}
+{"at": "2026-11-09T00:20:00.000Z", "id": "W3-F2", "event": "done", "loc": 30, "evidence": "retry on 3/3（5 次重试全恢复）vs no-retry 0/2（provider_error）；repair 3步/repairs=1 vs fail 8步/1错误", "note": "首个正向 harness 增益证据；malformed-args 初版是哑弹（见 lessons），改参数名拼写后可归因"}

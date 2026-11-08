@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-08T16:36:07.833Z",
+  "mode": "live",
+  "providerName": "kilo",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "4f9e1c065397",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "v2-l3-f01",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "停止原因 provider_error ≠ completed",
+        "注入故障未全部触发（1/2）：任务太短或提前终止，本结果不可用于恢复力结论",
+        "隐藏测试失败 (exit=1): node --input-type=module -e \"const {createStore}=await import('./src/store.js');const s=createStore();const a=s.add('a');s.add('b');if(typeof s.remove!=='function')process.exit(1);if(s.remove(a.id)!==true)process.exit(1);if(s.remove(999)!==false)process.exit(1);if(s.all().length!==1)process.exit(1);if(s.add('c').id!==3)process.exit(1)\" → "
+      ],
+      "stoppedBy": "provider_error",
+      "steps": 1,
+      "toolCalls": 0,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tokens": 0,
+      "latencyMs": 22,
+      "provider": "unknown",
+      "answer": "模型调用失败：全部模型均不可用 → kilo: HTTP 429: rate limit exceeded (injected fault)",
+      "providerRetries": 0,
+      "faultsInjected": 1
+    },
+    {
+      "taskId": "v2-l3-f02",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "停止原因 provider_error ≠ completed",
+        "注入故障未全部触发（1/3）：任务太短或提前终止，本结果不可用于恢复力结论",
+        "隐藏测试失败 (exit=1): node --input-type=module -e \"const {createStore}=await import('./src/store.js');const s=createStore();const a=s.add('a');if(typeof s.setPriority!=='function')process.exit(1);if(s.setPriority(a.id,1).priority!==1)process.exit(1);let threw=false;try{s.setPriority(a.id,5)}catch(e){threw=e instanceof RangeError}if(!threw)process.exit(1);if(s.setPriority(999,1)!==null)process.exit(1);if(s.get(a.id).priority!==1)process.exit(1)\" → "
+      ],
+      "stoppedBy": "provider_error",
+      "steps": 1,
+      "toolCalls": 0,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tokens": 0,
+      "latencyMs": 21,
+      "provider": "unknown",
+      "answer": "模型调用失败：全部模型均不可用 → kilo: HTTP 500: internal server error (injected fault)",
+      "providerRetries": 0,
+      "faultsInjected": 1
+    }
+  ],
+  "summary": {
+    "overall": 0,
+    "byCategory": {
+      "multi-step": 0
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 0,
+    "avgSteps": 1,
+    "avgToolCalls": 0,
+    "avgLatencyMs": 22,
+    "totalTokens": 0,
+    "toolErrorRate": 0,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 0,
+    "total": 2,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": true,
+    "violations": []
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  },
+  "layers": [
+    {
+      "layer": "l3",
+      "tasks": 4,
+      "ran": 2,
+      "ok": 0,
+      "pending": 0,
+      "samples": 0,
+      "file": "data/tasks/v2/l3.jsonl",
+      "hash": "bfdedd3d099b"
+    }
+  ],
+  "preset": null
+}

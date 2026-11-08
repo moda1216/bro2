@@ -86,6 +86,14 @@ export function validateTaskV2(t: TaskV2): string[] {
   if (t.hiddenTests && (!Array.isArray(t.hiddenTests) || t.hiddenTests.some((x) => typeof x !== "string"))) {
     p.push(`${label}: hiddenTests 必须是字符串数组`);
   }
+  const f = t.faults?.provider;
+  if (t.faults?.provider !== undefined) {
+    const kinds = ["rate-limit", "server-error", "malformed-args"];
+    if (!f || !kinds.includes(f.kind) || !Number.isInteger(f.times) || f.times < 1 || f.times > 5) {
+      p.push(`${label}: faults.provider 需为 kind∈{rate-limit,server-error,malformed-args} 且 1≤times≤5（超过 5 次只是烧钱，不测恢复力）`);
+    }
+    if (t.liveOnly !== true) p.push(`${label}: 带 provider 故障的任务必须 liveOnly（deterministic 模式下注入无意义）`);
+  }
   if (t.repo !== undefined && (typeof t.repo !== "string" || !t.repo.trim())) {
     p.push(`${label}: repo 必须是非空字符串`);
   }

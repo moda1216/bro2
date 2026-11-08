@@ -187,6 +187,7 @@ export function mergeConfigForEval(
     storage: b.storage,
     permission: b.permission,
     budget: { ...((b.budget as object) ?? {}), ...((o.budget as object) ?? {}) },
+    model: { ...((b.model as object) ?? {}), ...((o.model as object) ?? {}) },
   } as Partial<RuntimeConfig>;
 }
 
@@ -196,6 +197,6 @@ export function emptyRun(task: EvalTask, repeat: number, reasons: string[]): Eva
     taskId: task.id, category: task.category, repeat, ok: false, reasons, stoppedBy: "error",
     steps: 0, toolCalls: 0, toolErrors: 0, guards: 0, approvalsDenied: 0, compactions: 0,
     protocolViolations: 0, repairs: 0, groundingRejects: 0, loopAdvisories: 0, compactionEvidence: 0,
-    tools: {}, tokens: 0, latencyMs: 0, provider: "unknown", answer: "",
+    tools: {}, providerRetries: 0, faultsInjected: 0, tokens: 0, latencyMs: 0, provider: "unknown", answer: "",
   };
 }

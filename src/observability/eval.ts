@@ -24,6 +24,7 @@ import { ApprovalDecision } from "../governance/approval.ts";
 import { EMPTY_STATS, type InferenceStats } from "../models/cache.ts";
 import type { RuntimeConfig } from "../kernel/runtime.ts";
 import { emptyRun, extract, faultConfig, grade, mergeConfigForEval } from "./eval-grade.ts";
+import { wrapFlaky, type FlakyProvider } from "../models/router.ts";
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -63,6 +64,8 @@ export interface EvalTask {
   expectedPolicy?: Record<string, string>;
   /** 通过配置/监听注入的故障 */
   fault?: "malformed-args" | "unknown-tool" | "approval-deny" | "step-limit" | "deny-path";
+  /** 真实 provider 故障注入（仅 live 生效）：前 times 次调用注入限流/5xx/畸形参数 */
+  faults?: { provider?: { kind: "rate-limit" | "server-error" | "malformed-args"; times: number } };
   maxTokens?: number;
   /** 上下文压缩阈值（独立于 Guards 硬预算） */
   compactTokens?: number;
@@ -92,6 +95,10 @@ export interface EvalRunMetrics {
   compactionEvidence: number;
   /** 工具使用分布：名字 → 次数（用于 ACI 归因，不参与判分） */
   tools: Record<string, number>;
+  /** 路由层实际执行的瞬时故障重试次数（无故障任务恒为 0） */
+  providerRetries: number;
+  /** 实际注入的 provider 故障次数；< faults.provider.times 说明故障没打完，结论不可信 */
+  faultsInjected: number;
   tokens: number;
   latencyMs: number;
   provider: string;
@@ -199,7 +206,7 @@ async function runOne(os: AgentOS, task: EvalTask, workspace: string, repeat: nu
       reasons: [`运行抛异常: ${msg}`], stoppedBy: "exception", steps: 0, toolCalls: 0,
       toolErrors: 0, guards: 0, approvalsDenied: 0, compactions: 0,
       protocolViolations: 0, repairs: 0, groundingRejects: 0, loopAdvisories: 0,
-      compactionEvidence: 0, tools: {}, tokens: 0, latencyMs: Date.now() - started,
+      compactionEvidence: 0, tools: {}, providerRetries: 0, faultsInjected: 0, tokens: 0, latencyMs: Date.now() - started,
       provider: "unknown", answer: "",
     };
   }
@@ -375,7 +382,15 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
           ...(mode === "deterministic" && task.script ? { mockScript: task.script } : {}),
           config: mergeConfigForEval(faultConfig(task, tmp), options.configOverride),
         });
+        let flaky: FlakyProvider | undefined;
         if (mode === "live") {
+          const fault = task.faults?.provider;
+          if (fault) {
+            const base = os.providers.get(providerName);
+            if (!base) throw new Error(`provider 未注册: ${providerName}`);
+            flaky = wrapFlaky(base, fault);
+            os.router.register(providerName, flaky);
+          }
           os.router.setDefault(providerName);
           os.router.setStrict(true); // 禁止静默降级到 Mock，否则评测结果失真
         }
@@ -383,6 +398,16 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
           os.approvals.onRequest((req) => { os?.approvals.resolve(req.id, ApprovalDecision.Deny); });
         }
         const r = await runOne(os, task, workspace, repeat);
+        r.providerRetries = os.router.retryAttempts;
+        if (flaky) {
+          r.faultsInjected = flaky.injected;
+          // 防自欺：声明了故障就必须真的打进去，否则「恢复成功」无从谈起
+          const want = task.faults!.provider!.times;
+          if (flaky.injected < want) {
+            r.ok = false;
+            r.reasons.push(`注入故障未全部触发（${flaky.injected}/${want}）：任务太短或提前终止，本结果不可用于恢复力结论`);
+          }
+        }
         if (options.verifyWorkspace) {
           try {
             const extra = await options.verifyWorkspace(task, workspace);

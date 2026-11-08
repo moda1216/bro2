@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-08T16:41:48.881Z",
+  "mode": "live",
+  "providerName": "kilo",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "9b4e9390113d",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "v2-l3-f03",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": true,
+      "reasons": [],
+      "stoppedBy": "completed",
+      "steps": 3,
+      "toolCalls": 2,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 1,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tokens": 14266,
+      "latencyMs": 9115,
+      "provider": "kilo",
+      "answer": "已完成。`src/query.js` 新增了 `search(items, text)`：\n\n- `text` 为空字符串时返回全部待办的**副本**（`items.map((x) => ({ ...x }))`）\n- 否则返回 `title` 包含 `text`（大小写不敏感）的待办**副本**\n- 使用 `map`",
+      "providerRetries": 0,
+      "faultsInjected": 1
+    }
+  ],
+  "summary": {
+    "overall": 1,
+    "byCategory": {
+      "multi-step": 1
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 1,
+    "avgSteps": 3,
+    "avgToolCalls": 2,
+    "avgLatencyMs": 9115,
+    "totalTokens": 14266,
+    "toolErrorRate": 0,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 1,
+    "total": 1,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": true,
+    "violations": []
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  },
+  "layers": [
+    {
+      "layer": "l3",
+      "tasks": 4,
+      "ran": 1,
+      "ok": 1,
+      "pending": 0,
+      "samples": 0,
+      "file": "data/tasks/v2/l3.jsonl",
+      "hash": "bfdedd3d099b"
+    }
+  ],
+  "preset": null
+}

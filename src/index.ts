@@ -206,6 +206,7 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
   // 全部 provider 走同一个 OpenAICompat 适配器：云端 API、vLLM、LM Studio、
   // 本地 Ollama 只是 baseUrl / 认证策略不同，内核不感知差异。
   const router = new ProviderRouter(config.model.default);
+  if (config.model.retry) router.setRetry(config.model.retry);
   const providers = new Map<string, LLMProvider>();
   const mock = new MockProvider(options.mockScript ? { script: options.mockScript } : { strategy: "heuristic" });
   router.register("mock", mock);

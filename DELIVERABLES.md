@@ -11,7 +11,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.6.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.7.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
@@ -110,6 +110,7 @@
 | **bench**（v2.3.1） | `schema.ts`（`bro2.task/2` 契约 + 幂等升格 + 唯一转换点）/ `loader.ts`（分层装载 + 去重 + fixture 引用校验）/ `scripts/bench-v2.ts`（分层评测入口，复用 `runEval`） | `tests/bench-v2.test.ts` (10) / `npm run bench:v2` |
 | **fixtures**（v2.3.2） | `data/fixtures/repos/` 4 个快照（v2.6.0 增 `ts-todo`）（ts-strkit / py-dates / js-cart，各埋 1 真缺陷）/ `manifest.json`（内容指纹）/ `scripts/fixture-check.ts`（`--run` / `--update`） | `tests/fixture.test.ts` (4) / `npm run fixture:check -- --run` |
 | **ACI**（v2.5.0） | `context/repomap.ts`（预算受限符号索引）/ `tools/patch.ts`（多文件 diff、失败零写入）/ `tools/diagnostics.ts`（三类测试输出结构化）/ `tools/edit-strategy.ts`（唯一命中才降级的编辑链）/ `tools/builtins/code.ts`（`repo_map` `search_symbol` `apply_patch` `diagnostics`） | `tests/repomap.test.ts` (8) / `tests/patch.test.ts` (7) / `tests/diagnostics.test.ts` (5) / `tests/edit.test.ts` (6) / `npm run aci:check` |
+| **故障注入**（v2.7.0） | `models/router.ts`（`wrapFlaky` 确定性注入 429/5xx/参数名拼写 + 路由退避重试 + `injected`/`retryAttempts` 归因计数）/ `bench:v2 --no-retry --policy` 消融开关 | `tests/flaky.test.ts` (8) / `data/bench/v2-kilo-fault-*.json`（retry on 3/3 vs off 0/2；repair 3步 vs fail 8步） |
 | **l2 任务**（v2.4.0） | `data/tasks/v2/l2.jsonl` 18 个真实工程任务（3 仓库 × 6，`repo` + `hiddenTests` + 参考解）/ `src/bench/runner.ts`（fixture 铺设 + 隐藏断言执行 + 超时强杀）/ `scripts/task-check.ts`（双态校准） | `tests/hidden.test.ts` (6) / `npm run task:check` / `npm run bench:v2 -- --layer all` |
 | interfaces | `cli` `api` `web/index.html` | `npm run verify` |
 
@@ -269,7 +270,8 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.6.0**（L3 首个任务 + 第 4 个 fixture；`task:check --layer l3` 1/1；**负结果延续**：standard 与 minimal 在 L2/L3 上均 0pp 差距，原因见 `docs/BENCH-v2.md` §5.2——shell 抹平了工具层差异）。
+- 当前最新：**v2.7.0**（故障注入场景 + 路由层瞬态重试；**第一组正证据**：同模型同任务唯一变量下，重试开 3/3 vs 关 0/2，repair 3步/0错误 vs fail 8步/1错误；`npm test` 230/230；无故障场景 0pp 结论不变）。
+- 上版：**v2.6.0**（L3 首任务 + ts-todo fixture；0pp 负结果延续，shell 抹平工具层差异）。
 - 上版：**v2.5.0**（W2 编码 ACI：repomap / apply_patch / diagnostics / 编辑降级链；L2 live 17/18）。
 - 上版：**v2.4.0**（W1-03/04：18 个 L2 任务 + 隐藏测试执行器 + 双态校准；`npm test` 196/196）。
 - 上版：**v2.3.2**（W1-02：3 个 fixture 仓库快照，各埋 1 个可证实的真缺陷，可见测试 16 项全绿）。

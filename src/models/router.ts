@@ -16,6 +16,9 @@ export class ProviderRouter implements LLMProvider {
   private current: string;
   private readonly circuitThreshold = 3;
   private readonly cooldownMs = 30000;
+  /** 同 provider 瞬时故障重试：免费端点 429/5xx 是常态，适配器层重试耗尽后路由层再兜一轮。 */
+  private retryCfg = { attempts: 0, baseMs: 500 };
+  private retryTotal = 0;
   /** 严格模式：禁止降级到其它 provider。评测真实模型时必须开启，否则 Mock 会掩盖失败。 */
   private strictMode = false;
 
@@ -39,6 +42,16 @@ export class ProviderRouter implements LLMProvider {
 
   setStrict(v: boolean): void {
     this.strictMode = v;
+  }
+
+  /** attempts=0 表示关闭（用于消融对照：唯一变量就是「路由层重试」）。 */
+  setRetry(cfg: { attempts: number; baseMs: number }): void {
+    this.retryCfg = { attempts: Math.max(0, cfg.attempts), baseMs: Math.max(0, cfg.baseMs) };
+  }
+
+  /** 本次运行以来路由层实际执行的重试次数（评测归因用）。 */
+  get retryAttempts(): number {
+    return this.retryTotal;
   }
 
   get strict(): boolean {
@@ -72,18 +85,27 @@ export class ProviderRouter implements LLMProvider {
       }
       const p = this.providers.get(name);
       if (!p) continue;
-      try {
-        const res = await p.complete(req);
-        this.failures.delete(name);
-        return { ...res, provider: `${name}${res.provider !== name ? `/${res.provider}` : ""}` };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${name}: ${msg}`);
-        if (req.signal?.aborted) throw err;
-        const state = this.failures.get(name) ?? { count: 0, cooldownUntil: 0 };
-        state.count += 1;
-        if (state.count >= this.circuitThreshold) state.cooldownUntil = Date.now() + this.cooldownMs;
-        this.failures.set(name, state);
+      // 瞬时故障先在原地退避重试（不计熔断）；重试耗尽才计入熔断并切下一个。
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          const res = await p.complete(req);
+          this.failures.delete(name);
+          return { ...res, provider: `${name}${res.provider !== name ? `/${res.provider}` : ""}` };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (req.signal?.aborted) throw err;
+          if (attempt < this.retryCfg.attempts && isTransientError(err)) {
+            this.retryTotal += 1;
+            await new Promise((r) => setTimeout(r, this.retryCfg.baseMs * 2 ** attempt));
+            continue;
+          }
+          errors.push(`${name}: ${msg}`);
+          const state = this.failures.get(name) ?? { count: 0, cooldownUntil: 0 };
+          state.count += 1;
+          if (state.count >= this.circuitThreshold) state.cooldownUntil = Date.now() + this.cooldownMs;
+          this.failures.set(name, state);
+          break;
+        }
       }
     }
     throw new Error(`全部模型均不可用 → ${errors.join(" | ")}`);
@@ -95,4 +117,89 @@ export class ProviderRouter implements LLMProvider {
     if (p && isStatsProvider(p)) return p.inferenceStats();
     return EMPTY_STATS;
   }
+}
+
+// ---------------------------------------------------------------- 故障注入
+export type FaultKind = "rate-limit" | "server-error" | "malformed-args";
+
+export interface ProviderFault {
+  kind: FaultKind;
+  /** 前几次调用注入故障；之后完全透传 */
+  times: number;
+}
+
+export interface FlakyProvider extends LLMProvider {
+  /** 已实际注入的故障次数（< times 说明任务太短，结论不可信） */
+  readonly injected: number;
+}
+
+const FAULT_ERRORS: Record<Exclude<FaultKind, "malformed-args">, string> = {
+  "rate-limit": "HTTP 429: rate limit exceeded (injected fault)",
+  "server-error": "HTTP 500: internal server error (injected fault)",
+};
+
+/**
+ * 用故障包装任意 provider。错误消息刻意与 OpenAICompat 的真实错误同构
+ * （"HTTP 429: ..."），保证重试判定走的代码路径与真实限流完全一致——
+ * 不许为测试单独开一条「假装是 429」的捷径。
+ */
+export function wrapFlaky(base: LLMProvider, fault: ProviderFault): FlakyProvider {
+  if (!Number.isInteger(fault.times) || fault.times < 1) {
+    throw new Error(`fault.times 必须是正整数，收到: ${fault.times}`);
+  }
+  let calls = 0;
+  let injected = 0;
+  return {
+    name: base.name,
+    get injected() {
+      return injected;
+    },
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      calls += 1;
+      if (calls <= fault.times) {
+        injected += 1;
+        if (fault.kind === "malformed-args") {
+          // 畸形参数不是「替代模型回答」，而是污染真实回答：
+          // 先让底层模型正常跑，再把第一个工具调用的标量参数全部字符串化
+          // （5 → "5"、true → "true"——弱/免费模型最常见的参数类型错误）。
+          // 模型没说工具调用时本次不注入（injected 不计），避免空转消耗额度。
+          const res = await base.complete(req);
+          if (res.toolCalls.length === 0) {
+            injected -= 1;
+            calls -= 1; // 没注进去就下一次再注，保证 times 次故障一定发生
+            return res;
+          }
+          const [first, ...restCalls] = res.toolCalls;
+          const entries = Object.entries(first!.arguments);
+          // 优先注入「参数名拼错」（repair 策略的真实修复分支）：
+          // 把第一个长度 ≥3 的键去掉尾字符，如 path → pat、command → comman。
+          // 没有可拼错的键时退化为标量字符串化（fail/repair 下都会报错，仍消耗一步）。
+          const idx = entries.findIndex(([k]) => k.length >= 3);
+          let corrupted: Record<string, unknown>;
+          if (idx >= 0) {
+            corrupted = Object.fromEntries(
+              entries.map(([k, v], i) => [i === idx ? k.slice(0, -1) : k, v]),
+            );
+          } else {
+            corrupted = Object.fromEntries(
+              entries.map(([k, v]) => [k, typeof v === "number" || typeof v === "boolean" ? String(v) : v]),
+            );
+          }
+          return {
+            ...res,
+            toolCalls: [{ ...first!, arguments: corrupted }, ...restCalls],
+          };
+        }
+        throw new Error(FAULT_ERRORS[fault.kind]);
+      }
+      return base.complete(req);
+    },
+  };
+}
+
+/** 瞬时故障判定：与 OpenAICompat 的可重试错误口径一致（429 / 5xx / 网络层）。 */
+export function isTransientError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  if ((err as { fatal?: boolean }).fatal === true) return false;
+  return /HTTP 429|HTTP 5\d\d|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|timed out/i.test(msg);
 }
