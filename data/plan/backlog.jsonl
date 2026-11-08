@@ -1,29 +1,29 @@
-{"id":"W1-01","battle":"W1","title":"定义 v2 任务 schema 与 fixture 装载器","accept":"npm run bench:v2 -- --layer l1 能读出 19 个旧任务并复跑通过 19/19","loc":180,"deps":[]}
-{"id":"W1-02","battle":"W1","title":"建 3 个最小 fixture 仓库快照","accept":"data/fixtures/repos/ 下 3 个仓库各含 package.json 或 pyproject，总大小 < 3MB，可离线跑测试","loc":60,"deps":["W1-01"]}
-{"id":"W1-03","battle":"W1","title":"写首批 18 个 L2 真实工程任务","accept":"每任务含 repo/commit/issue/hiddenTests/budget，难度校准后通过率落在 20%-70%","loc":120,"deps":["W1-02"]}
-{"id":"W1-04","battle":"W1","title":"实现隐藏测试执行器","accept":"任务跑完后在隔离副本里执行 hiddenTests，失败给出行号级输出；不污染源 fixture","loc":150,"deps":["W1-01"]}
-{"id":"W1-05","battle":"W1","title":"难度校准：最小 harness vs bro2 双跑","accept":"18 个任务中至少 2 个产生 >= 20pp 差距，且无任务双跑全过或全挂","loc":90,"deps":["W1-03","W1-04"]}
-{"id":"W1-06","battle":"W1","title":"L2 扩到 60 个任务","accept":"60 任务覆盖 bug-fix/feature/refactor 三类，dev 40 / holdout 20 分层冻结","loc":150,"deps":["W1-05"]}
-{"id":"W1-07","battle":"W1","title":"L3 长程任务 12 个（含人为失败点）","accept":"平均 20-40 步；至少 6 个任务含中途工具报错需纠错","loc":100,"deps":["W1-06"]}
-{"id":"W1-08","battle":"W1","title":"bench:v2 CLI 与报告落盘","accept":"npm run bench:v2 -- --layer l2 --repeat 3 产出 data/bench/v2-<model>-<ts>.json，含 per-task steps/tokens/编辑尝试","loc":180,"deps":["W1-07"]}
-{"id":"W1-09","battle":"W1","title":"最小 harness 对照组","accept":"baseline/minimal-harness.ts 约 150 行，只做调模型->解析工具->回喂，能独立跑完 L2 并出分","loc":150,"deps":["W1-08"]}
-{"id":"W1-10","battle":"W1","title":"BENCH-v2 文档与复现命令","accept":"第三方按文档 30 分钟内跑出第一份分数；任务来源与判定口径可逐条复核","loc":60,"deps":["W1-09"]}
-{"id":"W1-11","battle":"W1","title":"benchv2 接入发布门禁","accept":"project:status 新增第 14 道 benchv2，L1 通过率 != 1.0 即阻断","loc":50,"deps":["W1-10"]}
-{"id":"W2-01","battle":"W2","title":"repomap 符号索引","accept":"零依赖生成类/函数/导出/import 摘要，默认 <= 1200 tokens，L2 任务可注入","loc":220,"deps":["W1-08"]}
-{"id":"W2-02","battle":"W2","title":"apply_patch 多块 unified diff","accept":"支持多处修改，失败返回最近匹配行号与上下文；一次成功率 >= 75%","loc":240,"deps":["W2-01"]}
-{"id":"W2-03","battle":"W2","title":"diagnostics 结构化诊断","accept":"能跑 tsc/eslint/pytest 并把错误归一为 {file,line,code,message}","loc":120,"deps":["W2-02"]}
-{"id":"W2-04","battle":"W2","title":"编辑降级链与自动重试","accept":"精确匹配->空白归一化->块级定位->请求重读，四段全有真实分支断言","loc":150,"deps":["W2-03"]}
-{"id":"W2-05","battle":"W2","title":"ACI 指标实测与 aci:check","accept":"编辑一次成功率/尝试次数/token 三项相对 W1 基线达标，进 project:status","loc":80,"deps":["W2-04"]}
-{"id":"W2-06","battle":"W2","title":"W2 收口：L2 通过率 +15pp","accept":"同模型同任务，L2 通过率提升 >= 15pp 且 L1 保持 1.0","loc":60,"deps":["W2-05"]}
-{"id":"W3-01","battle":"W3","title":"模型矩阵跑分器","accept":"6 模型 x 4 harness 配置 x 20 任务 x 3 重复，缺格显式 unavailable","loc":200,"deps":["W2-06"]}
-{"id":"W3-02","battle":"W3","title":"成本前沿报告生成","accept":"产出 docs/COST-FRONTIER.md，含帕累托前沿与 8B+bro2 vs 70B 裸跑对比","loc":100,"deps":["W3-01"]}
-{"id":"W3-03","battle":"W3","title":"matrix:check 门禁","accept":"矩阵无静默缺格、无 0 值冒充缺失，进 project:status","loc":50,"deps":["W3-02"]}
-{"id":"W4-01","battle":"W4","title":"三类编辑算子扩展","accept":"context-policy/tool-desc/prompt-fragment 三类，写保护白名单同步扩展且先有测试","loc":250,"deps":["W3-03"]}
-{"id":"W4-02","battle":"W4","title":"OOD 通道：3 个完全留出仓库","accept":"OOD 不参与任何搜索；账本可验证只读；退化即阻断晋升","loc":180,"deps":["W4-01"]}
-{"id":"W4-03","battle":"W4","title":"晋升判据接入 bench:v2","accept":"L2-dev 提升 AND holdout 不退化 AND OOD 不退化 三条同时满足才晋升","loc":120,"deps":["W4-02"]}
-{"id":"W4-04","battle":"W4","title":"ood:check 门禁","accept":"OOD 退化 >= 2pp 时门禁失败，且失败原因可在 journal 复核","loc":50,"deps":["W4-03"]}
-{"id":"W5-01","battle":"W5","title":"Headless SDK 薄封装","accept":"createAgentOS/runTask 可被外部 import，30 行示例跑通；不复制内核","loc":180,"deps":["W4-04"]}
-{"id":"W5-02","battle":"W5","title":"Dockerfile 与 OS 级隔离","accept":"docker run 一行起沙箱，路径白名单 + 只读根；补应用层沙箱短板","loc":60,"deps":["W5-01"]}
-{"id":"W5-03","battle":"W5","title":"REPRODUCE 第三方复现手册","accept":"外部人 30 分钟内跑出第一份分数，含预期输出与常见偏差","loc":70,"deps":["W5-02"]}
-{"id":"W5-04","battle":"W5","title":"每周 bench CI workflow","accept":"bench.yml 定期跑 L2 抽样并发布趋势，失败不静默","loc":60,"deps":["W5-03"]}
-{"id":"W5-05","battle":"W5","title":"同期 harness 同模型对照","accept":"1 组同模型/同任务/同预算对照，结果无论输赢写入 data/bench/external/","loc":80,"deps":["W5-04"]}
+{"id": "W1-01", "battle": "W1", "title": "定义 v2 任务 schema 与 fixture 装载器", "accept": "npm run bench:v2 -- --layer l1 能读出 19 个旧任务并复跑通过 19/19", "loc": 180, "deps": []}
+{"id": "W1-02", "battle": "W1", "title": "建 3 个最小 fixture 仓库快照", "accept": "data/fixtures/repos/ 下 3 个仓库各含 package.json 或 pyproject，总大小 < 3MB，可离线跑测试", "loc": 60, "deps": ["W1-01"]}
+{"id": "W1-03", "battle": "W1", "title": "写首批 18 个 L2 真实工程任务", "accept": "每任务含 repo/commit/issue/hiddenTests/budget，难度校准后通过率落在 20%-70%", "loc": 120, "deps": ["W1-04"]}
+{"id": "W1-04", "battle": "W1", "title": "实现隐藏测试执行器", "accept": "任务跑完后在隔离副本里执行 hiddenTests，失败给出行号级输出；不污染源 fixture", "loc": 150, "deps": ["W1-01"]}
+{"id": "W1-05", "battle": "W1", "title": "难度校准：最小 harness vs bro2 双跑", "accept": "18 个任务中至少 2 个产生 >= 20pp 差距，且无任务双跑全过或全挂", "loc": 90, "deps": ["W1-03", "W1-04"]}
+{"id": "W1-06", "battle": "W1", "title": "L2 扩到 60 个任务", "accept": "60 任务覆盖 bug-fix/feature/refactor 三类，dev 40 / holdout 20 分层冻结", "loc": 150, "deps": ["W1-05"]}
+{"id": "W1-07", "battle": "W1", "title": "L3 长程任务 12 个（含人为失败点）", "accept": "平均 20-40 步；至少 6 个任务含中途工具报错需纠错", "loc": 100, "deps": ["W1-06"]}
+{"id": "W1-08", "battle": "W1", "title": "bench:v2 CLI 与报告落盘", "accept": "npm run bench:v2 -- --layer l2 --repeat 3 产出 data/bench/v2-<model>-<ts>.json，含 per-task steps/tokens/编辑尝试", "loc": 180, "deps": ["W1-07"]}
+{"id": "W1-09", "battle": "W1", "title": "最小 harness 对照组", "accept": "baseline/minimal-harness.ts 约 150 行，只做调模型->解析工具->回喂，能独立跑完 L2 并出分", "loc": 150, "deps": ["W1-08"]}
+{"id": "W1-10", "battle": "W1", "title": "BENCH-v2 文档与复现命令", "accept": "第三方按文档 30 分钟内跑出第一份分数；任务来源与判定口径可逐条复核", "loc": 60, "deps": ["W1-09"]}
+{"id": "W1-11", "battle": "W1", "title": "benchv2 接入发布门禁", "accept": "project:status 新增第 14 道 benchv2，L1 通过率 != 1.0 即阻断", "loc": 50, "deps": ["W1-10"]}
+{"id": "W2-01", "battle": "W2", "title": "repomap 符号索引", "accept": "零依赖生成类/函数/导出/import 摘要，默认 <= 1200 tokens，L2 任务可注入", "loc": 220, "deps": ["W1-08"]}
+{"id": "W2-02", "battle": "W2", "title": "apply_patch 多块 unified diff", "accept": "支持多处修改，失败返回最近匹配行号与上下文；一次成功率 >= 75%", "loc": 240, "deps": ["W2-01"]}
+{"id": "W2-03", "battle": "W2", "title": "diagnostics 结构化诊断", "accept": "能跑 tsc/eslint/pytest 并把错误归一为 {file,line,code,message}", "loc": 120, "deps": ["W2-02"]}
+{"id": "W2-04", "battle": "W2", "title": "编辑降级链与自动重试", "accept": "精确匹配->空白归一化->块级定位->请求重读，四段全有真实分支断言", "loc": 150, "deps": ["W2-03"]}
+{"id": "W2-05", "battle": "W2", "title": "ACI 指标实测与 aci:check", "accept": "编辑一次成功率/尝试次数/token 三项相对 W1 基线达标，进 project:status", "loc": 80, "deps": ["W2-04"]}
+{"id": "W2-06", "battle": "W2", "title": "W2 收口：L2 通过率 +15pp", "accept": "同模型同任务，L2 通过率提升 >= 15pp 且 L1 保持 1.0", "loc": 60, "deps": ["W2-05"]}
+{"id": "W3-01", "battle": "W3", "title": "模型矩阵跑分器", "accept": "6 模型 x 4 harness 配置 x 20 任务 x 3 重复，缺格显式 unavailable", "loc": 200, "deps": ["W2-06"]}
+{"id": "W3-02", "battle": "W3", "title": "成本前沿报告生成", "accept": "产出 docs/COST-FRONTIER.md，含帕累托前沿与 8B+bro2 vs 70B 裸跑对比", "loc": 100, "deps": ["W3-01"]}
+{"id": "W3-03", "battle": "W3", "title": "matrix:check 门禁", "accept": "矩阵无静默缺格、无 0 值冒充缺失，进 project:status", "loc": 50, "deps": ["W3-02"]}
+{"id": "W4-01", "battle": "W4", "title": "三类编辑算子扩展", "accept": "context-policy/tool-desc/prompt-fragment 三类，写保护白名单同步扩展且先有测试", "loc": 250, "deps": ["W3-03"]}
+{"id": "W4-02", "battle": "W4", "title": "OOD 通道：3 个完全留出仓库", "accept": "OOD 不参与任何搜索；账本可验证只读；退化即阻断晋升", "loc": 180, "deps": ["W4-01"]}
+{"id": "W4-03", "battle": "W4", "title": "晋升判据接入 bench:v2", "accept": "L2-dev 提升 AND holdout 不退化 AND OOD 不退化 三条同时满足才晋升", "loc": 120, "deps": ["W4-02"]}
+{"id": "W4-04", "battle": "W4", "title": "ood:check 门禁", "accept": "OOD 退化 >= 2pp 时门禁失败，且失败原因可在 journal 复核", "loc": 50, "deps": ["W4-03"]}
+{"id": "W5-01", "battle": "W5", "title": "Headless SDK 薄封装", "accept": "createAgentOS/runTask 可被外部 import，30 行示例跑通；不复制内核", "loc": 180, "deps": ["W4-04"]}
+{"id": "W5-02", "battle": "W5", "title": "Dockerfile 与 OS 级隔离", "accept": "docker run 一行起沙箱，路径白名单 + 只读根；补应用层沙箱短板", "loc": 60, "deps": ["W5-01"]}
+{"id": "W5-03", "battle": "W5", "title": "REPRODUCE 第三方复现手册", "accept": "外部人 30 分钟内跑出第一份分数，含预期输出与常见偏差", "loc": 70, "deps": ["W5-02"]}
+{"id": "W5-04", "battle": "W5", "title": "每周 bench CI workflow", "accept": "bench.yml 定期跑 L2 抽样并发布趋势，失败不静默", "loc": 60, "deps": ["W5-03"]}
+{"id": "W5-05", "battle": "W5", "title": "同期 harness 同模型对照", "accept": "1 组同模型/同任务/同预算对照，结果无论输赢写入 data/bench/external/", "loc": 80, "deps": ["W5-04"]}
