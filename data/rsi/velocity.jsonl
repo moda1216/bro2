@@ -1,0 +1,8 @@
+{"seq":0,"ts":"2026-11-08T04:54:29.486Z","attempts":3,"experienceHits":0,"firstTryHit":true,"improvement":1,"probesAvoided":0,"usedFallback":false,"protocolViolations":0}
+{"seq":1,"ts":"2026-11-08T04:54:34.127Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
+{"seq":2,"ts":"2026-11-08T04:54:34.177Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
+{"seq":3,"ts":"2026-11-08T04:54:34.234Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
+{"seq":4,"ts":"2026-11-08T04:54:34.282Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
+{"seq":5,"ts":"2026-11-08T04:54:34.328Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
+{"seq":6,"ts":"2026-11-08T04:54:34.374Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}
+{"seq":7,"ts":"2026-11-08T04:54:34.421Z","attempts":2,"experienceHits":1,"firstTryHit":true,"improvement":1,"probesAvoided":1,"usedFallback":false,"protocolViolations":0}

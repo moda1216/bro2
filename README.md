@@ -97,6 +97,8 @@ npm run cli -- run --task "计算 sum([12,18,25,31,14]) 并写入 notes.md" --pr
 | `npm run eval` | 确定性能力评测与回归门禁 |
 | `npm run eval:live` | 真实模型评测（先过 `preflight`），报告写 `data/eval-live-report.json` |
 | `npm run evolve` | 能力面 RSI 自我改进 |
+| `npm run evolve:tick -- --rounds 8` | 推进 8 轮真实迭代，把「越用越快」写进跨会话只增账本 |
+| `npm run watermark` | 查看迭代水位（趋势 / 探测成本 / 经验复用），打开 `data/rsi/watermark.html` 看曲线 |
 | `npm run meta` | meta RSI：改进改进机制自身 |
 | `npm run benchmark` | 能力基准：ablation + 证据阶梯 + 领先度声明 |
 | `npm run project:status` | 聚合全部发布阻断门禁，CI 友好 |
@@ -186,6 +188,7 @@ PRE_STEP Hooks → ContextBuilder → 预算压缩 → LLM(stream, tool_calls)
 
 | 版本 | 日期 | 要点 |
 | --- | --- | --- |
+| **2.2.0** | 2026-11-08 | 进化启动器 + 迭代水位看板：真实评测驱动、跨会话只增账本、水位变化可视化 |
 | **2.1.0** | 2026-11-08 | 复利中枢：跨会话经验库、冻结速度尺子、学习型路由（越用越快 / 越用越省） |
 | **2.0.6** | 2026-11-08 | 打通 OpenRouter 免费 550B 强模型的真实评测通路，取得首份真实模型分数 |
 | **2.0.5** | 2026-11-08 | 免 Key 网状 + 本地协同双层叠加；对比式改进 live 闭环（防 reward hacking） |

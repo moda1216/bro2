@@ -12,7 +12,8 @@
  *   improvementPerAttempt  单位探测的改进量（应随使用递增）
  *
  * 诚实边界（防自确认循环，与 meta-RSI 的冻结 fitness 同源）：
- *   1) 尺子定义固定在本模块，经验库 / MetaState 都不得改动它；
+ *   1) 尺子定义固定在本模块的 `velocitySnapshotFrom`，经验库 / MetaState /
+ *      水位看板都不得改动它；看板只做前缀投影，不重写判定口径。
  *   2) `improvement` 只数「行为对比成立」的接受项，绝不采信自报 scoreGain；
  *   3) 样本不足（< MIN_SAMPLES）一律返回 insufficient-data，
  *      **绝不**因为数据好看就宣称 accelerating；
@@ -98,6 +99,75 @@ function improvementPerAttempt(rows: AttemptRecord[]): number {
   return rows.reduce((a, r) => a + r.improvement, 0) / attempts;
 }
 
+/**
+ * 冻结尺子的**唯一实现**。输入一批 attempt 记录，输出快照。
+ *
+ * v2.2.0 从 `VelocityLedger.snapshot()` 提炼出来的动机：水位看板需要对
+ * 「截至第 N 轮」做前缀投影。若看板自己复制一份判定逻辑，就会出现两套尺子、
+ * 加速结论可被悄悄改写——这直接破坏防自确认循环。因此判定只保留在这里，
+ * Ledger 与看板都调用本函数，谁都不许改口径。
+ */
+export function velocitySnapshotFrom(records: readonly AttemptRecord[]): VelocitySnapshot {
+  const all = records;
+  const usable = all.filter((r) => r.protocolViolations === 0);
+  const base: Omit<VelocitySnapshot, "trend" | "honesty" | "firstHalfIPA" | "secondHalfIPA"> = {
+    samples: all.length,
+    usableSamples: usable.length,
+    firstTryHitRate: mean(usable.map((r) => (r.firstTryHit ? 1 : 0))),
+    avgAttempts: mean(usable.map((r) => r.attempts)),
+    avgProbesAvoided: mean(usable.map((r) => r.probesAvoided)),
+    improvementPerAttempt: improvementPerAttempt(usable),
+    reuseRate: mean(usable.map((r) => (r.experienceHits > 0 ? 1 : 0))),
+  };
+
+  if (usable.length < MIN_SAMPLES) {
+    return {
+      ...base, firstHalfIPA: 0, secondHalfIPA: 0,
+      trend: "insufficient-data",
+      honesty: {
+        frozenMetric: true, selfReported: false,
+        reason: `可用样本 ${usable.length} < ${MIN_SAMPLES}，禁止宣称加速或减速`,
+      },
+    };
+  }
+
+  const half = Math.floor(usable.length / 2);
+  const first = usable.slice(0, half);
+  const second = usable.slice(half);
+  const firstIPA = improvementPerAttempt(first);
+  const secondIPA = improvementPerAttempt(second);
+  const firstAttempts = mean(first.map((r) => r.attempts));
+  const secondAttempts = mean(second.map((r) => r.attempts));
+  const firstHit = mean(first.map((r) => (r.firstTryHit ? 1 : 0)));
+  const secondHit = mean(second.map((r) => (r.firstTryHit ? 1 : 0)));
+
+  // 加速需同时满足：单位探测改进量上升、探测次数不上升、首轮命中率不下降
+  const accelerating =
+    secondIPA > firstIPA * (1 + TREND_EPSILON)
+    && secondAttempts <= firstAttempts
+    && secondHit >= firstHit;
+  const decelerating =
+    secondIPA < firstIPA * (1 - TREND_EPSILON)
+    || secondAttempts > firstAttempts * (1 + TREND_EPSILON);
+
+  const trend: VelocityTrend = accelerating ? "accelerating" : decelerating ? "decelerating" : "flat";
+  return {
+    ...base,
+    firstHalfIPA: firstIPA,
+    secondHalfIPA: secondIPA,
+    trend,
+    honesty: {
+      frozenMetric: true,
+      selfReported: false,
+      reason: `样本 ${usable.length}（前半 ${half} / 后半 ${usable.length - half}）；`
+        + `IPA ${firstIPA.toFixed(3)}→${secondIPA.toFixed(3)}，`
+        + `探测 ${firstAttempts.toFixed(2)}→${secondAttempts.toFixed(2)}，`
+        + `首轮命中 ${firstHit.toFixed(2)}→${secondHit.toFixed(2)}；`
+        + `协议违规 ${all.length - usable.length} 轮已排除`,
+    },
+  };
+}
+
 /** 复利速度只增账本。跨会话累积，快照由本模块的冻结尺子计算。 */
 export class VelocityLedger {
   readonly path: string;
@@ -127,65 +197,9 @@ export class VelocityLedger {
     return out;
   }
 
+  /** 实例视图：判定完全委托给冻结尺子的唯一实现。 */
   snapshot(): VelocitySnapshot {
-    const all = this.records();
-    const usable = all.filter((r) => r.protocolViolations === 0);
-    const base: Omit<VelocitySnapshot, "trend" | "honesty" | "firstHalfIPA" | "secondHalfIPA"> = {
-      samples: all.length,
-      usableSamples: usable.length,
-      firstTryHitRate: mean(usable.map((r) => (r.firstTryHit ? 1 : 0))),
-      avgAttempts: mean(usable.map((r) => r.attempts)),
-      avgProbesAvoided: mean(usable.map((r) => r.probesAvoided)),
-      improvementPerAttempt: improvementPerAttempt(usable),
-      reuseRate: mean(usable.map((r) => (r.experienceHits > 0 ? 1 : 0))),
-    };
-
-    if (usable.length < MIN_SAMPLES) {
-      return {
-        ...base, firstHalfIPA: 0, secondHalfIPA: 0,
-        trend: "insufficient-data",
-        honesty: {
-          frozenMetric: true, selfReported: false,
-          reason: `可用样本 ${usable.length} < ${MIN_SAMPLES}，禁止宣称加速或减速`,
-        },
-      };
-    }
-
-    const half = Math.floor(usable.length / 2);
-    const first = usable.slice(0, half);
-    const second = usable.slice(half);
-    const firstIPA = improvementPerAttempt(first);
-    const secondIPA = improvementPerAttempt(second);
-    const firstAttempts = mean(first.map((r) => r.attempts));
-    const secondAttempts = mean(second.map((r) => r.attempts));
-    const firstHit = mean(first.map((r) => (r.firstTryHit ? 1 : 0)));
-    const secondHit = mean(second.map((r) => (r.firstTryHit ? 1 : 0)));
-
-    // 加速需同时满足：单位探测改进量上升、探测次数不上升、首轮命中率不下降
-    const accelerating =
-      secondIPA > firstIPA * (1 + TREND_EPSILON)
-      && secondAttempts <= firstAttempts
-      && secondHit >= firstHit;
-    const decelerating =
-      secondIPA < firstIPA * (1 - TREND_EPSILON)
-      || secondAttempts > firstAttempts * (1 + TREND_EPSILON);
-
-    const trend: VelocityTrend = accelerating ? "accelerating" : decelerating ? "decelerating" : "flat";
-    return {
-      ...base,
-      firstHalfIPA: firstIPA,
-      secondHalfIPA: secondIPA,
-      trend,
-      honesty: {
-        frozenMetric: true,
-        selfReported: false,
-        reason: `样本 ${usable.length}（前半 ${half} / 后半 ${usable.length - half}）；`
-          + `IPA ${firstIPA.toFixed(3)}→${secondIPA.toFixed(3)}，`
-          + `探测 ${firstAttempts.toFixed(2)}→${secondAttempts.toFixed(2)}，`
-          + `首轮命中 ${firstHit.toFixed(2)}→${secondHit.toFixed(2)}；`
-          + `协议违规 ${all.length - usable.length} 轮已排除`,
-      },
-    };
+    return velocitySnapshotFrom(this.records());
   }
 }
 

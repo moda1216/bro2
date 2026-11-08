@@ -10,6 +10,52 @@
 
 ---
 
+## [2.2.0] — 2026-11-08 · 进化启动器与迭代水位看板（MINOR）
+
+> 类型：**MINOR · 新增能力域**。v2.1.0 造好了冻结速度尺子，但真实账本 0 条记录、
+> 演示跑完即删——「有尺子、没刻度」，用户无处查看「越用越快」是否真的发生。
+> 本版把复利闭环接到**持久只增账本**，并提供可反复运行的启动器与可视化水位，
+> 让设计目标 1 从「离线演示断言」变成「跨会话可查看、可证伪的时间序列」。
+> 详见 [docs/ITERATION-WATERMARK.md](./docs/ITERATION-WATERMARK.md)。
+
+### 新增（Added）
+- **`bin/evolve-loop.ts` · 进化启动器**：`npm run evolve:tick -- --rounds N` 每次推进 N 轮真实迭代，
+  账本只增、跨会话累积；`npm run watermark` 只读查看；`--reset` 需显式指定才清空账本。
+  每轮轨迹来自 `runEval` 真实评测（deterministic 模型脚本 + 真实 harness 策略分支），
+  **没有任何手搓的行为摘要**。
+- **`data/rsi/compound-tasks.jsonl` · 复利回路专属工作负载**：与主能力评测任务集严格隔离；
+  畸形工具参数任务使 `malformedArgs=repair` 真实把 `toolErrors` 2→0（`repairs=2` 为真实代码分支），
+  `noop` 变体行为不变，自报提分的伪修复被 reward hacking 拦截。
+- **`src/rsi/watermark.ts` · 迭代水位看板**：对只增账本做逐轮前缀投影，输出
+  `data/rsi/watermark.html`（4 条 SVG 曲线 + 逐轮表）、`watermark.json` 与
+  `docs/ITERATION-WATERMARK.md`；`formatWatermark` 提供终端视图。
+- **惰性真实探测（`compound.ts` 向后兼容增强）**：新增 `PendingCandidate` 与
+  `CompoundOptions.probe`。被经验裁剪的候选**不触发评测**，因此 `attempts` 等于真实计算成本，
+  而不是纸面裁剪；经验回退需补探测时拒绝伪造摘要，由启动器降级为全量重跑。
+- **`scripts/watermark-check.ts` · 第 12 道发布阻断门禁**：校验冻结尺子唯一、账本 seq 连续、
+  报告与尺子一致、派生视图完整、门禁运行前后账本字节不变（只读）。
+- **测试**：`tests/watermark.test.ts`（8 项）；全量 `npm test` **157/157**。
+
+### 变更（Changed）
+- `velocity.ts`：把 `snapshot()` 的判定提炼为**唯一纯函数** `velocitySnapshotFrom(records)`，
+  Ledger 与看板共用同一把尺子；判定口径、阈值、诚实性约束一字未改。
+- `project:status`：新增 `watermark` 阻断门禁，版本显示 v2.2.0；`package.json` 版本升至 2.2.0。
+
+### 首次真实启动结果（可复核，非演示断言）
+- 连续 8 轮真实迭代写入持久账本：探测数 **3 → 2**、每轮真实评测 **4 → 3** 次、
+  累计跳过探测 **7** 次、接受改进 8 次、协议违规 0。
+- 冻结尺子在**第 6 轮**首次判定 `trend=accelerating`；IPA **0.333 → 0.471**
+  （前半 0.444 → 后半 0.500），平均探测 2.25 → 2.00，首轮命中率 1.00 未下降。
+- 判定全程 `frozenMetric=true` / `selfReported=false`；`leadership.verdict` 仍 `not-proven`、
+  L4 仍 `not-achieved`，水位变化**不构成能力或业界水平结论**。
+
+### 诚实边界
+- 轨迹来自确定性模型脚本 + 真实 harness 代码分支，是**行为对比证据**，不是模型能力分数。
+- 复利结论仅限**同类失败模式**；跨失败模式泛化（P3 OOD）与异步按需探测（P4）尚未实现。
+- 启动器预跑的是「本轮被探测候选」的轨迹，省下的是真实评测/判定次数；看板只读，绝不回写账本。
+
+---
+
 ## [2.1.0] — 2026-11-08 · 复利中枢：两大设计目标的可证伪落点（MINOR）
 
 > 类型：**MINOR · 新增能力域**。新增跨会话经验层与冻结速度度量，把「越使用改进速度越快」与

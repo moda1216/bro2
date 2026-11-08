@@ -41,10 +41,18 @@ export type {
   PrioritizeResult, ExperienceStats,
 } from "./experience.ts";
 export {
-  VelocityLedger, MIN_SAMPLES, TREND_EPSILON, velocityPath,
+  VelocityLedger, MIN_SAMPLES, TREND_EPSILON, velocityPath, velocitySnapshotFrom,
 } from "./velocity.ts";
 export type { AttemptRecord, VelocitySnapshot, VelocityTrend } from "./velocity.ts";
 export { compoundProbe, EXPLORE_SLOTS } from "./compound.ts";
-export type { CompoundOptions, CompoundResult } from "./compound.ts";
+export type { CompoundOptions, CompoundResult, PendingCandidate } from "./compound.ts";
+
+// 迭代水位看板（只读投影 + HTML/Markdown 渲染，判定口径仍只有冻结尺子一份）
+export {
+  buildWatermark, formatWatermark, renderWatermarkHtml, WATERMARK_VERSION,
+} from "./watermark.ts";
+export type {
+  WatermarkPoint, WatermarkReport, WatermarkTotals,
+} from "./watermark.ts";
 
 export * from "./types.ts";

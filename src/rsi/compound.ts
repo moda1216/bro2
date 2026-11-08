@@ -28,6 +28,13 @@ import type { RunSummary } from "./contrast.ts";
 /** 经验命中时仍保留的探索候选数，避免经验库过早收敛。 */
 export const EXPLORE_SLOTS = 1;
 
+/**
+ * 惰性候选项：只有 `probed` 尚未实跑的提案描述。
+ * `probed` 必须由 `CompoundOptions.probe()` 在候选真正进入探测集时生成，
+ * 绝不预先填好假摘要——否则「裁剪探测集」只是纸面省成本，属于变相 reward hacking。
+ */
+export type PendingCandidate = Omit<LiveCandidate, "probed">;
+
 export interface CompoundOptions {
   /** 显式指定指纹；缺省由基线行为摘要计算。 */
   signature?: string;
@@ -35,6 +42,14 @@ export interface CompoundOptions {
   topK?: number;
   /** 经验来源标记，写入只增账本便于审计。 */
   source?: string;
+  /**
+   * 惰性探测钩子（v2.2.0）：仅当候选**真正被探测**时调用，返回带真实 `probed`
+   * 行为摘要的候选。调用方在此实跑评测；被经验裁剪掉的候选不会触发回调，
+   * 因而 `attempts` 等于真实计算成本，而不是纸面数字。
+   *
+   * 不传时与 v2.1.0 完全一致（要求候选自带 probed），保证既有演示/单测零改动。
+   */
+  probe?: (candidate: PendingCandidate) => LiveCandidate;
 }
 
 export interface CompoundResult {
@@ -64,13 +79,31 @@ export interface CompoundResult {
  */
 export function compoundProbe(
   baseline: RunSummary,
-  candidates: LiveCandidate[],
+  candidates: Array<LiveCandidate | PendingCandidate>,
   bank: ExperienceBank,
   ledger: VelocityLedger,
   opts: CompoundOptions = {},
 ): CompoundResult {
   const signature = opts.signature ?? failureSignature(baseline);
   const source = opts.source ?? "compoundProbe";
+
+  // 真实探测才生成行为摘要：resolved 只收录实际跑过的候选。
+  const resolved = new Map<string, LiveCandidate>();
+  const materialize = (batch: Array<LiveCandidate | PendingCandidate>): LiveCandidate[] =>
+    batch.map((c) => {
+      if ("probed" in c) {
+        const full = c as LiveCandidate;
+        resolved.set(full.id, full);
+        return full;
+      }
+      if (!opts.probe) {
+        throw new Error(`候选 ${c.id} 未提供 probed 且未配置惰性 probe()：拒绝伪造行为摘要`);
+      }
+      const full = opts.probe(c as PendingCandidate);
+      resolved.set(full.id, full);
+      return full;
+    });
+
   const { prioritized, deferred, hits } = bank.prioritize(
     "harness-edit", signature, candidates, (c) => c.id,
   );
@@ -87,7 +120,7 @@ export function compoundProbe(
   const firstBatch = prioritized.slice(0, effectiveTopK);
   const rest = [...prioritized.slice(effectiveTopK), ...deferred];
 
-  const first = evaluateLiveCandidates(baseline, firstBatch);
+  const first = evaluateLiveCandidates(baseline, materialize(firstBatch));
   let decisions = [...first.decisions];
   const firstAccepted = first.decisions.filter((d) => d.accepted).length;
   let usedFallback = false;
@@ -95,12 +128,12 @@ export function compoundProbe(
   // 经验不灵：老实回退探测剩余候选，绝不硬信经验
   if (firstAccepted === 0 && rest.length > 0) {
     usedFallback = true;
-    const second = evaluateLiveCandidates(baseline, rest);
+    const second = evaluateLiveCandidates(baseline, materialize(rest));
     decisions = [...decisions, ...second.decisions];
   }
 
   // 经验回写：只由行为判定结果驱动，scoreGain 不参与；失败项同样留痕
-  const byId = new Map(candidates.map((c) => [c.id, c]));
+  const byId = resolved;
   const probed = new Set(decisions.map((d) => d.id));
   for (const d of decisions) {
     const good = d.accepted && !d.rewardHackingBlocked;

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>bro2 · 迭代水位看板</title>
+<style>
+  :root { --bg:#f7f8fa; --card:#fff; --fg:#1f2430; --muted:#6b7280; --grid:#e3e7ee; --line:#e8ebf0; --accent:#2c6fbb; --good:#c0392b; }
+  @media (prefers-color-scheme:dark){:root{--bg:#141820;--card:#1d222c;--fg:#e8ecf3;--muted:#98a2b3;--grid:#333b49;--line:#2c3442;--accent:#6fa8e8;--good:#ff7b72}}
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px;background:var(--bg);color:var(--fg);font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1160px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 4px} .sub{color:var(--muted);margin:0 0 22px;font-size:13px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card .k{color:var(--muted);font-size:12px} .card .v{font-size:24px;font-weight:650;margin-top:4px;font-variant-numeric:tabular-nums}
+  .card .d{color:var(--muted);font-size:11px;margin-top:2px}
+  .banner{background:var(--card);border:1px solid var(--line);border-left:4px solid #c0392b;border-radius:10px;padding:14px 18px;margin-bottom:20px}
+  .banner b{color:#c0392b} .banner .reason{color:var(--muted);font-size:12px;margin-top:6px;font-variant-numeric:tabular-nums}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin-bottom:20px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px 6px}
+  .panel h2{font-size:14px;margin:0 0 6px;color:var(--muted);font-weight:600}
+  .axis{font-size:10px;fill:var(--muted)}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-variant-numeric:tabular-nums}
+  th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);font-size:12px}
+  th:first-child,td:first-child{text-align:left} th{color:var(--muted);font-weight:600;background:var(--bg)}
+  tr:last-child td{border-bottom:none}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;color:var(--tag);border:1px solid var(--tag)}
+  .honesty{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin-top:20px}
+  .honesty h2{font-size:15px;margin:0 0 8px} .honesty ul{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:12px}
+  .empty{color:var(--muted);padding:40px;text-align:center}
+  code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
+  footer{color:var(--muted);font-size:11px;margin-top:18px;text-align:center}
+</style></head><body><div class="wrap">
+  <h1>bro2 · 迭代水位看板</h1>
+  <p class="sub">只增账本 <code>data/rsi/velocity.jsonl</code> · 冻结尺子 <code>velocitySnapshotFrom</code> · 生成 2026-11-08T04:54:34.422Z · v2.2.0</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">累计迭代轮次</div><div class="v">8</div><div class="d">每次 evolve:tick 追加</div></div>
+    <div class="card"><div class="k">真实探测次数</div><div class="v">17</div><div class="d">行为对比判定成本</div></div>
+    <div class="card"><div class="k">经验跳过探测</div><div class="v">7</div><div class="d">复利省下的搜索</div></div>
+    <div class="card"><div class="k">单位探测改进 IPA</div><div class="v">0.471</div><div class="d">前半 0.444 → 后半 0.500</div></div>
+    <div class="card"><div class="k">平均探测数</div><div class="v">2.13</div><div class="d">越低越快</div></div>
+    <div class="card"><div class="k">可复用经验</div><div class="v">1</div><div class="d">17 事件 / 3 条目</div></div>
+  </div>
+
+  <div class="banner">
+    <div><b>当前趋势：加速中（冻结尺子判定）</b>　<code>trend=accelerating</code>　样本 8/8　第 6 轮起被冻结尺子判定为 accelerating</div>
+    <div class="reason">样本 8（前半 4 / 后半 4）；IPA 0.444→0.500，探测 2.25→2.00，首轮命中 1.00→1.00；协议违规 0 轮已排除　·　frozenMetric=true　selfReported=false</div>
+  </div>
+
+  <div class="grid">
+    <div class="panel"><h2>每轮探测数（应随使用下降）</h2><svg viewBox="0 0 540 150" width="100%" role="img" aria-label="attempts / 轮">
+    <line x1="44" y1="18.0" x2="524" y2="18.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="22.0" text-anchor="end" class="axis">3.00</text><line x1="44" y1="70.0" x2="524" y2="70.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="74.0" text-anchor="end" class="axis">1.50</text><line x1="44" y1="122.0" x2="524" y2="122.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="126.0" text-anchor="end" class="axis">0.00</text><path d="M44.0,18.0 L112.6,52.7 L181.1,52.7 L249.7,52.7 L318.3,52.7 L386.9,52.7 L455.4,52.7 L524.0,52.7" fill="none" stroke="#2c6fbb" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44.0" cy="18.0" r="3" fill="#2c6fbb"><title>第 1 轮: 3.000</title></circle><circle cx="112.6" cy="52.7" r="3" fill="#2c6fbb"><title>第 2 轮: 2.000</title></circle><circle cx="181.1" cy="52.7" r="3" fill="#2c6fbb"><title>第 3 轮: 2.000</title></circle><circle cx="249.7" cy="52.7" r="3" fill="#2c6fbb"><title>第 4 轮: 2.000</title></circle><circle cx="318.3" cy="52.7" r="3" fill="#2c6fbb"><title>第 5 轮: 2.000</title></circle><circle cx="386.9" cy="52.7" r="3" fill="#2c6fbb"><title>第 6 轮: 2.000</title></circle><circle cx="455.4" cy="52.7" r="3" fill="#2c6fbb"><title>第 7 轮: 2.000</title></circle><circle cx="524.0" cy="52.7" r="3" fill="#2c6fbb"><title>第 8 轮: 2.000</title></circle><text x="44.0" y="142" text-anchor="middle" class="axis">1</text><text x="112.6" y="142" text-anchor="middle" class="axis">2</text><text x="181.1" y="142" text-anchor="middle" class="axis">3</text><text x="249.7" y="142" text-anchor="middle" class="axis">4</text><text x="318.3" y="142" text-anchor="middle" class="axis">5</text><text x="386.9" y="142" text-anchor="middle" class="axis">6</text><text x="455.4" y="142" text-anchor="middle" class="axis">7</text><text x="524.0" y="142" text-anchor="middle" class="axis">8</text>
+    <text x="44" y="12" class="axis">attempts / 轮</text>
+  </svg></div>
+    <div class="panel"><h2>累计单位探测改进 IPA（应随使用上升）</h2><svg viewBox="0 0 540 150" width="100%" role="img" aria-label="Σimprovement / Σattempts">
+    <line x1="44" y1="18.0" x2="524" y2="18.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="22.0" text-anchor="end" class="axis">0.47</text><line x1="44" y1="70.0" x2="524" y2="70.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="74.0" text-anchor="end" class="axis">0.24</text><line x1="44" y1="122.0" x2="524" y2="122.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="126.0" text-anchor="end" class="axis">0.00</text><path d="M44.0,48.3 L112.6,33.6 L181.1,27.3 L249.7,23.8 L318.3,21.5 L386.9,20.0 L455.4,18.9 L524.0,18.0" fill="none" stroke="#c0392b" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44.0" cy="48.3" r="3" fill="#c0392b"><title>第 1 轮: 0.333</title></circle><circle cx="112.6" cy="33.6" r="3" fill="#c0392b"><title>第 2 轮: 0.400</title></circle><circle cx="181.1" cy="27.3" r="3" fill="#c0392b"><title>第 3 轮: 0.429</title></circle><circle cx="249.7" cy="23.8" r="3" fill="#c0392b"><title>第 4 轮: 0.444</title></circle><circle cx="318.3" cy="21.5" r="3" fill="#c0392b"><title>第 5 轮: 0.455</title></circle><circle cx="386.9" cy="20.0" r="3" fill="#c0392b"><title>第 6 轮: 0.462</title></circle><circle cx="455.4" cy="18.9" r="3" fill="#c0392b"><title>第 7 轮: 0.467</title></circle><circle cx="524.0" cy="18.0" r="3" fill="#c0392b"><title>第 8 轮: 0.471</title></circle><text x="44.0" y="142" text-anchor="middle" class="axis">1</text><text x="112.6" y="142" text-anchor="middle" class="axis">2</text><text x="181.1" y="142" text-anchor="middle" class="axis">3</text><text x="249.7" y="142" text-anchor="middle" class="axis">4</text><text x="318.3" y="142" text-anchor="middle" class="axis">5</text><text x="386.9" y="142" text-anchor="middle" class="axis">6</text><text x="455.4" y="142" text-anchor="middle" class="axis">7</text><text x="524.0" y="142" text-anchor="middle" class="axis">8</text>
+    <text x="44" y="12" class="axis">Σimprovement / Σattempts</text>
+  </svg></div>
+    <div class="panel"><h2>累计跳过探测数（应随使用上升）</h2><svg viewBox="0 0 540 150" width="100%" role="img" aria-label="probes avoided">
+    <line x1="44" y1="18.0" x2="524" y2="18.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="22.0" text-anchor="end" class="axis">7.00</text><line x1="44" y1="70.0" x2="524" y2="70.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="74.0" text-anchor="end" class="axis">3.50</text><line x1="44" y1="122.0" x2="524" y2="122.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="126.0" text-anchor="end" class="axis">0.00</text><path d="M44.0,122.0 L112.6,107.1 L181.1,92.3 L249.7,77.4 L318.3,62.6 L386.9,47.7 L455.4,32.9 L524.0,18.0" fill="none" stroke="#27865a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44.0" cy="122.0" r="3" fill="#27865a"><title>第 1 轮: 0.000</title></circle><circle cx="112.6" cy="107.1" r="3" fill="#27865a"><title>第 2 轮: 1.000</title></circle><circle cx="181.1" cy="92.3" r="3" fill="#27865a"><title>第 3 轮: 2.000</title></circle><circle cx="249.7" cy="77.4" r="3" fill="#27865a"><title>第 4 轮: 3.000</title></circle><circle cx="318.3" cy="62.6" r="3" fill="#27865a"><title>第 5 轮: 4.000</title></circle><circle cx="386.9" cy="47.7" r="3" fill="#27865a"><title>第 6 轮: 5.000</title></circle><circle cx="455.4" cy="32.9" r="3" fill="#27865a"><title>第 7 轮: 6.000</title></circle><circle cx="524.0" cy="18.0" r="3" fill="#27865a"><title>第 8 轮: 7.000</title></circle><text x="44.0" y="142" text-anchor="middle" class="axis">1</text><text x="112.6" y="142" text-anchor="middle" class="axis">2</text><text x="181.1" y="142" text-anchor="middle" class="axis">3</text><text x="249.7" y="142" text-anchor="middle" class="axis">4</text><text x="318.3" y="142" text-anchor="middle" class="axis">5</text><text x="386.9" y="142" text-anchor="middle" class="axis">6</text><text x="455.4" y="142" text-anchor="middle" class="axis">7</text><text x="524.0" y="142" text-anchor="middle" class="axis">8</text>
+    <text x="44" y="12" class="axis">probes avoided</text>
+  </svg></div>
+    <div class="panel"><h2>截至每轮的冻结尺子判定</h2><svg viewBox="0 0 540 150" width="100%" role="img" aria-label="累计平均探测数">
+    <line x1="44" y1="18.0" x2="524" y2="18.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="22.0" text-anchor="end" class="axis">3.00</text><line x1="44" y1="70.0" x2="524" y2="70.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="74.0" text-anchor="end" class="axis">1.50</text><line x1="44" y1="122.0" x2="524" y2="122.0" stroke="var(--grid)" stroke-dasharray="3 4"/><text x="38" y="126.0" text-anchor="end" class="axis">0.00</text><path d="M44.0,18.0 L112.6,35.3 L181.1,41.1 L249.7,44.0 L318.3,45.7 L386.9,46.9 L455.4,47.7 L524.0,48.3" fill="none" stroke="#8e6bbf" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44.0" cy="18.0" r="3" fill="#8e6bbf"><title>第 1 轮: 3.000</title></circle><circle cx="112.6" cy="35.3" r="3" fill="#8e6bbf"><title>第 2 轮: 2.500</title></circle><circle cx="181.1" cy="41.1" r="3" fill="#8e6bbf"><title>第 3 轮: 2.333</title></circle><circle cx="249.7" cy="44.0" r="3" fill="#8e6bbf"><title>第 4 轮: 2.250</title></circle><circle cx="318.3" cy="45.7" r="3" fill="#8e6bbf"><title>第 5 轮: 2.200</title></circle><circle cx="386.9" cy="46.9" r="3" fill="#8e6bbf"><title>第 6 轮: 2.167</title></circle><circle cx="455.4" cy="47.7" r="3" fill="#8e6bbf"><title>第 7 轮: 2.143</title></circle><circle cx="524.0" cy="48.3" r="3" fill="#8e6bbf"><title>第 8 轮: 2.125</title></circle><text x="44.0" y="142" text-anchor="middle" class="axis">1</text><text x="112.6" y="142" text-anchor="middle" class="axis">2</text><text x="181.1" y="142" text-anchor="middle" class="axis">3</text><text x="249.7" y="142" text-anchor="middle" class="axis">4</text><text x="318.3" y="142" text-anchor="middle" class="axis">5</text><text x="386.9" y="142" text-anchor="middle" class="axis">6</text><text x="455.4" y="142" text-anchor="middle" class="axis">7</text><text x="524.0" y="142" text-anchor="middle" class="axis">8</text>
+    <text x="44" y="12" class="axis">累计平均探测数</text>
+  </svg></div>
+  </div>
+
+  <table><thead><tr><th>轮</th><th>探测</th><th>跳过</th><th>经验命中</th><th>接受</th><th>首轮命中</th><th>回退</th><th>累计 IPA</th><th>累计均探测</th><th>截至该轮趋势</th></tr></thead>
+  <tbody><tr>
+    <td>1</td><td>3</td><td>0</td>
+    <td>0</td><td>1</td>
+    <td>✓</td><td>否</td>
+    <td>0.333</td><td>3.00</td>
+    <td><span class="tag" style="--tag:#2c6fbb">insufficient-data</span></td>
+  </tr><tr>
+    <td>2</td><td>2</td><td>1</td>
+    <td>1</td><td>1</td>
+    <td>✓</td><td>否</td>
+    <td>0.400</td><td>2.50</td>
+    <td><span class="tag" style="--tag:#2c6fbb">insufficient-data</span></td>
+  </tr><tr>
+    <td>3</td><td>2</td><td>1</td>
+    <td>1</td><td>1</td>
+    <td>✓</td><td>否</td>
+    <td>0.429</td><td>2.33</td>
+    <td><span class="tag" style="--tag:#2c6fbb">insufficient-data</span></td>
+  </tr><tr>
+    <td>4</td><td>2</td><td>1</td>
+    <td>1</td><td>1</td>
+    <td>✓</td><td>否</td>
+    <td>0.444</td><td>2.25</td>
+    <td><span class="tag" style="--tag:#2c6fbb">insufficient-data</span></td>
+  </tr><tr>
+    <td>5</td><td>2</td><td>1</td>
+    <td>1</td><td>1</td>
+    <td>✓</td><td>否</td>
+    <td>0.455</td><td>2.20</td>
+    <td><span class="tag" style="--tag:#2c6fbb">insufficient-data</span></td>
+  </tr><tr>
+    <td>6</td><td>2</td><td>1</td>
+    <td>1</td><td>1</td>
+    <td>✓</td><td>否</td>
+    <td>0.462</td><td>2.17</td>
+    <td><span class="tag" style="--tag:#c0392b">accelerating</span></td>
+  </tr><tr>
+    <td>7</td><td>2</td><td>1</td>
+    <td>1</td><td>1</td>
+    <td>✓</td><td>否</td>
+    <td>0.467</td><td>2.14</td>
+    <td><span class="tag" style="--tag:#c0392b">accelerating</span></td>
+  </tr><tr>
+    <td>8</td><td>2</td><td>1</td>
+    <td>1</td><td>1</td>
+    <td>✓</td><td>否</td>
+    <td>0.471</td><td>2.13</td>
+    <td><span class="tag" style="--tag:#c0392b">accelerating</span></td>
+  </tr></tbody></table>
+
+  <div class="honesty"><h2>诚实边界（看板不得越过）</h2>
+    <p style="margin:0;color:var(--muted);font-size:12px">数据来源：runEval 真实评测轨迹（deterministic 模型脚本 + 真实 harness 策略分支），逐轮写入只增账本。证据等级：行为对比轨迹；不是模型能力分数，也不构成业界水平结论。<code>leadership.verdict=not-proven</code>、<code>L4=not-achieved</code>。</p>
+    <ul><li>趋势判定只使用唯一冻结尺子 velocitySnapshotFrom；看板只做前缀投影，不实现第二套口径。</li><li>improvement 只数行为对比成立的接受项，候选自报 scoreGain 全程不参与判定。</li><li>可用样本 &lt; 6 一律 insufficient-data；出现协议违规的轮次不计入趋势。</li><li>经验只裁剪 Propose 的探测集，接受判定仍走全量行为对比；经验不灵会回退并留痕。</li><li>跨失败模式泛化（P3 OOD）/ 异步按需探测（P4）尚未实现，复利结论仅限同类失败模式。</li></ul>
+  </div>
+  <footer>推进水位：<code>npm run evolve:tick -- --rounds N</code>　·　只看不改：<code>npm run watermark</code>　·　账本为只增事件，不回写历史</footer>
+</div></body></html>

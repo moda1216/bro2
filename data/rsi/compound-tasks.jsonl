@@ -1,0 +1,10 @@
+# bro2 复利回路专属工作负载（与主能力评测任务集 data/eval-tasks.jsonl 严格隔离）
+# 每个任务都由 deterministic 模型脚本注入「畸形工具参数」——这是真实可观测的失败模式：
+#   malformedArgs=fail   → 工具层校验失败，toolErrors>0
+#   malformedArgs=repair → 受控规范化（拼写修正 / 剔除多余字段）后重新校验，toolErrors=0
+# 改动的是真实运行时代码分支（src/tools/repair.ts），不是手搓的行为摘要。
+# 不带 fault 字段：故障由脚本本身注入，不依赖评测器的故障配置。
+{"id":"c01","category":"robustness","input":"模型把参数名 exprssion 拼错，框架应受控规范化","expectedStop":"completed","deterministicOnly":true,"script":[{"content":"","toolCalls":[{"name":"calc","arguments":{"exprssion":"sum([1,2])"}}]},{"content":"参数名已规范化，计算完成。"}]}
+{"id":"c02","category":"robustness","input":"模型把参数名 expressoin 拼错，框架应受控规范化","expectedStop":"completed","deterministicOnly":true,"script":[{"content":"","toolCalls":[{"name":"calc","arguments":{"expressoin":"sum([3,4])"}}]},{"content":"参数名已规范化，计算完成。"}]}
+{"id":"c03","category":"robustness","input":"模型附带了多余参数 extraneous，框架应剔除后重试","expectedStop":"completed","deterministicOnly":true,"script":[{"content":"","toolCalls":[{"name":"calc","arguments":{"expression":"sum([5,6])","extraneous":"x"}}]},{"content":"多余参数已剔除，计算完成。"}]}
+{"id":"c04","category":"robustness","input":"模型同时拼错参数名并附带多余参数，框架应受控规范化","expectedStop":"completed","deterministicOnly":true,"script":[{"content":"","toolCalls":[{"name":"calc","arguments":{"exprssion":"sum([7,8])","extra":"y"}}]},{"content":"参数已规范化，计算完成。"}]}

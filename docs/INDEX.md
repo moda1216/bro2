@@ -20,6 +20,8 @@
 | [docs/LOCAL-LLM.md](./LOCAL-LLM.md) | 本地真实推理服务（llama.cpp + Ollama 官方权重）：装不上 Ollama 二进制时的等价 OpenAI Compat 端点与实测坑 | 沙箱内要跑真实模型 |
 | [docs/FREE-LLM-APIS.md](./FREE-LLM-APIS.md) | 免费 LLM API 接入：OpenRouter/NIM/SiliconFlow/DeepSeek/Groq 的沙箱实测可达性、免费模型、限速、一条命令跑真实强模型 | 本地算力不足、要零部署测真模型 |
 | [docs/RSI-NEXT.md](./RSI-NEXT.md) | RSI 演进路线图：对齐 HARNESS²/Evo²/RRSI/OO-Harness，逐篇映射到 bro2 下一步 | 想推进"业界水平"、理解演进方向 |
+| [docs/ITERATION-WATERMARK.md](./ITERATION-WATERMARK.md) | 迭代水位：在哪里看、逐轮变化、如何推进、诚实边界（自动生成） | 想看「越用越快」是否真的发生 |
+| [docs/COMPOUND-LOOP.md](./COMPOUND-LOOP.md) | 复利闭环：经验库 + 冻结速度尺子 + 学习型路由的设计与边界 | 理解两大设计目标的共享底座 |
 | [docs/INDEX.md](./INDEX.md) | 本文件 | 找文档 |
 
 运行产物（非文档，但常被引用，均在 `data/`）：
@@ -36,6 +38,9 @@
 | `data/meta-report.json` | meta RSI 报告（冻结 fitness 曲线） |
 | `data/evolve/meta-state.json` / `meta-ledger.jsonl` | 已落地的元状态 / 元层只增账本 |
 | `data/benchmark-report.json` | ablation + 证据阶梯 + 领先度声明 |
+| `data/rsi/velocity.jsonl` / `experience.jsonl` | 复利速度 / 经验的只增账本（跨会话累积，不回写历史） |
+| `data/rsi/watermark.html` / `watermark.json` | 迭代水位可视化看板与结构化数据（自动生成） |
+| `data/rsi/compound-tasks.jsonl` | 复利回路专属工作负载（与主能力评测任务集隔离） |
 | `data/workspace/` | 工具真实写入的工作区 |
 
 ---
@@ -56,6 +61,7 @@
 | 沙箱内跑真实模型推理 | docs/LOCAL-LLM.md | 起本地服务 → `npm run preflight` → `npm run eval:live` |
 | 零本地部署跑真实强模型 | docs/FREE-LLM-APIS.md | `npm run free:probe` → 填 Key → `AGENTOS_LIVE_PROVIDER=openrouter npm run eval:live` |
 | 推进 RSI 演进路线 | docs/RSI-NEXT.md | 读路线图 → 落 P0–P5 |
+| 查看 / 推进迭代水位 | docs/ITERATION-WATERMARK.md → `data/rsi/watermark.html` | `npm run watermark` → `npm run evolve:tick -- --rounds 8` |
 | 提交前全量回归 | 本页 §3 | `npm test && npm run verify && ...` |
 
 ---
