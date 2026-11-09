@@ -10,6 +10,27 @@
 
 ---
 
+## [2.15.0] — 2026-11-09 · 阶段 C 接入 RSI 主循环（三段铁律成为真实晋升闸门）（MINOR）
+
+**解决的问题**：v2.11.0 的三段晋升判据（`judgePromotion`）与 v2.14.0 的真实三段任务集（manifest）
+都已就位，但**二者都没进活循环**——`runEvolve` 仍只用 train/holdout 两段、用内联的 2 段判据，
+且从没调用 `judgePromotion`、根本没有 OOD 段。阶段 C 因此「停在 B」（判定机器层已交付，缺接入主循环）。
+
+**改动**（零新增源文件；代码预算 **16,492/16,500**、90/90 文件，不升阈值、反而 freed 5 行）：
+- `src/rsi/loop.ts`：把晋升判据换成 `judgePromotion` 三段铁律作为**真实晋升闸门**——
+  dev 严格提升 / holdout·OOD 不退化 / OOD 完全只读（搜索只碰 dev）/ 协议零违规 / 完整性通过；
+  新增真实 OOD 段（`data/evolve/ood.jsonl`，作为「只读退化探针」，默认状态即应通过、改进不得使其退化）。
+- OOD 退化时**自动阻断并把阻断写进 journal 可复核**（`W4-C-ood-block`，与 ledger 同走 `scratchDir` 隔离，不污染真实只增账本）。
+- 把散落 6 处的 `ledger.append` **收口到一个 `appendLed` helper**（少而精、消除重复与漂移），
+  顺带删除 `efficiencyTiebreak` 特殊分支（三段铁律已是其严格上界）。
+- `src/rsi/shadow.ts`：`evolvePaths` 暴露 `ood` 段；`src/rsi/guardrails.ts`：OOD 纳入写保护面。
+
+**诚实边界（不产生能力分数）**：`leadership.verdict` 仍 `not-proven`、`L4` 仍 `not-achieved`、
+0pp 负结果不变。本版是**测量/治理机器的最后一公里接入**——现在 bro2 的每一次晋升都经三段铁律判定、
+每一次 OOD 退化都被记录；但「是否有可量化的能力增益」仍未被测得（演进 fixture 是确定性脚本回放，
+弱模型又跑不完多步任务）。阶段 C 的机器已闭环，缺口从「缺接入」变成「缺一次真实能力增益的测量」。
+见 `docs/BENCH-v2.md` §5.12、`docs/PLAN-TOP-HARNESS.md` §6.2。
+
 ## [2.14.0] — 2026-11-09 · 三段任务集真实分层与弱模型单步重测（MINOR）
 
 **解决的问题**：v2.11.0 的三段晋升判据虽是判定机器，但喂给它的三段是**手搓的玩具任务**，

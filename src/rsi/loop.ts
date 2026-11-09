@@ -10,9 +10,11 @@
  *   · 协议违规 = 0 · 保护面完整 · patch 在白名单且不在拒绝缓冲 · 漂移未越界
  * 任一不满足即回滚；候选从未接触真实运行时。
  */
-import { writeFileSync, rmSync } from "node:fs";
+import { writeFileSync, rmSync, appendFileSync } from "node:fs";
+import { join } from "node:path";
 import { runEval, loadTasks } from "../observability/eval.ts";
 import type { EvalReport, EvalTask, EvalThresholds } from "../observability/eval.ts";
+import { judgePromotion } from "../observability/eval-grade.ts";
 import { Ledger, IncidentLog, metaPatch, genesisPatch } from "./ledger.ts";
 import type { OperatorStats } from "./ledger.ts";
 import {
@@ -110,8 +112,9 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
   const dryRun = options.dryRun === true;
   const train = loadTasks(paths.train);
   const holdout = loadTasks(paths.holdout);
+  const ood = loadTasks(paths.ood);
   const holdoutAnswers = extractHoldoutAnswers(holdout);
-  const taskSetHash = shortHash({ train, holdout });
+  const taskSetHash = shortHash({ train, holdout, ood });
   const baselineIntegrity = computeIntegrity(root);
 
   let state: EvolvableState = options.reset ? freshDefaultState() : loadState(root);
@@ -131,13 +134,22 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
   const holdoutCurve: number[] = [];
   let stoppedBy = "max-generations";
 
-  ledger.append({
-    ...ledgerBase(0, null, genesisPatch(), shortHash(state)),
-    decision: "genesis",
-    reason: `任务集指纹 ${taskSetHash} · 保护面 ${Object.keys(baselineIntegrity).length} 文件`,
-    gatePass: true,
-    integrityOk: true,
-  });
+  // 账本写入统一收口到一个 helper（少而精：原散落 6 处 ledger.append 合并，避免重复与漂移）。
+  const appendLed = (
+    generation: number, patch: Patch, decision: string, reason: string,
+    stBefore: EvolvableState, stAfter: EvolvableState, extra: Record<string, unknown> = {},
+  ): void => {
+    ledger.append({ ...ledgerBase(generation, shortHash(stBefore), patch, shortHash(stAfter)), decision, reason, ...extra });
+  };
+  // 阶段 C：OOD 退化阻断写入 journal 可复核；与 ledger 同走 scratchDir 隔离，避免污染真实只增账本。
+  const journalOodBlock = (reasons: string[]): void => {
+    appendFileSync(
+      join(paths.dir, "journal.jsonl"),
+      JSON.stringify({ at: new Date().toISOString(), id: "W4-C-ood-block", event: "block", reason: reasons.join("; "), segment: "ood" }) + "\n",
+    );
+  };
+
+  appendLed(0, genesisPatch(), "genesis", `任务集指纹 ${taskSetHash} · 保护面 ${Object.keys(baselineIntegrity).length} 文件`, state, state, { gatePass: true, integrityOk: true });
 
   const maxGen = options.generations ?? strategy.maxGenerations;
   const say = (line: string): void => options.onProgress?.(line);
@@ -167,10 +179,12 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
       break;
     }
 
-    // ---- 基线评测（train 与 holdout 分离，holdout 内容不进入 miner）----
+    // ---- 基线评测（train/holdout/ood 三段分离：holdout 与 ood 内容均不进入 miner）----
     const trainBefore = await evaluate(root, state, train);
     evalRuns += 1;
     const holdoutBefore = await evaluate(root, state, holdout);
+    evalRuns += 1;
+    const oodBefore = await evaluate(root, state, ood);
     evalRuns += 1;
     trainCurve.push(trainBefore.summary.overall);
     holdoutCurve.push(holdoutBefore.summary.overall);
@@ -243,13 +257,7 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
           detail: `${p.operator}: ${chk.reason}`,
           ...(p.id ? { patchId: p.id } : {}),
         });
-        ledger.append({
-          ...ledgerBase(gen, shortHash(state), p, shortHash(state)),
-          decision: "blocked",
-          reason: chk.reason,
-          gatePass: false,
-          integrityOk: true,
-        });
+        appendLed(gen, p, "blocked", chk.reason, state, state, { gatePass: false, integrityOk: true });
         say(`  ⊘ 拦截 ${p.operator}: ${chk.reason}`);
         continue;
       }
@@ -257,47 +265,49 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
       const candidateState = applyPatch(state, p);
       const trainAfter = await evaluate(root, candidateState, train);
       evalRuns += 1;
-      const trainImproved = trainAfter.summary.overall > trainBefore.summary.overall;
 
-      if (!trainAfter.gate.pass || !trainImproved || trainAfter.summary.protocolViolations > 0) {
+      if (!trainAfter.gate.pass || trainAfter.summary.protocolViolations > 0 ||
+          !(trainAfter.summary.overall > trainBefore.summary.overall)) {
         rejected += 1;
         rec.rejected += 1;
         bump(p.operator, "rejected");
         strategy = noteRejected(strategy, p.id);
-        ledger.append({
-          ...ledgerBase(gen, shortHash(state), p, shortHash(candidateState)),
-          decision: "rejected",
-          reason: !trainImproved
-            ? "train 未提升：该改动无法被外部断言验证，不予晋升"
-            : "train 门禁失败或存在协议违规",
-          trainBefore: trainBefore.summary.overall,
-          trainAfter: trainAfter.summary.overall,
-          holdoutBefore: holdoutBefore.summary.overall,
-          gatePass: trainAfter.gate.pass,
-          protocolViolations: trainAfter.summary.protocolViolations,
-          integrityOk: true,
+        const reason = !trainAfter.gate.pass || trainAfter.summary.protocolViolations > 0
+          ? "train 门禁失败或存在协议违规" : "train 未提升：改动无法被外部断言验证";
+        appendLed(gen, p, "rejected", reason, state, candidateState, {
+          trainBefore: trainBefore.summary.overall, trainAfter: trainAfter.summary.overall,
+          holdoutBefore: holdoutBefore.summary.overall, gatePass: trainAfter.gate.pass,
+          protocolViolations: trainAfter.summary.protocolViolations, integrityOk: true,
         });
-        say(`  ✗ 拒绝 ${p.operator}: ${!trainImproved ? "改动无法被验证（train 无提升）" : "门禁失败"}`);
+        say(`  ✗ 拒绝 ${p.operator}: ${reason}`);
         continue;
       }
 
       const holdoutAfter = await evaluate(root, candidateState, holdout);
       evalRuns += 1;
-      const strictGain = holdoutAfter.summary.overall > holdoutBefore.summary.overall;
-      // efficiency-tiebreak 只在「train 提升、holdout 打平、且步数更少」时破平局；
-      // 它绝不把 holdout 判据放松成 >=，因此验证层级不被削弱。
-      const efficiencyTiebreak =
-        meta.promotionStrictness === "efficiency-tiebreak" &&
-        trainAfter.summary.overall > trainBefore.summary.overall &&
-        holdoutAfter.summary.overall === holdoutBefore.summary.overall &&
-        holdoutAfter.summary.avgSteps < holdoutBefore.summary.avgSteps;
-      const ok =
-        holdoutAfter.gate.pass &&
-        (strictGain || efficiencyTiebreak) &&
-        holdoutAfter.summary.protocolViolations === 0;
+      const oodAfter = await evaluate(root, candidateState, ood);
+      evalRuns += 1;
+      // 阶段 C：用三段晋升铁律（judgePromotion）作为真实晋升闸门——
+      // dev 严格提升 · holdout/OOD 不退化 · OOD 完全只读（搜索只碰 dev）· 协议零违规 · 完整性通过。
+      const verdict = judgePromotion({
+        id: p.id,
+        before: { dev: trainBefore.summary.overall, holdout: holdoutBefore.summary.overall, ood: oodBefore.summary.overall },
+        after: { dev: trainAfter.summary.overall, holdout: holdoutAfter.summary.overall, ood: oodAfter.summary.overall },
+        hashes: {
+          dev: [trainBefore.taskSetHash, trainBefore.taskSetHash],
+          holdout: [holdoutBefore.taskSetHash, holdoutBefore.taskSetHash],
+          ood: [oodBefore.taskSetHash, oodBefore.taskSetHash],
+        },
+        searchTouchedHashes: [trainBefore.taskSetHash],
+        available: { dev: true, holdout: true, ood: true },
+        protocolViolationsAfter: trainAfter.summary.protocolViolations,
+        integrityOk: changed.length === 0,
+        usedGroundTruthVerifier: false,
+        tolerance: 0,
+      });
 
-      if (ok) {
-        const parentHash = shortHash(state);
+      if (verdict.promoted) {
+        const parentState = state;
         state = candidateState;
         drift += p.changes.length;
         promoted += 1;
@@ -306,52 +316,34 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
         didPromote = true;
         rec.trainAfter = trainAfter.summary.overall;
         rec.holdoutAfter = holdoutAfter.summary.overall;
-        ledger.append({
-          ...ledgerBase(gen, parentHash, p, shortHash(state)),
-          decision: "promoted",
-          reason: "train 严格提升 + holdout 严格提升 + 双门禁 PASS + 协议违规 0",
-          trainBefore: trainBefore.summary.overall,
-          trainAfter: trainAfter.summary.overall,
-          holdoutBefore: holdoutBefore.summary.overall,
-          holdoutAfter: holdoutAfter.summary.overall,
-          gatePass: true,
-          integrityOk: true,
-        });
+        appendLed(gen, p, "promoted",
+          `三段晋升 dev Δ=${verdict.deltas.dev.toFixed(4)} holdout Δ=${verdict.deltas.holdout.toFixed(4)} ood Δ=${verdict.deltas.ood.toFixed(4)}`,
+          parentState, candidateState, {
+            trainBefore: trainBefore.summary.overall, trainAfter: trainAfter.summary.overall,
+            holdoutBefore: holdoutBefore.summary.overall, holdoutAfter: holdoutAfter.summary.overall,
+            gatePass: true, integrityOk: true,
+          });
         if (!dryRun) saveState(root, state);
-        say(
-          `  ✓ 晋升 ${p.operator}: ${p.description}  ` +
-          `holdout ${holdoutBefore.summary.overall} → ${holdoutAfter.summary.overall}`,
-        );
+        say(`  ✓ 晋升 ${p.operator}: ${p.description}  holdout ${holdoutBefore.summary.overall} → ${holdoutAfter.summary.overall}`);
         break; // 每代最多晋升 1 个，保证单调、可归因
       }
 
       rejected += 1;
       rec.rejected += 1;
       strategy = noteRejected(strategy, p.id);
-      ledger.append({
-        ...ledgerBase(gen, shortHash(state), p, shortHash(candidateState)),
-        decision: "rejected",
-        reason: `holdout 未严格提升 (${holdoutBefore.summary.overall} → ${holdoutAfter.summary.overall})`,
-        trainBefore: trainBefore.summary.overall,
-        trainAfter: trainAfter.summary.overall,
-        holdoutBefore: holdoutBefore.summary.overall,
-        holdoutAfter: holdoutAfter.summary.overall,
-        gatePass: holdoutAfter.gate.pass,
-        protocolViolations: holdoutAfter.summary.protocolViolations,
+      if (verdict.blockedByOod) journalOodBlock(verdict.reasons);
+      appendLed(gen, p, "rejected", `三段门禁未过：${verdict.reasons.join("；")}`, state, candidateState, {
+        trainBefore: trainBefore.summary.overall, trainAfter: trainAfter.summary.overall,
+        holdoutBefore: holdoutBefore.summary.overall, holdoutAfter: holdoutAfter.summary.overall,
+        gatePass: holdoutAfter.gate.pass, protocolViolations: holdoutAfter.summary.protocolViolations,
         integrityOk: true,
       });
-      say(`  ✗ 拒绝 ${p.operator}: holdout 未严格提升`);
+      say(`  ✗ 拒绝 ${p.operator}: ${verdict.reasons[0] ?? "三段门禁未过"}`);
     }
 
     // ---- 受限 L4：改进机制自身由本代实证成败更新 ----
     strategy = updateStrategyWeights(strategy, genStats);
-    ledger.append({
-      ...ledgerBase(gen, shortHash(state), metaPatch(`meta-${gen}`, "算子先验更新"), shortHash(state)),
-      decision: "meta",
-      reason: "由账本实证成败更新搜索先验；非能力声明，不参与晋升判定",
-      gatePass: true,
-      integrityOk: true,
-    });
+    appendLed(gen, metaPatch(`meta-${gen}`, "算子先验更新"), "meta", "由账本实证成败更新搜索先验；非能力声明，不参与晋升判定", state, state, { gatePass: true, integrityOk: true });
     if (!dryRun) saveStrategy(root, strategy);
 
     rec.decision = didPromote ? "promoted" : "no-improvement";

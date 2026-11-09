@@ -11,7 +11,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.14.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.15.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
@@ -39,7 +39,7 @@
 | 对比式改进 live 闭环（防 reward hacking） | `npm run contrast:live` | 完整性 ✓ OK，2 晋升 / 2 拦截 | P1 门禁 |
 | 复利中枢（越用越快 / 越用越省） | `npm run compound:demo` | 10/10 断言，trend=accelerating，remoteAvoided=6 | 两大目标门禁 |
 | 迭代水位（唯一尺子 / 只增账本 / 只读投影） | `npm run watermark:check` | 13/13 项，账本 14 轮 `trend=accelerating` | 水位门禁（第 12 道） |
-| **代码预算（少而精）** | `npm run budget:check` | 16,497 / 16,500 行 · 90 / 90 文件 · 最大 584 行 · 测试比 0.26 · 依赖 0 | 体积门禁（第 13 道） |
+| **代码预算（少而精）** | `npm run budget:check` | 16,492 / 16,500 行 · 90 / 90 文件 · 最大 584 行 · 测试比 0.26 · 依赖 0 | 体积门禁（第 13 道） |
 | **v2 分层任务装载** | `npm run bench:v2 -- --layer l1` | 19/19 通过，指纹 `d1419b1efaa7` 与既有评测一致 | 迁移回归门禁（第 14 道） |
 | **fixture 快照** | `npm run fixture:check -- --run` | 3 仓库结构完整 · 7,585 / 3,145,728 字节 · 离线测试 3/3 通过 | fixture 门禁（第 15 道） |
 | **L2 任务双态校准** | `npm run task:check -- --layer l2 --quiet` | 18/18：原始快照必失败、参考解必通过 | 任务有效性门禁 |
@@ -47,6 +47,7 @@
 | **故障恢复确定性对照** | `npm run fault:check` | 3/3 接受（retry / empty-guard / repair）：离线可复算、防哑弹、拒绝自报增益 | 恢复力回归门禁（第 18 道） |
 | **三段晋升判据** | `npm run promotion:check` | 合法晋升 1/1 接受（三段分数由 `runEval` 真实产出：dev 0→1、holdout/ood 1→1）+ 12 个受控违规信号全部拒绝；OOD 退化即阻断、自报增益不参与 | 阶段 C 前置闸门（第 19 道） |
 | **三段任务集分层（W1-06 重定口径）** | `npm run segments:check` | 37 个真实任务冻结成 dev 12 / holdout 15 / ood 10；31/31 断言（源指纹一致 / 三段互不相交 / 指纹互异 / OOD 只读 / 真实分段接 `judgePromotion` / 6 个反例改坏必红）；真篡改 `ood.hash` 实测 `exit=1` | 阶段 C 输入契约门禁（第 21 道） |
+| **阶段 C 接入 RSI 主循环** | `npm run phasec:check` | 7/7 断言：`judgePromotion` 消费真实三段（dev 严格提升 / holdout·OOD 不退化 / OOD 完全只读 / 协议零违规）、OOD 退化即阻断且写 journal、`runEvolve` 搜索只碰 dev；`data/evolve/ood.jsonl` 为只读退化探针 | 阶段 C 接入门禁（第 22 道） |
 | **端点健康经验接线** | `npm run endpoint:check` | 13/13 断言（经验折叠 / 冷启动让位 / 硬过滤不绕过 / 回写闭环跨会话 / 失效归零）；先验只影响 `score()` 排序、绝不绕过冷却/限流 | 越用越稳闭环门禁（第 20 道） |
 | 远程同步一致性（防漏推，纯只读） | `npm run push:check` | `✓ 远程已同步`，main 与本地一致、最新 tag 已推送 | 信息展示门禁 |
 | 改进同步闭环（提交 + 唯一通道推送 + 自检） | `npm run ship` | 复用仓库外 600 权限 PAT，凭证不入库、不回显 | 发布流程 |
@@ -276,7 +277,7 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.14.0**（W1-06 重定口径：37 个真实任务按 `sha1(id)` 冻结成 dev 12 / holdout 15 / ood 10 三段、指纹互异、OOD 完全只读；`npm run segments:check` 第 21 道门禁 31/31 断言离线验证真实分段可复核、改坏必红，并把三段真实指纹接进 `judgePromotion` 作合法输入；新增 `npm run weak:probe` 弱模型单步准入探针，红线写死「只有 `completed` + 协议零违规才算有效测量」，链路修通后实测 1.5B 发起 2 次原生 `calc` 调用、协议 0 违规，彻底撤销 v2.10.0「0.5B 能力下限」，但本机纯 CPU 单步约 250~270s、三次尝试分别被 600s 墙钟与死循环守卫（连续 3 次相同工具调用）拦下、始终无 `completed` 轨迹，能力如实记为未测出。边界：`segments:check` 是输入契约门禁、不是 `promote.ts` 接入主循环，阶段 C 仍停在 B；不产生能力分数；`npm test` 273/273、门禁 21/21、预算 16,497/16,500，零新增源文件、未上调阈值）。
+- 当前最新：**v2.15.0**（阶段 C 接入 RSI 主循环：`runEvolve` 晋升闸门换成 `judgePromotion` 三段铁律（dev 严格提升 / holdout·OOD 不退化 / OOD 完全只读 / 协议零违规），新增真实 OOD 段 `data/evolve/ood.jsonl`（只读退化探针，默认状态即应通过、改进不得使其退化），OOD 退化自动阻断并写 `journal` 可复核（`W4-C-ood-block`）；散落 6 处 `ledger.append` 收口到 `appendLed` helper、删 `efficiencyTiebreak` 特殊分支；`evolvePaths` 暴露 `ood` 段、OOD 纳入写保护面。`npm run phasec:check` 第 22 道门禁 7/7 断言：判定机器消费真实三段、OOD 退化即阻断且写 journal、搜索只碰 dev。诚实边界：不产生能力分数，`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`，缺口从「缺接入」变成「缺一次真实能力增益的测量」；`npm test` 273/273、门禁 22/22、预算 16,492/16,500（反而 freed 5 行）、零新增源文件、未上调阈值）。
 - 上版：**v2.13.0**（接入门禁组合路径盲点修复：`complete()` 硬编码流式 + llama.cpp handler 拒绝「流式+自动工具选择」→ 本地端点 preflight 全绿却零工具调用；provider 新增 `stream`/`maxTokens` 可配（默认不变）、非流式解析回规范 `tool_calls`、探针补「流式+带 tools」组合观测与 `max_tokens`，`toolCalling=native` 硬门槛不放水；`tests/nonstream.test.ts` 5/5。1.5B 实测链路修通（preflight PASS、稳态 0.6s、无 OOM），但本机纯 CPU 多步评测 18 分钟挂起，`provider_error` 报告按红线删除；历史「0.5B 能力下限」结论因链路缺陷撤销、需重测。测量机器修复，不是能力分数；`npm test` 273/273、门禁 20/20，零新增源文件、未上调阈值）。
 - 上版：**v2.12.0**（端点健康经验接线：`endpointPriorFromExperience` 折叠跨会话先验注入 `KeylessAggregator.score()`、成败回写只增账本，补上「健康态进程内、重启清零 / `endpoint` 域只写不读」缺口；`npm run endpoint:check` 第 20 道门禁 13/13 离线验证先验只影响排序、不绕过冷却/限流硬过滤、失效与样本不足归零回退；运行时 opt-in 默认关闭，避免写被跟踪账本制造假 diff；结构闭环证据而非能力分数；`npm test` 268/268、门禁 20/20，零新增源文件、未上调阈值）。
 - 上版：**v2.11.0**（三段晋升判据：`judgePromotion` 要求 dev 严格提升 / holdout·OOD 不退化 / OOD 完全只读 / 三段无缺格 / 任务集冻结 / 协议 0 / 完整性通过，自报增益绝不参与判定；`npm run promotion:check` 第 19 道门禁以真实 `runEval` 三段分数验证合法晋升 1/1 接受、12 个违规信号全拒绝，退化即阻断；阶段 C 前置闸门。判定并入 `eval-grade.ts`、编排并入 `bench-v2.ts`，**零新增源文件、未上调阈值**；`npm test` 261/261、门禁 19/19）。

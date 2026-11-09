@@ -32,6 +32,7 @@ export function evolvePaths(root: string, scratchDir?: string): {
   incidents: string;
   train: string;
   holdout: string;
+  ood: string;
   report: string;
 } {
   const dir = scratchDir ?? join(root, "data", "evolve");
@@ -43,6 +44,7 @@ export function evolvePaths(root: string, scratchDir?: string): {
     incidents: join(dir, "incidents.jsonl"),
     train: join(root, "data", "evolve", "train.jsonl"),
     holdout: join(root, "data", "evolve", "holdout.jsonl"),
+    ood: join(root, "data", "evolve", "ood.jsonl"),
     report: scratchDir ? join(scratchDir, "evolve-report.json") : join(root, "data", "evolve-report.json"),
   };
 }

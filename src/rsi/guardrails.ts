@@ -40,6 +40,7 @@ export const PROTECTED_FILES: readonly string[] = [
   "data/eval-tasks.jsonl",
   "data/evolve/train.jsonl",
   "data/evolve/holdout.jsonl",
+  "data/evolve/ood.jsonl",
 ];
 
 export function computeIntegrity(root: string): Record<string, string> {

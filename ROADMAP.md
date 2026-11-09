@@ -123,13 +123,22 @@ v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者�
     冻结指纹、互不相交、OOD 完全只读。`npm run segments:check`（第 21 道门禁）
     离线验证真实分段可复核、改坏必红，并用三段真实指纹构造 `PromotionSpec`
     喂 `judgePromotion`，证明判定机器拿到了真实任务集输入。
-    **仍是输入契约门禁，不是 `promote.ts` 接入 RSI 主循环**，阶段 C 停在 B。
+    **v2.15.0 已把 `judgePromotion` 接入 `runEvolve` 主循环**：晋升闸门改为三段铁律、
+    新增真实 OOD 段、OOD 退化自动阻断并写 journal，判定机器终于吃到真实三段。
+    阶段 C 的**机器闭环已完整**（从「判定机器」到「活循环消费」都就位）。
   - **弱模型单步重测**：`npm run weak:probe` 用最短单步任务重测 1.5B，红线写死
     「只有 `completed` + 协议零违规才算有效测量」。链路修通后实测发起 2 次原生
     `calc` 调用（协议 0 违规），坐实撤销 v2.10.0「0 工具调用 = 能力下限」；
     但本机纯 CPU 单步约 250~270s，三次尝试分别被墙钟（600s）与死循环守卫
     （连续 3 次相同工具调用）拦下、无 `completed` 轨迹，能力仍是**未测出**，
     写成运行时/行为约束而非「模型太弱」。见 `docs/BENCH-v2.md` §5.11。
+- **v2.15.0** 完成阶段 C 的**最后一公里接入**（不产生能力分数）：
+  `runEvolve` 晋升闸门从内联 2 段判据换成 `judgePromotion` 三段铁律，新增真实
+  OOD 段（`data/evolve/ood.jsonl`，只读退化探针），OOD 退化自动阻断并写 `journal`
+  可复核；6 处 `ledger.append` 收口到 `appendLed`、删 `efficiencyTiebreak`、预算
+  反而 freed 5 行。`leadership.verdict` 仍 `not-proven`——机器闭环了，但缺口从
+  「缺接入」变成「缺一次真实能力增益的测量」（演进 fixture 是确定性脚本回放、弱模型
+  跑不完多步）。见 `docs/BENCH-v2.md` §5.12。
 - v2.12.0 的端点健康经验接线补的是**目标 2「越用越稳」的结构闭环**：端点体检结果不再
   只落文档，而是折叠成跨会话先验注入 `KeylessAggregator.score()`、成败再回写只增账本，
   解决「健康态进程内、重启清零」。`npm run endpoint:check`（第 20 道门禁）离线验证

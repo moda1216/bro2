@@ -46,6 +46,7 @@ const GATES: Gate[] = [
   { id: "benchmark", label: "基准诚实性测量", cmd: "npm run benchmark:check", timeoutMs: 60_000, gate: true },
   { id: "external", label: "外部证据防伪造", cmd: "npm run external:check", timeoutMs: 60_000, gate: true },
   { id: "preflight", label: "接入门禁防误判 / 证据隔离", cmd: "npm run preflight:check", timeoutMs: 60_000, gate: true },
+  { id: "phasec", label: "阶段 C 接入（judgePromotion 消费真实三段 / OOD 只读 / 退化写 journal）", cmd: "npm run phasec:check", timeoutMs: 60_000, gate: true },
   { id: "livesmoke", label: "live 链路自检（仿真，非能力分）", cmd: "npm run live:smoke", timeoutMs: 60_000, gate: false },
 ];
 

@@ -474,6 +474,38 @@ v2.13.0 只挡了 `provider_error`，本版实测发现 `cancelled` 与 `guard` 
 自带 `linkProbe` 字段保存链路证据，避免删无效报告时把有用信息一起删掉。
 `leadership.verdict` 仍 `not-proven`，不产生能力分数。
 
+### 5.12 阶段 C 接入 RSI 主循环（v2.15.0）
+
+§5.7 的 `judgePromotion` 与 §5.10 的真实三段任务集都已就位，但二者**都没进活循环**：
+`runEvolve` 仍只用 train/holdout 两段、用内联的 2 段判据，从不调用 `judgePromotion`、也没有 OOD 段。
+本版补上这最后一公里——把三段铁律变成 `runEvolve` 的**真实晋升闸门**。
+
+改动（`src/rsi/loop.ts`，零新增源文件，预算反而 freed 5 行 → 16,492/16,500）：
+
+1. **晋升闸门换成 `judgePromotion`**：每次候选先过 train 门禁（未提升 / 协议违规即拒），
+   再过 holdout 与 **新增真实 OOD 段**（`data/evolve/ood.jsonl`，6 个与 train/holdout 同面但刺激物
+   不同的确定性脚本任务，作为「只读退化探针」：默认状态即应通过，任何改进使其退化即判定阻断）。
+   三段分数（来自 `runEval` 真实 `summary.overall ∈ [0,1]`）与任务集指纹（真实 `taskSetHash`）
+   构造 `PromotionSpec` 喂 `judgePromotion`；dev 严格提升 / holdout·OOD 不退化 /
+   OOD 完全只读（搜索只碰 dev）/ 协议零违规 / 完整性通过，全过才晋升。
+2. **OOD 退化自动阻断 + 写 journal 可复核**：当且仅当 `verdict.blockedByOod` 时，
+   把阻断（带原因、段标识 `ood`）追加到 `journal`（`W4-C-ood-block`）；写路径与 ledger 同走
+   `scratchDir` 隔离，测试不污染真实只增账本。
+3. **账本写入收口 + 删分支**：散落 6 处的 `ledger.append` 合并为一个 `appendLed` helper
+   （少而精、消除重复与漂移），并删除 `efficiencyTiebreak` 特殊分支——三段铁律已是其严格上界。
+4. `src/rsi/shadow.ts` 的 `evolvePaths` 暴露 `ood` 段；`src/rsi/guardrails.ts` 把 OOD 纳入写保护面。
+
+**契约证明**：`npm run phasec:check`（第 22 道门禁，`examples/phase-c-check.ts`）用 `runEval`
+对三段 fixture 实际评测得到真实分数与互异指纹，再喂 `judgePromotion`，断言：
+合法改进（dev 提升、holdout/OOD 不退化、搜索只碰 dev）→ 晋升；OOD 退化 → 阻断且写 journal；
+搜索碰 OOD → 违反完全只读。7/7 通过。
+
+**诚实边界**：这是**治理/测量机器的闭环**，不是能力分数。`leadership.verdict` 仍 `not-proven`、
+`L4` 仍 `not-achieved`、0pp 负结果不变。阶段 C 从「判定机器就绪、缺接入主循环」走到
+「机器 + 活循环都已闭环」，缺口从**缺接入**变成**缺一次真实能力增益的测量**
+（演进 fixture 是确定性脚本回放、弱模型又跑不完多步任务）。`tests/rsi.test.ts` 端到端契约
+仍 9/9 通过（含 `promoted >= 3` / `holdoutCurve` 上升 / `loopDetection === "exact"`）。
+
 ---
 
 ## 6. 不能下的结论（诚实边界）

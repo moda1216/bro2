@@ -241,7 +241,9 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 > `dev 12 / holdout 15 / ood 10` 三堆、冻结指纹、互不相交、OOD 完全只读；
 > `npm run segments:check`（第 21 道门禁）离线验证真实分段可复核、改坏必红，
 > 并把三段真实指纹接进 `judgePromotion` 作为合法输入。详见 `docs/BENCH-v2.md` §5.10。
-> 边界：这是**输入契约门禁**，不是 `promote.ts` 接入 RSI 主循环，阶段 C 仍停在 B。
+> **v2.15.0 已把 `judgePromotion` 接入 `runEvolve` 主循环**（真实 OOD 段 + OOD 退化写 journal），
+> 判定机器与活循环都已闭环；阶段 C 不再「停在 B」，但 `leadership.verdict` 仍 `not-proven`
+> （缺口是「缺一次真实能力增益的测量」，非缺机器）。详见 `docs/BENCH-v2.md` §5.12。
 
 | 层 | 用途 | 规模 | 判定方式 |
 | --- | --- | --- | --- |
@@ -384,9 +386,8 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 | 文件 | 内容 |
 | --- | --- |
 | `src/rsi/operators.ts`（扩展） | 新增三类编辑算子：`context-policy`（压缩阈值/保留策略）、`tool-desc`（工具描述改写）、`prompt-fragment`（系统提示片段增删） |
-| `src/rsi/ood.ts` | OOD 通道：3 个仓库完全留出，只在评估时跑，不参与任何搜索 |
-| `src/rsi/promote.ts` | 晋升判据接入 `bench:v2`：`L2-dev 提升 AND L2-holdout 不退化 AND OOD 不退化` |
-| `tests/ood.test.ts` | OOD 退化必须阻断晋升 |
+| `data/evolve/ood.jsonl` + `src/rsi/loop.ts` | OOD 通道（v2.15.0 已交付）：真实 OOD 段只在评估时跑、不参与搜索；晋升闸门接 `judgePromotion` 三段铁律，OOD 退化即阻断 |
+| `examples/phase-c-check.ts` | 第 22 道门禁：判定机器消费真实三段、OOD 只读、退化写 journal，改坏必红 |
 
 **验收**
 
@@ -460,7 +461,7 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 | **W7（第 8 周）** | 模型矩阵跑通 | `data/matrix/*.json`（6×4×20） | 缺格显式标注 |
 | **W8（第 9 周）** | 成本前沿报告 | `docs/COST-FRONTIER.md` | 8B+bro2 ≥ 70B 裸跑 90%（或如实报告） |
 | **W9（第 10 周）** | RSI 算子扩展 | `src/rsi/operators.ts` 三类新算子 | 写保护测试先行 |
-| **W10（第 11 周）** | OOD 通道 + 晋升判据 | `src/rsi/ood.ts`、`src/rsi/promote.ts` | OOD 退化即阻断 |
+| **W10（第 11 周）** | OOD 通道 + 晋升判据 | `data/evolve/ood.jsonl` + `src/rsi/loop.ts`（v2.15.0 已交付：三段铁律晋升闸门 + OOD 退化写 journal） | OOD 退化即阻断 |
 | **W11（第 12 周）** | SDK + Docker | `src/sdk.ts`、`Dockerfile` | 外部人 30 分钟跑通 |
 | **W12（第 13 周）** | 外证与发布 | `docs/REPRODUCE.md`、`data/bench/external/` | ≥1 组同期 harness 对照 |
 
@@ -646,16 +647,17 @@ npm run auto:status    # 五个战役的 done/total、阻塞项、最近 5 条 j
 - 编辑降级链（W2）一次成功率 ≥ 75%；
 - 单任务 LOC 超预算率 < 10%。
 
-**阶段 C 的前置**：W4 的 `promote.ts` 必须能在 OOD 退化时**自动阻断**，且阻断记录可在 `journal` 里复核。做不到就停在 B。
+**阶段 C 的前置**：W4 的晋升闸门必须能在 OOD 退化时**自动阻断**，且阻断记录可在 `journal` 里复核。
 
 > **v2.11.0 已交付这道前置闸门（判定机器层）**：`judgePromotion`（并入 `eval-grade.ts`）
 > 把三段晋升铁律做成离线可复算的纯判定，`npm run promotion:check`（第 19 道门禁）以
 > 真实 `runEval` 三段分数验证「合法晋升接受 / 12 个违规信号全拒绝 / OOD 退化即阻断」。
-> 但**这是闸门，不是 `promote.ts` 接入 RSI 主循环**。真实 dev/holdout/OOD 任务集分层
-> 已于 **v2.14.0** 按重定口径交付（37 个真实任务三段冻结 + 第 21 道输入契约门禁），
-> 三段真实指纹已能作为判定机器的合法输入；**仍缺 `promote.ts` 把三段接进 RSI 主循环**。
-> 阶段 C 仍需这一接入后才成立，现在停在 B 是如实状态，不虚报。
-> 见 `docs/BENCH-v2.md` §5.7 / §5.10。
+> 真实 dev/holdout/OOD 任务集分层已于 **v2.14.0** 按重定口径交付（37 个真实任务三段冻结
+> + 第 21 道输入契约门禁），三段真实指纹已能作为判定机器的合法输入。
+> **v2.15.0 把 `judgePromotion` 接入 `runEvolve` 主循环**：新增真实 OOD 段、OOD 退化自动阻断
+> 并写 `journal`（`W4-C-ood-block`）、6 处账本写入收口到 `appendLed`。阶段 C 的**机器闭环已完整**，
+> 不再停在 B；但 `leadership.verdict` 仍 `not-proven`——缺口是「缺一次真实能力增益的测量」，
+> 不是缺机器。见 `docs/BENCH-v2.md` §5.7 / §5.10 / §5.12。
 >
 > **v2.12.0 补上目标 2 的另一半结构闭环**：端点体检结果（v2.10.0）此前只落文档，
 > `endpoint` 域经验「只写不读」；现折叠为跨会话先验注入 `KeylessAggregator.score()`、
