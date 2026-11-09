@@ -109,3 +109,40 @@ python3.11 -m llama_cpp.server \
 不制造假 diff、不携带本机状态；先验为空时行为与 v2.11.0 一致。
 先验只影响排序，绝不绕过冷却 / 限流 / 能力感知的硬过滤；失效或样本不足自动归零、
 回退完整探测。离线验证见 `npm run endpoint:check`（第 20 道门禁，13/13）。
+
+## 7. 1.5B 中间档与「流式工具调用」陷阱（v2.13.0 · 含 §3.1 结论修正）
+
+用户质疑「3B 跑不动可以换更小的」。实测 `qwen2.5:1.5b`（941MB GGUF，Ollama
+registry 匿名 blob `sha256:183715c435899…`），**完全跑得起来**：
+
+```bash
+python3.11 -m llama_cpp.server \
+  --model /root/.cache/bro2-llm/qwen2.5-1.5b.gguf \
+  --model_alias qwen2.5:1.5b --host 127.0.0.1 --port 11436 \
+  --n_ctx 8192 --n_threads 4 --n_batch 128 \
+  --chat_format chatml-function-calling --verbose false
+```
+
+配置 `local-qwen15b` 加了 `"stream": false` 与 `"maxTokens": 256`（见 §7 下方说明）。
+实测冷启动 5.4s（n_ctx 2048）/ 大上下文首次 55~77s、稳态 **0.6s**，
+内存 3.4~4.3GB / 8GB，`oom_kill 0`；warmup 后 `preflight` **✓ PASS**（676ms）。
+
+**真正的病根**：llama.cpp server 的 `chatml-function-calling` handler 在
+`stream: true` + `tool_choice: auto` + tools 下抛
+`ValueError: Automatic streaming tool choice is not supported`，零 `tool_calls`；
+非流式则正常返回规范工具调用。而 bro2 的 `complete()` 过去硬编码流式，
+`probe()` 又把「非流式带 tools」与「流式普通应答」分开测，从未覆盖 live 真正走的
+组合 → preflight 全绿、Agent 零工具调用。v2.13.0 把传输模式改为 provider 可配
+（默认仍流式）并补上组合探针，详见 `docs/BENCH-v2.md` §5.9。
+
+**三个曾把测量挡在门外的配置坑**（都不是能力或内存结论）：
+`n_ctx 2048` 撞 `HTTP 400 requested 3695 tokens`（Agent 光 system prompt + 工具定义
+就要约 3700）；请求无 `max_tokens` 让弱模型生成到上下文上限、单 worker 被占死
+（表现为「端点不可达」但端口在监听）；大 `n_ctx` 冷启动撞 30s 探针窗口。
+处理分别是 `n_ctx 8192`、provider 配 `maxTokens`、评测前 warmup，**未调门禁阈值**。
+
+**§3.1 结论修正与负结果**：本机纯 CPU 多步 live 评测仍在 18 分钟后挂起，
+无法产出 `completed` 轨迹；3/3 全 `provider_error` 的报告按红线删除、不进证据集。
+结论是「本机算力不足以完成多步评测」，不是「1.5B 能力不够」，也不是
+「必须换更大内存」。同理，§3 把 0.5B 归因为「能力下限」不再成立——那批
+0 工具调用发生在链路缺陷之下，不构成能力证据，需重测。

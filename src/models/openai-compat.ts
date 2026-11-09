@@ -25,6 +25,11 @@ export interface OpenAICompatOptions {
   apiKeyOptional?: boolean;
   /** 请求 stream_options.include_usage，让端点回传真实 token 统计。默认开启。 */
   includeUsage?: boolean;
+  /** 是否走流式 SSE（默认 true，既有端点行为不变）。llama.cpp server 的
+   * chatml-function-calling 在流式下拒绝自动工具选择，这类端点设 false。 */
+  stream?: boolean;
+  /** 单次生成上限。弱模型不设会一直生成到上下文上限，拖垮多步评测；缺省不发。 */
+  maxTokens?: number;
   /** 注入到每个请求（含 probe）的额外请求头。用于 OpenCode Zen 等需要 x-session-id 的无 Key 端点。 */
   extraHeaders?: Record<string, string>;
   /** 自动生成一个随机 UUID 并作为该请求头名发送（如 "x-session-id"），无 Key 端点据此区分匿名会话。 */
@@ -50,6 +55,10 @@ export interface ModelProbeResult {
   modelResponded: boolean;
   /** 是否返回 OpenAI 风格 SSE 流 */
   streaming: boolean;
+  /** 本次探针所用的响应模式（供预检区分「必须 SSE」与「已显式关闭流式」）。 */
+  streamMode: "stream" | "nonstream";
+  /** 流式 + 带 tools 是否真产出 tool_calls delta（补旧探针的门禁盲点）。 */
+  streamToolCalls: boolean;
   /** 是否原生返回 tool_calls（Agent 能正常用工具的硬前提） */
   toolCalling: ToolCallingSupport;
   latencyMs: number;
@@ -75,6 +84,14 @@ const LOCAL_HOST = /^(https?:\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1
 function isLocalEndpoint(url: string): boolean {
   return LOCAL_HOST.test(url);
 }
+
+/** tool_calls.arguments 字符串 → 对象；畸形交给工具层校验并回报模型。 */
+const parseToolArgs = (raw: string): Record<string, unknown> => {
+  try {
+    const p = JSON.parse(raw || "{}") as unknown;
+    return p && typeof p === "object" && !Array.isArray(p) ? p as Record<string, unknown> : {};
+  } catch { return {}; }
+};
 
 function toApiMessages(messages: readonly Message[]): Array<Record<string, unknown>> {
   return messages.map((m) => {
@@ -142,6 +159,8 @@ export class OpenAICompatProvider implements LLMProvider {
   private readonly temperature: number;
   private readonly apiKeyOptional: boolean;
   private readonly includeUsage: boolean;
+  private readonly stream: boolean;
+  private readonly maxTokens?: number;
   private readonly extraHeaders: Record<string, string>;
   private readonly supportsTools: boolean | undefined;
 
@@ -156,6 +175,8 @@ export class OpenAICompatProvider implements LLMProvider {
     // 本地端点（Ollama / vLLM / LM Studio）默认不认证，无需伪造 API Key
     this.apiKeyOptional = options.apiKeyOptional ?? isLocalEndpoint(this.baseUrl);
     this.includeUsage = options.includeUsage ?? true;
+    this.stream = options.stream ?? true;
+    this.maxTokens = options.maxTokens;
     this.supportsTools = options.supportsTools;
     // 注入额外请求头（如 OpenCode Zen 的 x-session-id）；genSessionHeader 自动生成随机会话 ID
     const eh = { ...(options.extraHeaders ?? {}) };
@@ -182,6 +203,11 @@ export class OpenAICompatProvider implements LLMProvider {
     return this.supportsTools;
   }
 
+  /** 供预检判定：本 provider 是否走流式 SSE。 */
+  get streamMode(): "stream" | "nonstream" {
+    return this.stream ? "stream" : "nonstream";
+  }
+
   private headers(): Record<string, string> {
     const h: Record<string, string> = { "content-type": "application/json" };
     if (this.apiKey.length > 0) h.authorization = `Bearer ${this.apiKey}`;
@@ -198,9 +224,10 @@ export class OpenAICompatProvider implements LLMProvider {
     const body = {
       model: this.model,
       messages: toApiMessages(req.messages),
-      stream: true,
-      ...(this.includeUsage ? { stream_options: { include_usage: true } } : {}),
+      stream: this.stream,
+      ...(this.stream && this.includeUsage ? { stream_options: { include_usage: true } } : {}),
       temperature: req.temperature ?? this.temperature,
+      ...(this.maxTokens ? { max_tokens: this.maxTokens } : {}),
       ...(req.tools && req.tools.length > 0
         ? {
             tools: req.tools.map((t) => ({
@@ -230,7 +257,9 @@ export class OpenAICompatProvider implements LLMProvider {
           throw err;
         }
         if (!res.body) throw new Error("模型响应缺少 body");
-        const parsed = await this.parseStream(res.body, req);
+        const parsed = this.stream
+          ? await this.parseStream(res.body, req)
+          : await this.parseNonStream(res, req);
         return {
           ...parsed,
           usage: this.normalizeUsage(parsed.usage, req),
@@ -266,6 +295,8 @@ export class OpenAICompatProvider implements LLMProvider {
       models: [],
       modelResponded: false,
       streaming: false,
+      streamMode: this.stream ? "stream" : "nonstream",
+      streamToolCalls: false,
       toolCalling: "unknown",
       latencyMs: 0,
       networkReachable: false,
@@ -310,6 +341,7 @@ export class OpenAICompatProvider implements LLMProvider {
           messages: baseMessages,
           stream: false,
           temperature: 0,
+          max_tokens: 96,
           tools: [PROBE_TOOL],
           tool_choice: "auto",
         }),
@@ -346,32 +378,42 @@ export class OpenAICompatProvider implements LLMProvider {
       result.warnings.push(`探针请求失败: ${result.rawError}`);
     }
 
-    // 3) 流式 —— 确认 SSE 与 tool_calls delta
-    try {
-      const res = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: this.headers(),
-        body: JSON.stringify({
-          model: this.model,
-          messages: [{ role: "user", content: "Reply with the single word: pong" }],
-          stream: true,
-          ...(this.includeUsage ? { stream_options: { include_usage: true } } : {}),
-          temperature: 0,
-        }),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (res.ok && res.body) {
-        const reader = res.body.getReader();
-        const first = await reader.read();
-        const head = new TextDecoder().decode(first.value ?? new Uint8Array()).slice(0, 400);
-        result.streaming = /^data:/m.test(head) || head.includes("choices");
-        void reader.cancel().catch(() => undefined);
-        result.reachable = true;
-      } else if (!res.ok) {
-        result.warnings.push(`流式探测 HTTP ${res.status}`);
+    // 3) 流式探测（仅流式模式）。带 tools 的流式请求才对应 live 评测真正走的路径——
+    //    旧探针把「非流式 tool_calls」与「流式普通应答」分开测，本地端点因此
+    //    preflight PASS 却在 live 里零工具调用。此处同时判定 SSE 与流式工具调用。
+    if (this.stream) {
+      try {
+        const res = await fetch(`${this.baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: this.headers(),
+          body: JSON.stringify({
+            model: this.model,
+            messages: baseMessages,
+            stream: true,
+            ...(this.includeUsage ? { stream_options: { include_usage: true } } : {}),
+            temperature: 0,
+            max_tokens: 96,
+            tools: [PROBE_TOOL],
+            tool_choice: "auto",
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+        if (res.ok && res.body) {
+          const text = await res.text();
+          result.streaming = /^data:/m.test(text.slice(0, 400)) || text.includes("choices");
+          result.streamToolCalls = text.includes("tool_calls");
+          result.reachable = true;
+          if (!result.streamToolCalls) {
+            result.warnings.push("流式 + 带 tools 未产出 tool_calls delta：live 评测可能零工具调用（建议该端点设 stream=false）");
+          }
+        } else if (!res.ok) {
+          result.warnings.push(`流式探测 HTTP ${res.status}`);
+        }
+      } catch (err) {
+        result.warnings.push(`流式探测失败: ${err instanceof Error ? err.message : String(err)}`);
       }
-    } catch (err) {
-      result.warnings.push(`流式探测失败: ${err instanceof Error ? err.message : String(err)}`);
+    } else {
+      result.warnings.push("已显式配置非流式（stream=false）：跳过 SSE 探测，原生 tool_calls 由第 2 步非流式探针验证");
     }
 
     // 4) 结论与可操作建议
@@ -406,6 +448,45 @@ export class OpenAICompatProvider implements LLMProvider {
       inputTokens: estimateMessagesTokens(req.messages, req.tools),
       outputTokens: usage.outputTokens,
       totalTokens: estimateMessagesTokens(req.messages, req.tools) + usage.outputTokens,
+    };
+  }
+
+  /** 非流式响应解析：llama.cpp 流式下拒绝自动工具选择，设 stream=false 走本分支。 */
+  private async parseNonStream(res: Response, req: LLMRequest): Promise<Omit<LLMResponse, "model" | "provider">> {
+    const started = Date.now();
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: {
+        content?: string;
+        reasoning_content?: string;
+        tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: string } }>;
+      } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+    };
+    const msg = data.choices?.[0]?.message ?? {};
+    const content = typeof msg.content === "string" ? msg.content : "";
+    if (content) req.onChunk?.({ kind: "text", text: content });
+
+    const toolCalls: ToolCall[] = [];
+    for (const c of msg.tool_calls ?? []) {
+      const args = parseToolArgs(c.function?.arguments ?? "");
+      const name = c.function?.name ?? "";
+      toolCalls.push({ id: c.id || newId("call"), name, arguments: args });
+      req.onChunk?.({ kind: "tool_call", text: name });
+    }
+    req.onChunk?.({ kind: "done" });
+
+    const u = data.usage ?? {};
+    const outputTokens = Number(u.completion_tokens ?? 0) || Math.ceil(content.length / 3.2);
+    return {
+      content,
+      ...(msg.reasoning_content ? { reasoning: String(msg.reasoning_content) } : {}),
+      toolCalls,
+      usage: {
+        inputTokens: Number(u.prompt_tokens ?? 0),
+        outputTokens,
+        totalTokens: Number(u.total_tokens ?? 0) || Number(u.prompt_tokens ?? 0) + outputTokens,
+      },
+      durationMs: Date.now() - started,
     };
   }
 
@@ -480,15 +561,7 @@ export class OpenAICompatProvider implements LLMProvider {
     const ordered = [...calls.entries()].sort((a, b) => a[0] - b[0]).map(([, c]) => c);
     const toolCalls: ToolCall[] = [];
     for (const c of ordered) {
-      let args: Record<string, unknown> = {};
-      if (c.arguments) {
-        try {
-          const parsed = JSON.parse(c.arguments) as unknown;
-          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) args = parsed as Record<string, unknown>;
-        } catch {
-          args = {}; // 畸形参数交给工具层校验并回报模型
-        }
-      }
+      const args = parseToolArgs(c.arguments);
       toolCalls.push({ id: c.id || newId("call"), name: c.name, arguments: args });
       req.onChunk?.({ kind: "tool_call", text: c.name });
     }

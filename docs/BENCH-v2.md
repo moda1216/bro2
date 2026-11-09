@@ -360,6 +360,39 @@ v2.10.0 把 15 个免 Key 端点查清了，但结论只落在文档和静态优
 被跨会话只增经验层补上」，不证明任何 harness 编辑有效，也不改变 live 分数与
 `leadership.verdict = not-proven`。单测见 `tests/endpoint-prior.test.ts`（7/7）。
 
+### 5.9 接入门禁组合路径盲点与本地弱模型链路重测（v2.13.0）
+
+用户质疑「3B 跑不动就换更小的模型」。按此实测 `qwen2.5:1.5b`（941MB GGUF，
+Ollama registry 匿名 blob），发现病根不在模型大小：bro2 的 `complete()` 硬编码
+`stream: true`，而 llama.cpp server 的 `chatml-function-calling` handler 在
+「流式 + 自动工具选择」下抛 `ValueError: Automatic streaming tool choice is not
+supported`。**单一变量对照**（同一 prompt、同一 tools）：
+
+| 组合 | 结果 |
+| --- | --- |
+| 非流式 + 带 tools | 规范 `tool_calls` ✓ |
+| 流式 + 普通应答 | SSE ✓ |
+| **流式 + 带 tools**（live 评测真正走的） | 空 delta / 服务端直接报错，零 `tool_calls` ✗ |
+
+旧 `probe()` 只测前两行 → preflight 全绿、Agent 每步零工具调用直接终答。
+`tool_choice: required` 同样无效。修复后 `preflight` 由 **BLOCKED → ✓ PASS**
+（端点探测 45s → 676ms），1.5B 稳态单请求 **0.6s**、内存 3.4~4.3GB / 8GB、
+`oom_kill 0`。三个曾挡住测量的配置坑（`n_ctx 2048` 撞 3695 tokens 的
+HTTP 400、无 `max_tokens` 导致生成到上下文上限、大 `n_ctx` 冷启动撞 30s 探针）
+全部按运行时准备修正，未上调任何门禁阈值。
+
+**负结果**：本机纯 CPU（4 核配额）多步 live 评测在 18 分钟后挂起、无法产出
+`completed` 轨迹。按「`provider_error` ≠ 能力弱」红线，3/3 全 `provider_error`
+的报告已删除、不进证据集；结论是「本机算力不足以完成多步评测」，
+**不是「1.5B 能力不够」**，也不是「必须换更大内存」——1.5B 本身就跑得起来。
+
+**历史结论修正**：§5.6 把本地 0.5B 归因为「能力下限」的确定性不再成立。
+那批 0 工具调用发生在链路缺陷之下，不构成能力证据；需在链路修通后重测，
+在此之前弱模型对照仍是**未测出**，而不是「已证明太弱」。
+
+**边界**：本次是**测量机器修复**，不是能力分数，不改变 live 分数与
+`leadership.verdict = not-proven`。行为契约见 `tests/nonstream.test.ts`（5/5）。
+
 ---
 
 ## 6. 不能下的结论（诚实边界）

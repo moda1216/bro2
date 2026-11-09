@@ -10,6 +10,54 @@
 
 ---
 
+## [2.13.0] — 2026-11-09 · 接入门禁组合路径盲点修复与本地弱模型链路归位（MINOR）
+
+**解决的问题**：用户质疑「3B 跑不动就换更小的模型」。按此实测 1.5B，反倒挖出
+真正的病根不在模型大小，而在 bro2 自己：**`OpenAICompatProvider.complete()` 硬编码
+`stream: true`**，而 llama.cpp server 的 `chatml-function-calling` handler 在
+「流式 + 自动工具选择」下直接抛 `ValueError: Automatic streaming tool choice is
+not supported`，零 `tool_calls`。旧 `probe()` 却把「非流式带 tools」与「流式普通
+应答」**分开测**，从未验证 live 评测真正走的那条组合 → preflight 全绿、Agent 每步
+零工具调用、直接终答。历史上 0.5B「准入 0/3、能力下限」的负结果因此站不住：
+那时根本没走到工具调用。
+
+**改动**（零新增源文件，代码预算 16,496/16,500）：
+- `OpenAICompatProvider` 新增 `stream`（默认 true，**所有既有端点行为不变**）与
+  `maxTokens`（缺省不发）两个可配项；`complete()` 按配置发 `stream`，非流式走
+  新增 `parseNonStream()` 解析回规范 `tool_calls`；`stream_options` 仅流式下发。
+- `probe()` 补三处：`max_tokens: 96` 消除弱模型无限生成导致的 30s 超时误判；
+  流式探测改为**带 tools** 的组合请求，同时判定 SSE 与 `tool_calls` delta，缺失时
+  给出「建议该端点设 stream=false」的可操作告警（只观测、**不改 ready 判定**，避免对
+  未经实测的远程端点引入新阻断）；新增 `streamMode` / `streamToolCalls` 字段。
+- `preflight` 的 `streaming` 检查按 `streamMode` 分流：非流式配置下降为 info
+  （「必须 SSE」是过时的手段性前提），但 **`toolCalling === "native"` 仍是硬
+  blocker**，门禁没有放水。
+- `tests/nonstream.test.ts` 5 项行为契约：非流式解析出可执行调用、缺省仍流式
+  （向后兼容）、盲点被观测、**不支持 tool_calls 的模型即便关流式仍 BLOCKED**。
+- `agentos.config.json` 新增 `local-qwen15b`（11436 / 941MB GGUF / `stream: false` /
+  `maxTokens: 256`），1.5B 从 Ollama registry 匿名下载。
+
+**实测（1.5B，本机 8GB cgroup / 4 核 CPU）**：
+- 冷启动 5.4s（n_ctx 2048）→ 稳态 **0.6s**，内存 3.4~4.3GB，`oom_kill 0`；
+- 同一 prompt：非流式返回规范 `tool_calls`，流式返回空 delta（坐实 handler 限制），
+  `tool_choice: required` 也救不了；
+- 修复后 `preflight` 从 **BLOCKED → ✓ PASS**（端点探测 45s → 676ms）；
+- 三个曾把测量挡在门外的配置坑：`n_ctx 2048` 撞 `HTTP 400 requested 3695 tokens`、
+  请求无 `max_tokens` 导致弱模型生成到上下文上限、大 `n_ctx` 冷启动 55~77s 撞
+  30s 探针窗口。均按运行时准备修正，**未上调任何门禁阈值**。
+
+**诚实边界（负结果）**：本机纯 CPU 多步 live 评测仍在 18 分钟后挂起（客户端
+CPU 0%、无法产出 `completed` 轨迹）。按「`provider_error` ≠ 能力弱」红线，
+删掉 3/3 全 `provider_error` 的无效报告，不进证据集；结论写
+「本机算力不足以完成多步评测」，**不是「1.5B 能力不够」**。
+这同时撤销了 v2.10.0 把 0.5B 归因为「能力下限」的确定性：链路修通前那批
+0 工具调用不构成能力证据，需重测。`leadership.verdict = not-proven`、
+L4 `not-achieved`、0pp 负结果均不变；本次是**测量机器修复**，不是能力分数。
+
+`npm test` **273/273**、发布门禁 **20/20** 全绿。
+
+---
+
 ## [2.12.0] — 2026-11-09 · 端点健康经验接线：把「越用越稳」从只写不读补成闭环（MINOR）
 
 **解决的问题**：v2.10.0 的端点体检把 15 个免 Key 端点的可用性查清了，但结论只落在

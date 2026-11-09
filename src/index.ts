@@ -243,6 +243,8 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
       maxRetries: Number(cfg.maxRetries ?? 2),
       apiKeyOptional: cfg.apiKeyOptional === true,
       includeUsage: cfg.includeUsage !== false,
+      stream: cfg.stream !== false,
+      maxTokens: typeof cfg.maxTokens === "number" ? cfg.maxTokens : undefined,
       extraHeaders: cfg.extraHeaders as Record<string, string> | undefined,
       genSessionHeader: typeof cfg.genSessionHeader === "string" ? (cfg.genSessionHeader as string) : undefined,
       supportsTools: cfg.supportsTools === undefined ? undefined : cfg.supportsTools === true,

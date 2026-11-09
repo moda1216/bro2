@@ -102,6 +102,18 @@
         "maxRetries": 2,
         "note": "弱模型对照候选（能力介于 0.5B 与 kilo 之间）。GGUF 已下载到 ~/.cache/bro2-llm/qwen2.5-3b.gguf，协议层实测 chat + 原生 tool_calls 均可用；但本机 cgroup 内存上限仅 8GB，多步 live 评测会被 OOM killer 终止或触发空响应，无法稳定跑分——这是资源约束，不是能力结论。需更大内存环境再跑准入，命令见 docs/ENDPOINT-HEALTH.md。属运行时依赖，不进 CI 门禁；keyless 自动发现会跳过本地端点。"
       },
+      "local-qwen15b": {
+        "type": "openai",
+        "baseUrl": "http://127.0.0.1:11436/v1",
+        "model": "qwen2.5:1.5b",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "stream": false,
+        "maxTokens": 256,
+        "timeoutMs": 300000,
+        "maxRetries": 2,
+        "note": "弱模型对照候选（能力介于 0.5B 与 3B 之间）。GGUF 从 Ollama registry 匿名 blob 下载（941MB，sha256:183715c435899…），llama_cpp.server 单服务降配启动（11436 / n_ctx 2048 / 4 线程 / n_batch 128），实测冷启动 5.4s、稳态内存约 3.4GB / 8GB，规避 3B 并发 OOM 与 30s 冷启动探针超时。属运行时依赖，不进 CI 门禁；keyless 自动发现会跳过本地端点。启动方式见 docs/ENDPOINT-HEALTH.md。"
+      },
       "kilo": {
         "type": "openai",
         "baseUrl": "https://api.kilo.ai/api/gateway/v1",

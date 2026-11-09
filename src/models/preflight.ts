@@ -111,7 +111,16 @@ export async function runPreflight(provider: OpenAICompatProvider): Promise<Pref
         ? "模型未返回有效应答"
         : modelListed ? "模型应答正常" : `配置的模型不在端点清单中：${probe.models.slice(0, 8).join(", ")}`,
     ),
-    check("streaming", probe.streaming, probe.streaming ? "返回 OpenAI 风格 SSE 流" : "未检测到 SSE 流（live 评测使用 stream:true）"),
+    check(
+      "streaming",
+      probe.streamMode === "nonstream" ? true : probe.streaming,
+      probe.streamMode === "nonstream"
+        ? "已显式配置非流式（stream=false）：原生 tool_calls 由非流式探针验证，不要求 SSE"
+        : probe.streaming
+          ? `返回 OpenAI 风格 SSE 流；流式带 tools 的 tool_calls delta：${probe.streamToolCalls ? "有" : "无（建议该端点设 stream=false）"}`
+          : "未检测到 SSE 流（live 评测使用 stream:true）",
+      probe.streamMode === "nonstream" ? "info" : "blocker",
+    ),
     check(
       "toolCalling",
       probe.toolCalling === "native",
