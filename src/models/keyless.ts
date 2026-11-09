@@ -54,6 +54,14 @@ export interface KeylessOptions {
   maxAttempts?: number;
   /** 全部上游失败时，作为最后兜底调用的 provider（如本地小模型）。默认无。 */
   emergencyProvider?: LLMProvider;
+  /**
+   * 跨会话端点先验分（v2.12.0，由 ExperienceBank 折叠注入）。
+   * **只叠加到 score() 的排序**，绝不绕过冷却/限流/能力感知的硬过滤；
+   * 缺省为空 → 与 v2.11.0 行为完全一致。历史失败端点因此在新进程里也从低分起步。
+   */
+  endpointPrior?: Record<string, number>;
+  /** 每次上游调用后的成败回写钩子（由装配层接到 ExperienceBank，用于跨会话累积）。 */
+  onEndpointOutcome?: (name: string, ok: boolean) => void;
 }
 
 interface BackendHealth {
@@ -81,6 +89,8 @@ export interface MeshStats {
     name: string;
     supportsTools: boolean;
     priority: number;
+    /** 跨会话经验先验分（v2.12.0）；0 = 无经验 / 已失效 / 样本不足。 */
+    endpointPrior: number;
     tags: string[];
     failures: number;
     cooledDown: boolean;
@@ -101,6 +111,8 @@ export class KeylessAggregator implements LLMProvider, StatsProvider, CompositeP
   private readonly failureCooldownMs: number;
   private readonly maxAttempts: number;
   private readonly emergency?: LLMProvider;
+  private readonly endpointPrior: Record<string, number>;
+  private readonly onEndpointOutcome?: (name: string, ok: boolean) => void;
 
   // 聚合层统计（供 eval.inference 与 meshStats 使用）
   private meshAttempts = 0;
@@ -116,6 +128,8 @@ export class KeylessAggregator implements LLMProvider, StatsProvider, CompositeP
     this.failureCooldownMs = opts.failureCooldownMs ?? 30_000;
     this.maxAttempts = opts.maxAttempts ?? Math.max(1, opts.backends.length + 1);
     this.emergency = opts.emergencyProvider;
+    this.endpointPrior = opts.endpointPrior ?? {};
+    this.onEndpointOutcome = opts.onEndpointOutcome;
     this.backends = opts.backends.map((be) => ({
       be,
       health: {
@@ -135,10 +149,13 @@ export class KeylessAggregator implements LLMProvider, StatsProvider, CompositeP
     return Array.isArray(req.tools) && req.tools.length > 0;
   }
 
-  /** 打分：优先级 - 失败惩罚 - 冷却/限流惩罚 - 延迟惩罚 + 成功率奖励。 */
+  /** 打分：优先级 + 跨会话先验 - 失败惩罚 - 冷却/限流惩罚 - 延迟惩罚 + 成功率奖励。 */
   private score(b: { be: KeylessBackend; health: BackendHealth }, now: number): number {
     const h = b.health;
     let s = b.be.priority ?? 0;
+    // v2.12.0：跨会话经验先验只影响排序；幅度上限 ±2，远小于冷却(-4)/限流(-8)的硬过滤，
+    // 且 selectBackend 先按 cooldown/rateLimited 过滤，被硬过滤的端点根本进不了打分集。
+    s += this.endpointPrior[h.name] ?? 0;
     s -= h.failures * 1.5;
     if (h.cooldownUntil > now) s -= 4;
     if (h.rateLimitedUntil > now) s -= 8;
@@ -214,6 +231,7 @@ export class KeylessAggregator implements LLMProvider, StatsProvider, CompositeP
         pick.health.ok += 1;
         pick.health.lastLatencyMs = Date.now() - start;
         this.successes += 1;
+        this.onEndpointOutcome?.(pick.health.name, true);
         return { ...res, provider: `${this.name}/${res.provider}` };
       } catch (err) {
         if (req.signal?.aborted) throw err;
@@ -224,6 +242,7 @@ export class KeylessAggregator implements LLMProvider, StatsProvider, CompositeP
         pick.health.failures += 1;
         pick.health.lastLatencyMs = Date.now() - start;
         pick.health.lastError = msg;
+        this.onEndpointOutcome?.(pick.health.name, false);
         if (RATE_LIMIT_RE.test(msg)) {
           pick.health.rateLimitedUntil = Date.now() + this.rateLimitCooldownMs;
           pick.health.rateLimitHits += 1;
@@ -274,6 +293,7 @@ export class KeylessAggregator implements LLMProvider, StatsProvider, CompositeP
         name: health.name,
         supportsTools: be.supportsTools !== false,
         priority: be.priority ?? 0,
+        endpointPrior: this.endpointPrior[health.name] ?? 0,
         tags: be.tags ?? [],
         failures: health.failures,
         cooledDown: health.cooldownUntil > Date.now(),

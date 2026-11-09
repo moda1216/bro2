@@ -28,6 +28,8 @@ import { OpenAICompatProvider } from "./models/openai-compat.ts";
 import { CachedProvider } from "./models/cache.ts";
 import { HybridProvider, cheapToLocalPolicy, remoteOnlyPolicy } from "./models/hybrid.ts";
 import { KeylessAggregator, type KeylessBackend } from "./models/keyless.ts";
+import { ExperienceBank, experiencePath, endpointSignature } from "./rsi/experience.ts";
+import { endpointPriorFromExperience } from "./models/route-experience.ts";
 import type { LLMProvider } from "./models/base.ts";
 import { SessionManager } from "./kernel/session.ts";
 import type { Session } from "./kernel/session.ts";
@@ -319,6 +321,32 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     if (backends.length === 0) {
       console.warn(`[keyless] 聚合器 "${name}" 没有任何可用上游，运行时将拒绝请求`);
     }
+    // v2.12.0 · 跨会话端点经验接线：从只增账本折叠历史成败，注入聚合器排序先验；
+    // 每次上游调用的成败再回写同一账本，形成「越用越稳、重启不清零」的闭环。
+    // 经验只影响 score() 排序，不绕过冷却/限流/能力过滤；失效/样本不足自动归零回退完整探测。
+    // 边界：**opt-in**（useEndpointExperience === true 才接线）。默认关闭可保证确定性评测 /
+    // CI 不写被跟踪的账本、不制造假 diff、不携带本机状态；账本路径可由 experienceFile 覆盖，
+    // 便于确定性门禁用隔离临时账本验证闭环。缺省时先验为空 → 与 v2.11.0 行为一致。
+    let endpointPrior: Record<string, number> | undefined;
+    let onEndpointOutcome: ((n: string, ok: boolean) => void) | undefined;
+    if (cfg.useEndpointExperience === true) {
+      try {
+        const path = typeof cfg.experienceFile === "string" ? cfg.experienceFile : experiencePath(root);
+        const bank = new ExperienceBank(path);
+        endpointPrior = endpointPriorFromExperience(bank.fold());
+        onEndpointOutcome = (endpoint, ok) => {
+          bank.observeOutcome(
+            "endpoint", endpointSignature(endpoint), endpoint,
+            ok ? "success" : "failure",
+            { applicableTo: [`上游 ${endpoint}`], source: "KeylessAggregator.onEndpointOutcome" },
+          );
+        };
+      } catch {
+        // 账本不可读（只读文件系统/权限）时静默降级为无经验，绝不阻塞装配。
+        endpointPrior = undefined;
+        onEndpointOutcome = undefined;
+      }
+    }
     const agg = new KeylessAggregator({
       name,
       backends,
@@ -326,6 +354,8 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
       rateLimitCooldownMs: typeof cfg.rateLimitCooldownMs === "number" ? cfg.rateLimitCooldownMs : 60000,
       failureCooldownMs: typeof cfg.failureCooldownMs === "number" ? cfg.failureCooldownMs : 30000,
       maxAttempts: typeof cfg.maxAttempts === "number" ? cfg.maxAttempts : undefined,
+      ...(endpointPrior ? { endpointPrior } : {}),
+      ...(onEndpointOutcome ? { onEndpointOutcome } : {}),
       ...(cfg.emergencyProvider && providers.get(String(cfg.emergencyProvider))
         ? { emergencyProvider: providers.get(String(cfg.emergencyProvider)) }
         : {}),

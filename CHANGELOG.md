@@ -10,6 +10,47 @@
 
 ---
 
+## [2.12.0] — 2026-11-09 · 端点健康经验接线：把「越用越稳」从只写不读补成闭环（MINOR）
+
+**解决的问题**：v2.10.0 的端点体检把 15 个免 Key 端点的可用性查清了，但结论只落在
+文档与静态配置里；`KeylessAggregator` 的健康态是**进程内内存态、重启清零**，
+`ExperienceBank` 的 `endpoint` 域虽有只增账本、`endpointSignature()` 与 `invalidate()`，
+实际 `data/rsi/experience.jsonl` 只有 `harness-edit` 域 29 条、没有一条 `endpoint` 事件——
+「有底座、没接线」。于是每次新进程都要重新撞一遍已知死端点，体验不到「越用越稳」。
+
+**改动**（零新增源文件：判定并入 `route-experience.ts`、接线并入 `index.ts`、门禁放 `examples/`）：
+
+- `endpointPriorFromExperience()`（`src/models/route-experience.ts`）：把只增账本折叠成
+  跨会话端点先验分。历史成功率映射到 `[-maxBoost, +maxBoost]`（默认 ±2），
+  `rate=1→+2`、`rate=0→-2`、`rate=0.5→0`；被 `invalidate()` 的经验、样本 < `minSamples`
+  （默认 3，冷启动保护）与缺格一律给 0 分，绝不冒充结论。纯函数、无 IO，CI 可用构造快照自证。
+- `KeylessAggregator`（`src/models/keyless.ts`）：`KeylessOptions` 新增 `endpointPrior` 与
+  `onEndpointOutcome`；先验**只叠加到 `score()` 排序**（±2 远小于冷却 −4 / 限流 −8 的硬过滤，
+  且 `selectBackend` 先按 cooldown/rateLimited 过滤，被硬过滤的端点根本进不了打分集）；
+  `complete()` 成功 / 失败均触发回写；`meshStats()` 露出每端点先验供复核。
+- `src/index.ts` 装配层：`useEndpointExperience === true` 才接线（**opt-in，默认关闭**），
+  从账本折叠先验注入聚合器，并把每次上游成败回写同一账本；`experienceFile` 可覆盖账本路径
+  便于隔离测试；账本不可读时静默降级为无经验，绝不阻塞装配。
+  **默认关闭是刻意设计**：确定性评测 / CI 不写被跟踪的 `data/rsi/experience.jsonl`、
+  不制造假 diff、不携带本机状态；先验为空时行为与 v2.11.0 完全一致。
+- `npm run endpoint:check`（`examples/endpoint-experience-check.ts`，**第 20 道发布阻断门禁**）：
+  全程离线、临时账本、无网络无凭据，13/13 断言覆盖经验折叠（死端点负先验 / 健康端点正先验 /
+  rate 0.5 归零 / 样本不足归零）、冷启动注入后历史失败端点不再首选、正先验不能让限流冷却端点
+  复活（先验不绕过硬过滤）、回写闭环跨会话可读、新 `ExperienceBank` 实例读得到、
+  `invalidate()` 选择性失效后归零回退完整探测。
+- `tests/endpoint-prior.test.ts`：7 项行为契约单测，含封顶 / 串域过滤 / 向后兼容。
+  其中「失败即当场让位」一例特意让历史表现好（正先验）的端点优先被尝试、本次失败仍如实
+  回写 `false` 并让位——证明新证据能覆盖旧先验，而不是只把经验当一次性静态排序。
+
+**诚实边界**：这是**结构闭环证据（离线确定性）**，不是能力分数。它证明「进程内健康态
+重启清零的缺口由跨会话只增经验层补上、且回退与失效路径都成立」，不证明 bro2 比最小
+harness 强，也不改变任何 live 分数。`leadership.verdict = not-proven`、L4 `not-achieved`
+均不变；0pp 负结果与弱模型准入缺口不变。零新增源文件（90/90）、未上调任何预算阈值。
+
+`npm test` **268/268**、发布门禁 **20/20** 全绿；代码预算 16,412/16,500 行、90/90 文件。
+
+---
+
 ## [2.11.0] — 2026-11-09 · 三段晋升判据：阶段 C「自提议自晋升」的前置闸门（MINOR）
 
 **解决的问题**：作战计划 §6.2 / W4 把 `dev 提升 AND holdout 不退化 AND OOD 不退化`

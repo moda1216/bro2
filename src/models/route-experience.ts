@@ -27,6 +27,7 @@ import type { LLMRequest } from "./base.ts";
 import {
   ExperienceBank, requestSignature, endpointSignature,
 } from "../rsi/experience.ts";
+import type { ExperienceEntry } from "../rsi/experience.ts";
 
 export interface LearnedRouteOptions {
   /** 采信「本地足够」所需的最低历史成功率，默认 0.7。 */
@@ -163,4 +164,45 @@ export class LearnedRoutePolicy implements RoutePolicy {
       endpointRecords: this.endpointRecords,
     };
   }
+}
+
+// ---------------------------------------------------------------- 跨会话端点先验（v2.12.0）
+
+export interface EndpointPriorOptions {
+  /** 采信经验所需的最少样本（冷启动保护），默认 3。 */
+  minSamples?: number;
+  /** 单个端点先验分的绝对值上限，默认 2——不足以压过冷却/限流的硬过滤。 */
+  maxBoost?: number;
+}
+
+/**
+ * 把只增经验账本折叠成「跨会话端点先验分」，注入 KeylessAggregator.score()。
+ *
+ * 解决「健康态只在进程内、重启清零」：历史失败多的端点在新进程里也从低分起步，
+ * 冷启动第一发不再优先打到已知死端点。治理红线：
+ *  - 先验**只影响排序**，不绕过冷却/限流/能力感知的硬过滤（见 keyless.ts:selectBackend）；
+ *  - 被 invalidate 的经验一律给 0 分（回退完整探测，绝不硬信经验）；
+ *  - 样本不足 / 失效 / 全失败但已失效 → 0 分；缺格不冒充结论。
+ *  - 幅度封顶 maxBoost，历史再好也不能凌驾于实时健康信号。
+ * 纯函数：输入是经验事件快照，不含 IO，CI 可用构造快照自给自足。
+ */
+export function endpointPriorFromExperience(
+  entries: readonly ExperienceEntry[],
+  opts: EndpointPriorOptions = {},
+): Record<string, number> {
+  const minSamples = opts.minSamples ?? 3;
+  const maxBoost = opts.maxBoost ?? 2;
+  const out: Record<string, number> = {};
+  for (const e of entries) {
+    if (e.domain !== "endpoint") continue;
+    const n = e.successes + e.failures;
+    // 失效经验（OOD 退化/适用条件变化）→ 0 分，回退完整探测
+    if (e.invalidations.length > 0) { out[e.prescription] = 0; continue; }
+    // 样本不足（冷启动保护）或缺格 → 0 分
+    if (n < minSamples) { out[e.prescription] = 0; continue; }
+    const rate = e.successes / n;
+    // 成功率映射到 [-maxBoost, +maxBoost]：rate=1→+maxBoost，rate=0→-maxBoost，rate=0.5→0
+    out[e.prescription] = Math.round((rate * 2 - 1) * maxBoost * 100) / 100;
+  }
+  return out;
 }

@@ -336,6 +336,30 @@ dev 严格提升 · holdout 不退化 · OOD 不退化 · OOD 完全只读（搜
 > 反模式：为了让晋升通过而放宽 `tolerance`、把退化段标成 `available: false` 之外的值、
 > 或用自报 `scoreGain` 替代行为分数——三者都会让阶段 C 失去「可证伪」的意义。
 
+### 5.8 端点健康经验接线的确定性闭环门禁（v2.12.0）
+
+v2.10.0 把 15 个免 Key 端点查清了，但结论只落在文档和静态优先级里：
+`KeylessAggregator` 的健康态是进程内内存态、重启清零，`ExperienceBank` 的 `endpoint`
+域账本有 29 条 `harness-edit` 事件、0 条 `endpoint` 事件——「只写不读」。
+`npm run endpoint:check`（第 20 道门禁）全程离线、临时账本、无网络无凭据，13/13 断言分五组：
+
+| 组 | 断言 | 结论 |
+| --- | --- | --- |
+| 1 经验折叠 | dead 4 败 → −2、live 4 成 → +2、mid 2:2 → 0、cold 1 样本 → 0 | 成功率映射 ±maxBoost，缺格 / 样本不足归零 |
+| 2 冷启动注入 | 新聚合器（模拟新进程）首选 `live`，`dead.calls=0` | 无需重新撞已知死端点 |
+| 3 硬过滤优先 | `live` 触发 429 冷却后，即便有 +2 正先验第二次仍被跳过，故障转移到 `dead` | 先验只影响排序，绝不绕过冷却 / 限流 |
+| 4 回写闭环 | 账本事件 0→1，新 `ExperienceBank` 实例读到 | 成败跨会话累积，重启不清零 |
+| 5 失效回退 | `dead` 先验 −2→0，`live` 仍 +2 | 选择性失效，回退完整探测 |
+
+`meshStats()` 同步露出每端点先验，可离线复核。`endpointPriorFromExperience()` 是纯函数
+（输入为账本折叠快照），`invalidate()`、样本下限、幅度封顶都在里面；聚合器接线在
+`src/index.ts` 为 **opt-in**（`useEndpointExperience === true`），默认关闭以免确定性
+评测写被跟踪账本、制造假 diff。开启方式见 `docs/ENDPOINT-HEALTH.md` §6。
+
+**边界**：这是**结构闭环证据**，不是能力分数。它证明「进程内健康态重启清零的缺口
+被跨会话只增经验层补上」，不证明任何 harness 编辑有效，也不改变 live 分数与
+`leadership.verdict = not-proven`。单测见 `tests/endpoint-prior.test.ts`（7/7）。
+
 ---
 
 ## 6. 不能下的结论（诚实边界）

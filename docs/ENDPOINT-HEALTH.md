@@ -93,3 +93,19 @@ python3.11 -m llama_cpp.server \
 - 限流型端点（ovhcloud / llm7 / pollinations）协议可用但**跑不了多步基准**，
   因此不能用来补「弱模型下 harness 增益更大」的结论；该结论只能由本地 0.5B 的实测给出。
 - 端点状态随时变化，本表是快照；恢复后再提权，不要写死「永久不可用」。
+
+## 6. 运行时如何开启跨会话端点经验（v2.12.0，opt-in）
+
+体检结论若只停在文档，新进程仍会重新撞一遍已知死端点。v2.12.0 把它接成闭环：
+在 `agentos.config.json` 的 `keyless` provider 上显式打开
+
+```jsonc
+"useEndpointExperience": true
+// 可选："experienceFile": "/path/to/experience.jsonl"（缺省 data/rsi/experience.jsonl）
+```
+
+装配层从只增账本折叠跨会话先验注入 `score()` 排序，每次上游成败再回写同一账本；
+`meshStats()` 可查看每端点先验。**默认关闭**：确定性评测与 CI 不写被跟踪账本、
+不制造假 diff、不携带本机状态；先验为空时行为与 v2.11.0 一致。
+先验只影响排序，绝不绕过冷却 / 限流 / 能力感知的硬过滤；失效或样本不足自动归零、
+回退完整探测。离线验证见 `npm run endpoint:check`（第 20 道门禁，13/13）。
