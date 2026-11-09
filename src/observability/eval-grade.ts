@@ -351,6 +351,7 @@ export interface PromotionSpec {
   tolerance?: number;
   /** 候选自报增益：只进审计与 rewardHacking 标记，绝不参与 promoted 判定。 */
   selfReportedGain?: number;
+  cost?: { remoteBefore: number; remoteAfter: number }; // 可选成本目标（远程调用数，越大越贵）；提供时晋升不得使其上升（P0.5-c：remoteAvoided↑ 且分数不降才纳入）。确定性评测域暂无成本信号，留待 hybrid 评测接入。
 }
 
 export interface PromotionVerdict {
@@ -412,6 +413,9 @@ export function judgePromotion(spec: PromotionSpec): PromotionVerdict {
   if (spec.protocolViolationsAfter > 0) {
     reasons.push(`编辑后存在 ${spec.protocolViolationsAfter} 个协议违规`);
   }
+
+  // 7) 成本目标（可选，P0.5-c）：能力不降的前提下，远程调用不得上升（remoteAvoided↑ 才纳入）。
+  if (spec.cost && spec.cost.remoteAfter > spec.cost.remoteBefore) reasons.push(`远程调用未不降反升（${spec.cost.remoteBefore}→${spec.cost.remoteAfter}）：成本退化`);
 
   const promoted = reasons.length === 0;
   // 自报增益只进审计：有自报、行为却未过判据 → 标记 reward hacking（不改变 promoted）。

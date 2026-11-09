@@ -64,7 +64,7 @@ v2.0.6 之前，P0 / P0.5 / P1 已把「能不能跑真模型」「能不能省�
 | 2 | P0.5 双层叠加 | 🟢 v2.0.5 已交付 |
 | 2 | **P0.5-a 学习型路由 + P0.5-c 成本经验闭环** | 🟢 **v2.1.0 最小闭环交付** |
 | 2 | P0.5-b 语义 / 近似缓存 | 🔲 待建 |
-| 2 | P0.5-c 完整「成本作为 RSI 晋升目标」 | 🟡 经验已回写路由；进入 evolve 晋升判据待建 |
+| 2 | P0.5-c 完整「成本作为 RSI 晋升目标」 | 🟢 **v2.16.0 判定机器交付**（judgePromotion 新增可选 `cost` 目标 + 第 23 道门禁 6/6）；live 接线待 hybrid 评测接入 |
 | — | P0 真实强模型 / P5 公开基准 | 🟢 P0 首份分数（v2.0.6）/ 🔲 P5 |
 
 ### 0.4 进化启动器与迭代水位（v2.2.0 交付）
@@ -139,6 +139,11 @@ v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者�
   反而 freed 5 行。`leadership.verdict` 仍 `not-proven`——机器闭环了，但缺口从
   「缺接入」变成「缺一次真实能力增益的测量」（演进 fixture 是确定性脚本回放、弱模型
   跑不完多步）。见 `docs/BENCH-v2.md` §5.12。
+- **v2.16.0** 把 **P0.5-c 成本晋升目标**的判定机器落地（不产生能力分数）：`judgePromotion` 的
+  `PromotionSpec` 新增可选 `cost` 字段，判定机器加第 7 条铁律「能力不降前提下远程调用不得上升」
+  （成本退化即阻断、不参与 `promoted`）；`examples/p0.5c-check.ts` 第 23 道门禁 6/6 断言。
+  诚实边界：`cost` 只是判定机器，真实 `remoteAvoided` 信号需 **hybrid 评测**接入（确定性评测域
+  的 mock 无远程/本地之分），live 接线待打通。见 `docs/BENCH-v2.md` §5.13。
 - v2.12.0 的端点健康经验接线补的是**目标 2「越用越稳」的结构闭环**：端点体检结果不再
   只落文档，而是折叠成跨会话先验注入 `KeylessAggregator.score()`、成败再回写只增账本，
   解决「健康态进程内、重启清零」。`npm run endpoint:check`（第 20 道门禁）离线验证
@@ -215,7 +220,7 @@ AGENTOS_LIVE_PROVIDER=openrouter OPENROUTER_API_KEY=sk-... npm run eval:live
   - `npm run compound:demo` 实证：5 个原本走远程的请求被压到本地，`remoteAvoided=6`。
 - **下一步（待建）**：
   - **P0.5-b 语义/近似缓存**：对 Near-duplicate 提示做 embedding 相似度匹配，扩展命中面（当前是精确匹配）。
-  - **P0.5-c 完整闭环**：把 `remoteAvoided↑ 且分数不降` 正式纳入 evolve 晋升判据（当前只回写路由经验，尚未进入能力层晋升）。
+  - **P0.5-c live 接线**：判定机器已在 v2.16.0 落地（`judgePromotion` 的 `cost` 目标 + 第 23 道门禁），待 hybrid 评测把真实 `remoteAvoided` 信号接入 `runEvolve` 的 `PromotionSpec.cost`（确定性评测域的 mock 无远程/本地之分，故 live 接线未做）。
 - **验收标准**：`npm run hybrid:demo` / `hybrid:keyless:demo` 与 `tests/{cache,hybrid,nested-hybrid-keyless}.test.ts` 全绿；`eval:live --provider hybrid` 报告含非空 `inference` 字段。
 - **依赖**：P0（真实远程端点作为 `remote` 一侧）。
 - **状态**：🟢 **双层叠加已交付（v2.0.5）**；P0.5-a/b/c 待建。

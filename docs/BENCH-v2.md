@@ -500,6 +500,27 @@ v2.13.0 只挡了 `provider_error`，本版实测发现 `cancelled` 与 `guard` 
 合法改进（dev 提升、holdout/OOD 不退化、搜索只碰 dev）→ 晋升；OOD 退化 → 阻断且写 journal；
 搜索碰 OOD → 违反完全只读。7/7 通过。
 
+### 5.13 P0.5-c 成本晋升目标（v2.16.0）
+
+P0.5-a/c 的学习型路由已把 `remoteAvoided` 经验回写路由，但成本**从未进入 evolve 晋升判据**——
+一次「省了远程调用却没提升能力」或「借能力增益掩盖成本退化」的候选都能蒙混晋升。本版把
+「成本作为晋升目标」的判定逻辑落地，与 §5.7 / §5.12 同口径：判定机器先就位、离线可证，live 接线待 hybrid 评测打通。
+
+改动（`src/observability/eval-grade.ts`，零新增源文件，预算 16,498/16,500）：
+
+1. `judgePromotion` 的 `PromotionSpec` 新增**可选** `cost?: { remoteBefore; remoteAfter }` 字段；
+   判定机器加第 7 条铁律：**能力不降的前提下，远程调用不得上升**（成本退化即阻断，且不参与 `promoted`）。
+   字段可选、默认不传 → 既有 273 单测与 phasec/segments 判定机全部向后兼容、零改动。
+2. `examples/p0.5c-check.ts` + `npm run p0.5c:check`（第 23 道发布阻断门禁）：用真实三段分数
+   （`runEval` 对 `data/evolve/{train,holdout,ood}.jsonl` 实际评测）喂 `judgePromotion`，6/6 断言——
+   能力晋升+成本不升→晋升、能力晋升+成本反升→阻断且记原因、能力未晋升+成本下降→仍不晋升
+   （成本不越权）、能力晋升+成本下降→晋升（remoteAvoided↑ 受鼓励）、未传成本→行为不变。
+
+**诚实边界**：`cost` 只是判定机器，真实 `remoteAvoided` 信号需由 **hybrid 评测**接入
+（确定性评测域的 mock 无远程/本地之分，故门禁用真实任务集指纹 + 合成分数喂判定机器，与
+promotion:check / phasec:check 同口径）。本版不声称成本已被实时测量，live 接线待 hybrid 评测打通。
+`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`。
+
 **诚实边界**：这是**治理/测量机器的闭环**，不是能力分数。`leadership.verdict` 仍 `not-proven`、
 `L4` 仍 `not-achieved`、0pp 负结果不变。阶段 C 从「判定机器就绪、缺接入主循环」走到
 「机器 + 活循环都已闭环」，缺口从**缺接入**变成**缺一次真实能力增益的测量**

@@ -1,6 +1,6 @@
 {
   "name": "bro2",
-  "version": "2.15.0",
+  "version": "2.16.0",
   "type": "module",
   "description": "bro2 · 通用 Agent 运行时（含 RSI 有界可验证自我改进）— 零第三方依赖",
   "license": "MIT",
@@ -66,6 +66,7 @@
     "promotion:check": "node --experimental-strip-types --no-warnings scripts/bench-v2.ts --promotion-contrast",
     "segments:check": "node --experimental-strip-types --no-warnings examples/segments-check.ts",
     "phasec:check": "node --experimental-strip-types --no-warnings examples/phase-c-check.ts",
+    "p0.5c:check": "node --experimental-strip-types --no-warnings examples/p0.5c-check.ts",
     "endpoint:check": "node --experimental-strip-types --no-warnings examples/endpoint-experience-check.ts"
   },
   "keywords": [

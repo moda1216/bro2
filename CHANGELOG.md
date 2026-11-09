@@ -10,6 +10,27 @@
 
 ---
 
+## [2.16.0] — 2026-11-09 · P0.5-c 成本晋升目标（remoteAvoided↑ 且分数不降才纳入晋升）（MINOR）
+
+**解决的问题**：P0.5-a/c 的学习型路由已把 `remoteAvoided` 经验回写路由，但成本**从未进入 evolve 晋升判据**——
+一次「省了远程调用却没提升能力」或「借能力增益掩盖成本退化」的候选都能蒙混晋升。这与 P0.5-c（remoteAvoided↑ 且分数不降）的闭环目标差最后一格。
+
+**改动**（零新增源文件；代码预算 **16,498/16,500**、90/90 文件，不升阈值，净 +5 行且从删除注释冗余里腾出 2 行余量）：
+- `src/observability/eval-grade.ts`：给 `judgePromotion` 的 `PromotionSpec` 增加**可选** `cost?: { remoteBefore; remoteAfter }` 字段，
+  并在判定机器里加第 7 条铁律：**能力不降的前提下，远程调用不得上升**（成本退化即阻断，且不参与 `promoted`）。
+  字段可选、默认不传 → 既有 273 单测与 phasec/segments 判定机全部向后兼容、零改动。
+- `examples/p0.5c-check.ts` + `npm run p0.5c:check`（**第 23 道发布阻断门禁**）：用真实三段分数（`runEval` 对
+  `data/evolve/{train,holdout,ood}.jsonl` 实际评测）喂 `judgePromotion`，6/6 断言——
+  能力晋升+成本不升→晋升、能力晋升+成本反升→阻断且记原因、能力未晋升+成本下降→仍不晋升（成本不越权）、
+  能力晋升+成本下降→晋升（remoteAvoided↑ 受鼓励）、未传成本→行为不变。
+- `scripts/project-status.ts` 登记 `p0.5c` 门禁 + `package.json` 加 `p0.5c:check` 脚本（门禁脚本在 `examples/`，不计代码预算）。
+
+**诚实边界（不产生能力分数）**：`leadership.verdict` 仍 `not-proven`、`L4` 仍 `not-achieved`。
+`judgePromotion` 的成本目标只是**判定机器**，真实 `remoteAvoided` 信号需由 **hybrid 评测**接入
+（确定性评测域的 mock 无远程/本地之分，故门禁用真实任务集指纹 + 合成分数喂判定机器，与 promotion:check / phasec:check 同口径）。
+本版不声称成本已被实时测量，只把「成本作为晋升目标」的判定逻辑落地并离线可证；live 接线待 hybrid 评测打通。
+见 `docs/BENCH-v2.md` §5.13、`docs/PLAN-TOP-HARNESS.md` §6.2。
+
 ## [2.15.0] — 2026-11-09 · 阶段 C 接入 RSI 主循环（三段铁律成为真实晋升闸门）（MINOR）
 
 **解决的问题**：v2.11.0 的三段晋升判据（`judgePromotion`）与 v2.14.0 的真实三段任务集（manifest）
