@@ -224,8 +224,15 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 > 首个正向 harness 增益证据，边界见 `docs/BENCH-v2.md` §5.3（不改变无故障 0pp 结论）。
 > 脏故障与扩容（v2.8.0）✅：timeout / retry-after / empty-response 三类真实形态 + 空响应守卫；
 > 故障任务 3 → 9 个。三组 on/off：路由重试 5/5 vs 0/5、空响应守卫 2/2 vs 0/2、repair 效率级。
-> **弱模型对照（候选 2）为负结果**：4 个免 Key 端点全部链路故障 / 抖动，拿不到可信弱模型，
-> 证据缺口如实保留（见 `docs/BENCH-v2.md` §5.4）。补齐条件：链路稳定且明显弱于 kilo 的真实端点。
+> **弱模型对照（候选 2）仍为负结果，但原因已升级**：v2.8 归因于「端点链路故障」；
+> v2.10.0 逐个精确归因（限流 / 额度耗尽 / 模型下架 / 连接超时）并修复后，链路不再是主因。
+> 本地 0.5B 服务已起且 preflight 全 PASS，但 L2 准入 **0/3、全部 0 工具调用**——
+> 卡在「能力下限」而非「拿不到模型」。补齐条件：能力介于 0.5B 与 kilo 之间、工具调用稳定、
+> 能承受约 126 次请求的模型。已下载 `qwen2.5:3b`（协议层 chat + 原生 tool_calls 通过），
+> 但本机 cgroup 内存仅 8GB，其中等多步评测被 OOM 终止 / 空响应拦截（`provider_error`，
+> 资源约束非能力结论，无效报告已删除）。**补齐路径是换有足够内存 / GPU 的环境在
+> `local-qwen3b` 上重跑准入，不是继续换端点**。见 `docs/BENCH-v2.md` §5.6、
+> `docs/ENDPOINT-HEALTH.md`。
 > 确定性回归（v2.9.0）✅：`faults.provider` 在 deterministic / live 均生效，三组 on/off 对照
 > 从「只能靠 kilo 人工跑分」升级为**离线可复算的第 18 道发布阻断门禁**（`npm run fault:check`，
 > 3/3 接受）；零新增源文件、未上调代码预算阈值。边界见 `docs/BENCH-v2.md` §5.5。

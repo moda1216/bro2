@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-09T03:34:04.409Z",
+  "mode": "live",
+  "providerName": "local-qwen",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "abcbf373efea",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "v2-ts-01",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "隐藏测试失败 (exit=1): node --experimental-strip-types --no-warnings --input-type=module -e \"const m=await import('./src/index.ts');for(const max of [0,1,2,3]){const s=m.truncate('abcdefghij',max);if(s.length>max){console.error('max='+max+' len='+s.length);process.exit(1)}}\" → max=0 len=10"
+      ],
+      "stoppedBy": "completed",
+      "steps": 1,
+      "toolCalls": 0,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {},
+      "providerRetries": 0,
+      "faultsInjected": 0,
+      "emptyGuardHits": 0,
+      "tokens": 2742,
+      "latencyMs": 147605,
+      "provider": "local-qwen",
+      "answer": "functions.trajectory_view:"
+    },
+    {
+      "taskId": "v2-ts-02",
+      "category": "robustness",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "隐藏测试失败 (exit=1): node --experimental-strip-types --no-warnings --input-type=module -e \"const m=await import('./src/index.ts');const a=m.splitLines('a\\r\\nb\\r\\n');if(a.length!==3||a[0]!=='a'||a[1]!=='b'||a[2]!==''){console.error(a.length);process.exit(1)}\" → 3"
+      ],
+      "stoppedBy": "completed",
+      "steps": 1,
+      "toolCalls": 0,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {},
+      "providerRetries": 0,
+      "faultsInjected": 0,
+      "emptyGuardHits": 0,
+      "tokens": 2733,
+      "latencyMs": 179969,
+      "provider": "local-qwen",
+      "answer": "functions.file_list:"
+    },
+    {
+      "taskId": "v2-ts-03",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "隐藏测试失败 (exit=1): node --experimental-strip-types --no-warnings --input-type=module -e \"const m=await import('./src/index.ts');if(typeof m.capitalize!=='function')process.exit(1);if(m.capitalize('hello')!=='Hello'||m.capitalize('')!==''){console.error(m.capitalize('hello'));process.exit(1)}\" → "
+      ],
+      "stoppedBy": "completed",
+      "steps": 1,
+      "toolCalls": 0,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {},
+      "providerRetries": 0,
+      "faultsInjected": 0,
+      "emptyGuardHits": 0,
+      "tokens": 2730,
+      "latencyMs": 206777,
+      "provider": "local-qwen",
+      "answer": "functions.apply_patch:"
+    }
+  ],
+  "summary": {
+    "overall": 0,
+    "byCategory": {
+      "multi-step": 0,
+      "robustness": 0
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 0,
+    "avgSteps": 1,
+    "avgToolCalls": 0,
+    "avgLatencyMs": 178117,
+    "totalTokens": 8205,
+    "toolErrorRate": 0,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 0,
+    "total": 3,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": true,
+    "violations": []
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  },
+  "layers": [
+    {
+      "layer": "l2",
+      "tasks": 18,
+      "ran": 3,
+      "ok": 0,
+      "pending": 0,
+      "samples": 0,
+      "file": "data/tasks/v2/l2.jsonl",
+      "hash": "96a830ee92b8"
+    }
+  ],
+  "preset": null
+}

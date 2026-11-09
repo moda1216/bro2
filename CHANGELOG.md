@@ -10,6 +10,42 @@
 
 ---
 
+## [2.10.0] — 2026-11-09 · 免 Key 端点体检、聚合器健康度修复与弱模型能力下限（MINOR）
+
+**解决的问题**：v2.8 把 4 个免 Key 弱端点的失败笼统记为「链路故障」，本地 0.5B 记为
+「Ollama 未启动」；`keylessai` 还被设为 `priority: 4`，smart-fallback 首次请求会优先打到
+一个已确认连接超时的端点（真实配置缺陷）。用户提供的 `awesome-freellm-apis` 列表也从未按
+「匿名 + 原生 `tool_calls`」口径验证过。
+
+**改动**：
+- 15 个端点匿名实测（链路层 + 协议层双层判定），逐个精确归因：限流 / 额度耗尽 /
+  模型下架 / 连接超时 / 需要 Key。新增 `docs/ENDPOINT-HEALTH.md`（可复现快照，不进 CI）。
+- **新增 `ovhcloud` provider**：从 awesome 列表挖掘并经实测确认的匿名免注册端点，
+  `/v1/models` 列 21 个模型、chat + 原生 `tool_calls` 全通（bro2 preflight PASS）。
+  限流约 3 次/窗口，定位为故障转移兜底（`priority 5`），不作跑分主力。
+- **修复 `llm7`**：`gpt-oss-120b` 已下架（400 `model_unavailable`）→ 免费 `gpt-oss:20b`，preflight PASS。
+- **修复聚合器优先级**：按实测健康度重排 `kilo 10 > ovhcloud 5 > llm7 3 > pollinations 1 >
+  opencode-zen / keylessai 0`；`keylessai` 从 4 降到 0，消除首次请求白等超时。
+- **本地 0.5B 归位**：GGUF 一直在（380 MB），用 `llama_cpp.server`（无需 Ollama）起服务，
+  preflight 判定 chat / SSE / 原生 `tool_calls` 全 PASS；如实记录其对 prompt 敏感、首次流式约 28 s。
+
+**负结果（必须保留）**：本地 0.5B 的 L2 准入实测 **0/3，全部 0 工具调用、约 3 分钟/题**
+（`data/bench/v2-localqwen-l2-admission.json`）。三条准入判据缺「无故障基线能通过一部分任务」：
+基线 0 通过时 harness 差异无从体现。**弱模型对照证据缺口仍在，原因从「链路不可用」
+升级为「能力下限」**。`leadership.verdict` 仍 `not-proven`，L4 仍 `not-achieved`。
+
+**中等模型尝试（同为负结果，资源约束）**：自主下载 `qwen2.5:3b`（1.8 GB GGUF），
+协议层 chat + 原生 `tool_calls` 均通过，是方向正确的弱模型对照候选。但本机
+`cgroup` 内存上限仅 8 GB：多步 live 评测被 OOM killer 终止或触发连续空响应，
+三次尝试均无 `completed` 轨迹。按「`provider_error` ≠ 能力弱」红线，这些无效报告已删除、
+不作证据；结论是**本机资源不足以跑中等模型基准**，不是「3B 能力不够」。
+
+**未做 / 边界**：不把外部端点可达性、本机服务/GGUF 写进 CI 门禁（治理红线：测试只断言可复现的结构不变量）；
+不调任何代码预算阈值；零新增源文件。端点状态是快照，不写死「永久不可用」。
+`npm test` 249/249、发布门禁 18/18 全绿。
+
+---
+
 ## [2.9.0] — 2026-11-09 · 故障恢复证据的确定性回归门禁（MINOR）
 
 > 类型：**MINOR · 新测量门禁 + 评测链路修正**。

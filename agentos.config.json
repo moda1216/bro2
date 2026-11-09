@@ -78,7 +78,9 @@
         "apiKeyOptional": true,
         "includeUsage": true,
         "timeoutMs": 180000,
-        "maxRetries": 3
+        "maxRetries": 3,
+        "priority": 1,
+        "note": "2026-11-09 实测：匿名 chat 200，但连续第 2 次请求返回 402 FREE_LIMIT（1 reply/45s per IP）。只能作极低频兜底，Agent 多步调用必撞限流，降级优先级。"
       },
       "local-qwen": {
         "type": "openai",
@@ -87,7 +89,18 @@
         "apiKeyOptional": true,
         "includeUsage": true,
         "timeoutMs": 120000,
-        "maxRetries": 2
+        "maxRetries": 2,
+        "note": "2026-11-09 实测：GGUF 已在 /root/.cache/bro2-llm/，llama.cpp server 可起；bro2 preflight 判定 chat + 原生 tool_calls 均 PASS（强 system prompt 引导下能返回规范 tool_calls）。但 0.5B 对 prompt 敏感（弱引导时退化成正文文本）、首次流式约 28s，能力明显弱于 kilo，是弱模型对照候选。启动方式见 docs/ENDPOINT-HEALTH.md。"
+      },
+      "local-qwen3b": {
+        "type": "openai",
+        "baseUrl": "http://127.0.0.1:11435/v1",
+        "model": "qwen2.5:3b",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 300000,
+        "maxRetries": 2,
+        "note": "弱模型对照候选（能力介于 0.5B 与 kilo 之间）。GGUF 已下载到 ~/.cache/bro2-llm/qwen2.5-3b.gguf，协议层实测 chat + 原生 tool_calls 均可用；但本机 cgroup 内存上限仅 8GB，多步 live 评测会被 OOM killer 终止或触发空响应，无法稳定跑分——这是资源约束，不是能力结论。需更大内存环境再跑准入，命令见 docs/ENDPOINT-HEALTH.md。属运行时依赖，不进 CI 门禁；keyless 自动发现会跳过本地端点。"
       },
       "kilo": {
         "type": "openai",
@@ -96,7 +109,24 @@
         "apiKeyOptional": true,
         "includeUsage": true,
         "timeoutMs": 180000,
-        "maxRetries": 3
+        "maxRetries": 3,
+        "priority": 10,
+        "note": "2026-11-09 实测：唯一匿名免 Key 且可稳定跑多步基准的端点（chat 200 + 原生 tool_calls）。设为最高优先级主力。"
+      },
+      "ovhcloud": {
+        "type": "openai",
+        "baseUrl": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
+        "model": "gpt-oss-120b",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "timeoutMs": 180000,
+        "maxRetries": 2,
+        "priority": 5,
+        "tags": [
+          "anonymous",
+          "native-tools"
+        ],
+        "note": "2026-11-09 从 awesome-freellm-apis 挖掘并经实测：匿名免注册（STATUS.md 明确 no registration for anonymous tier），/v1/models 列 21 个模型，chat + 原生 tool_calls 全通。限流约 3 次/窗口（第 4 次起 429），只作故障转移/低频兜底，不作跑分主力。小模型 Qwen3.5-9B / gpt-oss-20b 同样支持原生 tool_calls，是弱模型对照候选但受同一限流约束。"
       },
       "opencode-zen": {
         "type": "openai",
@@ -106,16 +136,20 @@
         "genSessionHeader": "x-session-id",
         "includeUsage": true,
         "timeoutMs": 180000,
-        "maxRetries": 2
+        "maxRetries": 2,
+        "priority": 0,
+        "note": "2026-11-09 实测：429 FreeUsageLimitError（免费额度耗尽，需 OpenCode Go 订阅）。保留为最低优先级，恢复前不会被优先选中。"
       },
       "llm7": {
         "type": "openai",
         "baseUrl": "https://api.llm7.io/v1",
-        "model": "gpt-oss-120b",
+        "model": "gpt-oss:20b",
         "apiKeyOptional": true,
         "includeUsage": true,
         "timeoutMs": 120000,
-        "maxRetries": 2
+        "maxRetries": 3,
+        "priority": 3,
+        "note": "2026-11-09 修复：原配 gpt-oss-120b 已下架（400 model_unavailable）。免费 turbo 层改用 gpt-oss:20b，chat + 原生 tool_calls 均通；限流极严（连续第 2 请求即 429，Retry after 1s），靠 maxRetries/退避扛。其余可用免费层：codestral-latest、nemotron-3-nano:30b。"
       },
       "keylessai": {
         "type": "openai",
@@ -125,11 +159,11 @@
         "includeUsage": true,
         "timeoutMs": 180000,
         "maxRetries": 2,
-        "priority": 4,
+        "priority": 0,
         "tags": [
           "unified-gateway"
         ],
-        "note": "KeylessAI：统一 OpenAI 兼容端点，聚合 Pollinations 等上游，自带故障转移/限流处理。模型以各家为准（可用 KEYLESSAI_MODEL 覆盖，默认 gpt-oss-20b）。"
+        "note": "2026-11-09 实测：UND_ERR_CONNECT_TIMEOUT（workers.dev 连接超时）。原 priority=4 会让 smart-fallback 首次就选它并白等超时，现降为 0。KeylessAI 聚合 Pollinations 等上游的设想保留，端点恢复后再提权。"
       },
       "zerogateway": {
         "type": "openai",
@@ -195,20 +229,21 @@
         "type": "keyless",
         "backends": [
           "kilo",
+          "ovhcloud",
+          "llm7",
+          "pollinations",
+          "opencode-zen",
           {
             "name": "keylessai",
-            "priority": 4
-          },
-          "opencode-zen",
-          "pollinations",
-          "llm7"
+            "priority": 0
+          }
         ],
         "autoDiscoverKeyless": true,
         "strategy": "smart-fallback",
         "rateLimitCooldownMs": 60000,
         "failureCooldownMs": 30000,
         "emergencyProvider": "local-qwen",
-        "note": "无 Key 远程端点统一聚合器：把 kilo/pollinations/opencode-zen/keylessai/llm7 等聚合为唯一接口，智能故障转移+限流感知。未配置的上游（如 harness 插件端点）自动跳过。"
+        "note": "无 Key 远程端点统一聚合器。优先级按 2026-11-09 匿名实测健康度排序（kilo 10 > ovhcloud 5 > llm7 3 > pollinations 1 > opencode-zen/keylessai 0），避免把首次请求打到已确认不可用/超时的端点。详见 docs/ENDPOINT-HEALTH.md。未配置的上游（harness 插件端点）自动跳过。"
       },
       "hybrid": {
         "type": "hybrid",
@@ -217,7 +252,7 @@
         "policy": "cheap-to-local",
         "cache": true,
         "fallback": true,
-        "note": "双层叠加：remote 指向 keyless 聚合器（免 Key 网状，smart-fallback 故障转移），本地小模型承接便宜/重复调用并作限流兜底；聚合器管可用性、hybrid 管开销。"
+        "note": "双层叠加：remote 指向 keyless 聚合器（免 Key 网状，smart-fallback 故障转移），本地小模型承接便宜/重复调用并作限流兜底；聚合器管可用性、hybrid 管开销。注意 local-qwen(0.5B) 虽能返回原生 tool_calls，但对 prompt 敏感、延迟高，仅作弱模型对照与限流兜底。"
       }
     },
     "retry": {

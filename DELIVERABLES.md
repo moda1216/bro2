@@ -11,7 +11,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.9.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.10.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
@@ -272,7 +272,8 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.9.0**（故障恢复证据的确定性回归门禁：`faults.provider` 在 deterministic / live 均生效；`npm run fault:check` 三组 on/off 对照 3/3 接受，离线可复算、防哑弹、拒绝自报增益，进第 18 道发布阻断门禁；判定并入 `eval-grade.ts`、编排并入 `bench-v2.ts`，**零新增源文件、未上调代码预算阈值**；`npm test` 249/249、门禁 18/18）。
+- 当前最新：**v2.10.0**（免 Key 端点体检与聚合器健康度修复：15 个端点匿名实测双层归因、新增匿名 `ovhcloud` 后端、复活 `llm7`、按实测重排聚合器优先级、本地 0.5B 服务归位；**负结果**：0.5B L2 准入 0/3、0 工具调用，弱模型证据缺口原因升级为「能力下限」；`npm test` 249/249、门禁 18/18）。
+- 上版：**v2.9.0**（故障恢复证据的确定性回归门禁：`faults.provider` 在 deterministic / live 均生效；`npm run fault:check` 三组 on/off 对照 3/3 接受，离线可复算、防哑弹、拒绝自报增益，进第 18 道发布阻断门禁；判定并入 `eval-grade.ts`、编排并入 `bench-v2.ts`，**零新增源文件、未上调代码预算阈值**；`npm test` 249/249、门禁 18/18）。
 - 上版：**v2.8.0**（脏故障形态 timeout/retry-after/empty-response + 空响应守卫 + 故障任务扩到 9 个；三组对照：重试 5/5 vs 0/5、守卫 2/2 vs 0/2、repair 效率级；`npm test` 237/237；**负结果**：免 Key 弱端点均为链路故障，弱模型对照证据缺口保留）。
 - 上版：**v2.7.0**（故障注入 + 路由瞬态重试；首个正向增益证据：重试开 3/3 vs 关 0/2）。
 - 上版：**v2.6.0**（L3 首任务 + ts-todo fixture；0pp 负结果延续，shell 抹平工具层差异）。
