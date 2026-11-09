@@ -81,11 +81,12 @@ live 报告默认落 `data/bench/v2-<provider>-<时间戳>.json`，含逐任务 
 
 ---
 
-## 5. 当前证据（截至 v2.5.0）
+## 5. 当前证据（截至 v2.9.0）
 
 | 项 | 结果 | 命令 |
 | --- | --- | --- |
 | L1 回归 | **19/19**，指纹 `d1419b1efaa7` | `npm run bench:v2 -- --layer l1` |
+| 故障恢复确定性对照（离线、可复算） | **3/3 接受**（详见 §5.5） | `npm run fault:check` |
 | L2 任务有效性 | **18/18 双态成立** | `npm run task:check -- --layer l2` |
 | L2 live（kilo，standard，k=1） | **17/18（94.4%）**，平均 7.39 步 / 12.06 次工具 | `--mode live --model kilo` |
 | L2 live（kilo，minimal，k=1） | **17/18（94.4%）**，平均 6.94 步 / 9.72 次工具 | `--preset minimal` |
@@ -225,15 +226,50 @@ empty-response 走守卫），且半截响应的「静默成功」正是 catch �
 **所以当前唯一诚实的结论是**：在可用模型（kilo）与现有场景下，
 「bro2 比最小 harness 强」**未被证实**；`leadership.verdict = not-proven` 不因任何分数改变。
 
+### 5.5 恢复力结论的确定性回归门禁（v2.9.0）
+
+§5.3 / §5.4 的三组 on/off 结论此前只能在 `mode=live` 下复现：`eval.ts` 把 `faults.provider`
+的注入包在 `if (mode === "live")` 里，因此 kilo 端点一抖动，证据既无法重跑、也无法进 CI；
+W4 的晋升判据同样缺一个确定性底座。v2.9.0 把这条结论改成**离线可复算的发布阻断门禁**。
+
+**改动**：`faults.provider` 在 deterministic / live 均生效；带故障任务一律
+`setDefault` + `setStrict`（禁止切到别的 provider 吸收故障，保证唯一变量）。判分与指标抽取
+仍复用 `runEval` / `eval-grade`，不复制第二套口径。`src/bench/schema.ts` 允许故障任务以
+「`liveOnly`（真实模型）」或「内置 `script`（确定性回归）」两种口径存在，禁止落到启发式 Mock。
+
+**`npm run fault:check`（第 18 道门禁）**：三组对照，每组只有一份 `shared` 配置，
+由 `withValue` 注入单个变量值；`judgeContrast` 只认客观行为，不认任何自报增益。
+判定并入 `src/observability/eval-grade.ts`、编排并入 `scripts/bench-v2.ts --fault-contrast`，
+**零新增源文件、未上调代码预算阈值**（源文件数保持 90/90）。
+
+| 机制组 | 类型 | 唯一变量 | 机制开 | 机制关 |
+| --- | --- | --- | --- | --- |
+| retry | 成败级 | `model.retry.attempts` 3→0 | 通过，注入 2 / 重试 2 | 失败，重试 0 |
+| empty-guard | 成败级 | `model.emptyGuard` true→false | 通过，守卫 2 / 重试 2 | 空终答伪装完成，守卫 0 |
+| repair | 效率级 | `policy.malformedArgs` repair→fail | 通过，repairs 1 / 工具错误 0 | 通过，repairs 0 / 工具错误 1 |
+
+报告：`data/bench/fault-contrast.json`。拒绝条件由 12 项单测逐条守住：哑弹故障、机制开侧注入
+未打完、机制计数器为零或关侧未归零、公共配置 / 任务哈希不一致、变量取值相同、
+成败级里机制关侧也通过、效率级里任一侧失败、协议违规。
+
+**口径**：机制关侧常因提前终止只注入 1 次（`faultsInjected < times` 是预期），判定只要求
+两侧都 ≥1 且机制开侧等于声明值——它不作恢复力证据，只作对照。
+
+**边界**：这是**回归门禁，不是新的能力证据**。它证明「恢复机制仍有效且可离线复算」，
+不证明 bro2 比最小 harness 强；无故障场景 0pp（§5.1 / §5.2）继续成立，弱模型证据缺口
+（§5.4）仍在，`leadership.verdict` 保持 `not-proven`。
+
 ---
 
 ## 6. 不能下的结论（诚实边界）
 
 - **不是外部基准**：任务、fixture、隐藏断言均为本项目自建，不具备外部有效性；
-- **样本太小**：18 个任务、k=1，单题权重 5.6pp，一次波动就能改变结论；
+- **样本太小**：18 个 L2 任务 + 1 个 L3 任务 + 9 个故障任务，全部 k=1，单题权重 5.6pp，
+  一次波动就能改变结论；`fault:check` 是确定性回归，不增加统计功效；
 - **模型非顶尖**：kilo 是免费端点，分数不能外推到 GPT/Claude 级模型；
-- **L3 为空**：长程压缩与纠错能力**没有测过**，任何关于它的说法都无证据；
-- **`leadership.verdict` 仍为 `not-proven`**：L4 未达成，不因 17/18 而改变。
+- **L3 长程能力仍未有效测到**：现有 L3 任务 standard / minimal 均 1/1（0pp），
+  压缩、纠错、重规划没有被真正触发，任何关于它的说法都无证据；
+- **`leadership.verdict` 仍为 `not-proven`**：L4 未达成，不因 17/18 或 3/3 对照而改变。
 
 ---
 
@@ -249,3 +285,7 @@ empty-response 走守卫），且半截响应的「静默成功」正是 catch �
 
 > 反模式：为了让分数好看而降低隐藏断言强度、或把 `sample: true` 的任务算进通过率。
 > 前者是自欺，后者是虚报——两者都会让这套基准失去意义。
+>
+> 故障任务（§5.3–§5.5）分两类：`liveOnly: true` 走真实端点（`data/tasks/v2/l3.jsonl` 的 f01–f09）；
+> 内置 `script` 的走确定性回归（`npm run fault:check`）。两者都必须声明 `faults.provider`，
+> 禁止落到启发式 Mock——行为不可复算的对照不产生证据。

@@ -38,6 +38,13 @@ fi
 for f in data/evolve/incidents.jsonl data/evolve/ledger.jsonl data/live-link-smoke.json data/eval-report.json; do
   if [ -f "$f" ]; then git restore -- "$f" 2>/dev/null || true; fi
 done
+# 视图类产物：不带 --rounds 时只是 watermark 重新生成的时间戳，还原避免假 diff；
+# 带 --rounds 时账本真的推进了，视图变化必须随本轮一起提交。
+if [ -z "$ROUNDS" ]; then
+  for f in data/rsi/watermark.html data/rsi/watermark.json docs/ITERATION-WATERMARK.md; do
+    if [ -f "$f" ]; then git restore -- "$f" 2>/dev/null || true; fi
+  done
+fi
 
 # 3) 提交全部改进（凭证文件位于仓库外，绝不会被纳入）
 git add -A

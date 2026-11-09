@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-09T02:16:15.747Z",
+  "mode": "deterministic",
+  "providerName": "mock",
+  "accepted": 3,
+  "total": 3,
+  "cases": [
+    {
+      "id": "retry",
+      "mechanism": "retry",
+      "effect": "pass",
+      "variable": "model.retry.attempts",
+      "variableOn": 3,
+      "variableOff": 0,
+      "fault": {
+        "kind": "rate-limit",
+        "times": 2
+      },
+      "sharedConfig": {
+        "model": {
+          "retry": {
+            "attempts": 3,
+            "baseMs": 1
+          }
+        }
+      },
+      "sharedHash": "5ba3b45ad61a",
+      "taskHash": "9952cd6fcecf",
+      "verdict": {
+        "id": "retry",
+        "mechanism": "retry",
+        "effect": "pass",
+        "accepted": true,
+        "reasons": [],
+        "on": {
+          "ok": true,
+          "answer": "完成：工具结果已确认",
+          "stoppedBy": "completed",
+          "faultsInjected": 2,
+          "providerRetries": 2,
+          "emptyGuardHits": 0,
+          "repairs": 0,
+          "toolErrors": 0,
+          "protocolViolations": 0
+        },
+        "off": {
+          "ok": false,
+          "answer": "模型调用失败：全部模型均不可用 → mock: HTTP 429: rate limit exceeded (injected fault)",
+          "stoppedBy": "provider_error",
+          "faultsInjected": 1,
+          "providerRetries": 0,
+          "emptyGuardHits": 0,
+          "repairs": 0,
+          "toolErrors": 0,
+          "protocolViolations": 0
+        }
+      }
+    },
+    {
+      "id": "empty-guard",
+      "mechanism": "empty-guard",
+      "effect": "pass",
+      "variable": "model.emptyGuard",
+      "variableOn": true,
+      "variableOff": false,
+      "fault": {
+        "kind": "empty-response",
+        "times": 2
+      },
+      "sharedConfig": {
+        "model": {
+          "retry": {
+            "attempts": 3,
+            "baseMs": 1
+          }
+        }
+      },
+      "sharedHash": "5ba3b45ad61a",
+      "taskHash": "f7ab0fb7de9e",
+      "verdict": {
+        "id": "empty-guard",
+        "mechanism": "empty-guard",
+        "effect": "pass",
+        "accepted": true,
+        "reasons": [],
+        "on": {
+          "ok": true,
+          "answer": "完成：工具结果已确认",
+          "stoppedBy": "completed",
+          "faultsInjected": 2,
+          "providerRetries": 2,
+          "emptyGuardHits": 2,
+          "repairs": 0,
+          "toolErrors": 0,
+          "protocolViolations": 0
+        },
+        "off": {
+          "ok": false,
+          "answer": "",
+          "stoppedBy": "completed",
+          "faultsInjected": 1,
+          "providerRetries": 0,
+          "emptyGuardHits": 0,
+          "repairs": 0,
+          "toolErrors": 0,
+          "protocolViolations": 0
+        }
+      }
+    },
+    {
+      "id": "repair",
+      "mechanism": "repair",
+      "effect": "efficiency",
+      "variable": "policy.malformedArgs",
+      "variableOn": "repair",
+      "variableOff": "fail",
+      "fault": {
+        "kind": "malformed-args",
+        "times": 1
+      },
+      "sharedConfig": {},
+      "sharedHash": "44136fa355b3",
+      "taskHash": "08d960fbcbe1",
+      "verdict": {
+        "id": "repair",
+        "mechanism": "repair",
+        "effect": "efficiency",
+        "accepted": true,
+        "reasons": [],
+        "on": {
+          "ok": true,
+          "answer": "完成：工具结果已确认",
+          "stoppedBy": "completed",
+          "faultsInjected": 1,
+          "providerRetries": 0,
+          "emptyGuardHits": 0,
+          "repairs": 1,
+          "toolErrors": 0,
+          "protocolViolations": 0
+        },
+        "off": {
+          "ok": true,
+          "answer": "完成：工具结果已确认",
+          "stoppedBy": "completed",
+          "faultsInjected": 1,
+          "providerRetries": 0,
+          "emptyGuardHits": 0,
+          "repairs": 0,
+          "toolErrors": 1,
+          "protocolViolations": 0
+        }
+      }
+    }
+  ],
+  "note": [
+    "确定性回归门禁：证明恢复机制在任何机器上可离线复算，不是能力分数。",
+    "机制关侧因提前终止常只注入 1 次故障（faultsInjected < times 为预期），不作恢复力证据。",
+    "repair 为效率级对照：两侧都完成，差异只在 repairs / toolErrors，不改通过率结论。",
+    "leadership.verdict 仍为 not-proven，L4 仍为 not-achieved。"
+  ]
+}

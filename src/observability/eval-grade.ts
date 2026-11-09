@@ -2,8 +2,10 @@
  * L7 可观测性 · 评测判分与故障配置
  * ----------------------------------------------------------
  * 从 eval.ts 拆出的原因只有一个：**单文件不得超过 700 行**（预算门禁）。
- * 职责边界不变：这里只做「从轨迹抽指标 + 按任务判分 + 构造故障配置」，
+ * 职责边界不变：这里只做「从轨迹抽指标 + 按任务判分 + 构造故障配置 + 对照判定」，
  * 执行编排与报告聚合仍由 eval.ts 负责，避免第二套口径。
+ * v2.9.0：故障恢复的确定性对照判定（judgeContrast）并入本模块——它属于「判分」，
+ * 与 grade 同口径；独立成文件会把源文件数顶破预算（少而精：合并优先于新增）。
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -198,5 +200,122 @@ export function emptyRun(task: EvalTask, repeat: number, reasons: string[]): Eva
     steps: 0, toolCalls: 0, toolErrors: 0, guards: 0, approvalsDenied: 0, compactions: 0,
     protocolViolations: 0, repairs: 0, groundingRejects: 0, loopAdvisories: 0, compactionEvidence: 0,
     tools: {}, providerRetries: 0, faultsInjected: 0, emptyGuardHits: 0, tokens: 0, latencyMs: 0, provider: "unknown", answer: "",
+  };
+}
+
+// ---------------------------------------------------------------- 故障恢复对照判定（v2.9.0）
+
+/**
+ * 把 v2.7/v2.8 依赖真实端点的「机制开/关决定成败」变成**离线可复算的判定**。
+ * 只认三样东西：唯一变量、注入真实性（防哑弹）、机制计数器 + 行为对比；
+ * **没有任何自报增益字段参与判定**（沿用 live-contrast 的防 reward hacking 红线）。
+ * 判定的是「恢复机制是否仍有效」，不是模型能力分数；不改变 leadership.verdict。
+ */
+export type ContrastMechanism = "retry" | "empty-guard" | "repair";
+/** pass：机制开关决定成败；efficiency：两侧都完成，只改变纠错成本（v2.8 的 repair 结论） */
+export type ContrastEffect = "pass" | "efficiency";
+
+export interface ContrastSpec {
+  id: string;
+  mechanism: ContrastMechanism;
+  effect: ContrastEffect;
+  times: number;
+  /** 唯一变量在 on/off 两侧的取值（必须不同） */
+  variableOn: unknown;
+  variableOff: unknown;
+  /** 剔除唯一变量后的公共配置哈希，on/off 必须一致 */
+  sharedHashOn: string;
+  sharedHashOff: string;
+  /** 同一份任务的哈希，on/off 必须一致 */
+  taskHashOn: string;
+  taskHashOff: string;
+}
+
+export interface ContrastSide {
+  ok: boolean;
+  answer: string;
+  stoppedBy: string;
+  faultsInjected: number;
+  providerRetries: number;
+  emptyGuardHits: number;
+  repairs: number;
+  toolErrors: number;
+  protocolViolations: number;
+}
+
+export interface ContrastVerdict {
+  id: string;
+  mechanism: ContrastMechanism;
+  effect: ContrastEffect;
+  accepted: boolean;
+  reasons: string[];
+  on: ContrastSide;
+  off: ContrastSide;
+}
+
+const contrastSide = (r: EvalRunMetrics): ContrastSide => ({
+  ok: r.ok,
+  answer: r.answer,
+  stoppedBy: r.stoppedBy,
+  faultsInjected: r.faultsInjected,
+  providerRetries: r.providerRetries,
+  emptyGuardHits: r.emptyGuardHits,
+  repairs: r.repairs,
+  toolErrors: r.toolErrors,
+  protocolViolations: r.protocolViolations,
+});
+
+export function judgeContrast(spec: ContrastSpec, on: EvalRunMetrics, off: EvalRunMetrics): ContrastVerdict {
+  const reasons: string[] = [];
+
+  // 1) 唯一变量：任何额外差异都会让 on/off 的因果归属失效。
+  if (spec.sharedHashOn !== spec.sharedHashOff) reasons.push("公共配置哈希不一致：on/off 不是唯一变量");
+  if (spec.taskHashOn !== spec.taskHashOff) reasons.push("任务定义哈希不一致：on/off 不是同一任务");
+  if (JSON.stringify(spec.variableOn) === JSON.stringify(spec.variableOff)) {
+    reasons.push("唯一变量取值相同：未形成对照");
+  }
+
+  // 2) 注入真实性：哑弹故障（v2.7 教训）判为不可用，不是「机制无效」。
+  //    机制关侧常因提前终止而只注入 1 次，这是预期的，故只要求 >= 1。
+  if (on.faultsInjected < 1 || off.faultsInjected < 1) {
+    reasons.push(`故障是哑弹（on=${on.faultsInjected}, off=${off.faultsInjected}）：至少一侧未实际注入`);
+  }
+  if (on.faultsInjected !== spec.times) {
+    reasons.push(`机制开侧注入未打完（${on.faultsInjected}/${spec.times}）：恢复结论不可信`);
+  }
+
+  // 3) 机制计数器必须真的动过（on 非零 / off 归零），否则差异只是波动。
+  if (spec.mechanism === "retry") {
+    if (on.providerRetries < spec.times) reasons.push(`机制开侧重试计数 ${on.providerRetries} < ${spec.times}`);
+    if (off.providerRetries !== 0) reasons.push(`机制关侧仍有 ${off.providerRetries} 次路由重试`);
+  } else if (spec.mechanism === "empty-guard") {
+    if (on.emptyGuardHits < 1) reasons.push("机制开侧空响应守卫计数为 0");
+    if (off.emptyGuardHits !== 0) reasons.push(`机制关侧守卫仍命中 ${off.emptyGuardHits} 次`);
+  } else {
+    if (on.repairs < 1 || on.toolErrors > 0) {
+      reasons.push(`repair 侧未修复或仍有工具错误（repairs=${on.repairs}, toolErrors=${on.toolErrors}）`);
+    }
+    if (off.repairs !== 0 || off.toolErrors < 1) {
+      reasons.push(`fail 侧未产生可归因的工具错误（repairs=${off.repairs}, toolErrors=${off.toolErrors}）`);
+    }
+  }
+
+  // 4) 行为对比：只认客观终局，不认任何自报分数/增益。
+  if (spec.effect === "pass") {
+    if (!on.ok || on.answer.trim() === "") reasons.push("机制开侧未完成任务或终答为空");
+    if (off.ok && off.answer.trim() !== "") reasons.push("机制关侧同样完成：差异不存在");
+  } else if (!on.ok || !off.ok) {
+    reasons.push("效率级对照两侧都应完成（差异只在机制计数，不在通过率）");
+  }
+
+  // 5) 治理不变量：协议违规一律拒绝。
+  if (on.protocolViolations > 0 || off.protocolViolations > 0) {
+    reasons.push("存在未配对 tool_call（协议违规）");
+  }
+
+  return {
+    id: spec.id, mechanism: spec.mechanism, effect: spec.effect,
+    accepted: reasons.length === 0, reasons,
+    on: contrastSide(on), off: contrastSide(off),
   };
 }

@@ -10,6 +10,52 @@
 
 ---
 
+## [2.9.0] — 2026-11-09 · 故障恢复证据的确定性回归门禁（MINOR）
+
+> 类型：**MINOR · 新测量门禁 + 评测链路修正**。
+> 不新增能力、不改变 `leadership.verdict`；只把 v2.7/v2.8 依赖真实端点的唯一一组正证据，
+> 变成离线可复算、防哑弹、进 CI 的发布阻断门禁。
+
+### 问题（为什么做这个）
+`faults.provider` 此前只在 `mode === "live"` 生效（`eval.ts`），所以三组 on/off 对照只能靠 kilo
+端点人工跑分（`data/bench/v2-kilo-*.json`）：端点抖动即无法重跑、CI 复现不了、W4 晋升判据也
+没有确定性基础。这与「测试只断言可复现的结构不变量」红线相悖。
+`auto:next` 指向的 W1-06「L2 扩到 60 个同质任务」已被 0pp 负结果否定，继续堆任务只会得到更多 0pp。
+
+### 新增（Added）
+- `src/observability/eval.ts`：`faults.provider` 在 deterministic / live 两种模式均生效；带故障任务
+  一律 `setDefault` + `setStrict`，杜绝「切到别的 provider」吸收故障、污染唯一变量。
+  L1 19/19 回归不受影响（无故障任务不进入该分支）。
+- `src/bench/schema.ts`：故障任务允许「liveOnly（真实模型）」或「内置 script 作确定性回归」两种口径，
+  禁止落到启发式 Mock（行为不可复算）。
+- `src/observability/eval-grade.ts` · `judgeContrast`：唯一变量哈希校验、注入防哑弹、机制计数器、
+  行为对比（成败级 / 效率级）、协议零违规；**没有任何自报增益字段参与判定**。
+- `scripts/bench-v2.ts --fault-contrast` · `npm run fault:check`：3 组 on/off 对照，判分与指标抽取
+  复用 `runEval` 唯一口径，报告落 `data/bench/fault-contrast.json`。
+- **零新增源文件**：判定并入既有判分模块、编排并入既有跑分入口，`budget:check` 源文件数保持
+  90/90、源码行 16,059/16,500、单文件 564/700，**未上调任何阈值**（少而精：合并优先于新增）。
+- `project:status` 第 **18** 道发布阻断门禁 `faultcontrast`；`project-status.ts` 版本号改为从
+  `package.json` 动态读取（此前硬编码 v2.3.2）。
+- `tests/fault-contrast.test.ts` 12 项反例单测（哑弹 / 注入不全 / 计数器为零 / 唯一变量破坏 /
+  机制关侧也通过 / 协议违规 / 自报增益不参与）。
+
+### 证据（离线确定性，mock，2026-11-09）
+| 机制组 | 类型 | 唯一变量 | 机制开 | 机制关 | 判定 |
+| --- | --- | --- | --- | --- | --- |
+| retry | 成败级 | `model.retry.attempts` 3→0 | 通过，注入 2 / 重试 2 | 失败（第 1 次 429 即终止），重试 0 | ✓ |
+| empty-guard | 成败级 | `model.emptyGuard` true→false | 通过，守卫 2 / 重试 2 | 空终答伪装完成，守卫 0 | ✓ |
+| repair | **效率级** | `policy.malformedArgs` repair→fail | 通过，repairs 1 / 工具错误 0 | 通过，repairs 0 / 工具错误 1 | ✓ |
+
+`npm run fault:check` → **3/3 接受**；报告 `data/bench/fault-contrast.json`。
+机制关侧常因提前终止只注入 1 次（`faultsInjected < times` 为预期），不作恢复力证据，
+判定只要求两侧都 ≥1 且机制开侧等于声明值。
+
+### 诚实边界（累计）
+- 这是**回归门禁，不是新的能力证据**：证明「恢复机制仍有效且可离线复算」，不证明 bro2 比最小
+  harness 强；无故障场景 0pp（§5.1/§5.2）继续成立。
+- 弱模型对照仍为证据缺口（§5.4）；`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`。
+- 确定性故障覆盖的是脚本化 Mock 行为，不替代真实端点下的 live 结论，二者互补。
+
 ## [2.8.0] — 2026-11-09 · 脏故障形态、空响应守卫与弱模型证据缺口（MINOR）
 
 > 类型：**MINOR · 新故障形态 + 新恢复机制 + 任务集扩容**。

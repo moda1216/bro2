@@ -11,14 +11,14 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.8.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.9.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
 | 架构 | 8 层：kernel / models / context / tools / memory / cognition / delegation / governance / observability / interfaces |
 | 唯一真相源 | `Trajectory`（每次运行的轨迹日志，不可变追加） |
 | 源代码规模 | 68 个 `src/*.ts` + 4 个入口/脚本 `.ts` + 1 个 Web 入口 HTML + 1 个 Python 本地推理服务 |
-| 测试规模 | 22 个测试文件；`npm test` **190** 项全绿 |
+| 测试规模 | 29 个测试文件；`npm test` **249** 项全绿 |
 | 诚实判定 | `leadership.verdict = not-proven`；证据阶梯 L4 = `not-achieved`（不伪造外部基准） |
 | 仓库状态 | 已初始化 git，初始提交 `v2.0.0` tag；`.gitignore` 隔离运行时产物 |
 | 版本控制 | git（提交粒度 = 逻辑交付单元；发布 = tag + CHANGELOG 条目） |
@@ -31,7 +31,7 @@
 
 | 验收项 | 命令 | 当前结果 | 性质 |
 | --- | --- | --- | --- |
-| 单元测试 + e2e + 故障注入 | `npm test` | **190 / 190 PASS** | 交付门禁 |
+| 单元测试 + e2e + 故障注入 | `npm test` | **249 / 249 PASS** | 交付门禁 |
 | CI 可移植性（测试不得依赖本机环境事实） | `npm test` → `tests/remote-sync.test.ts` 第 6 项 | 有/无凭证两环境均 6/6 | 防复发门禁 |
 | 能力矩阵结构自检 | `npm run verify` | 23 项 PASS | 结构门禁 |
 | 行为策略代码分支实证 | `npm run policy:check` | 19 项 PASS | 策略门禁 |
@@ -39,11 +39,12 @@
 | 对比式改进 live 闭环（防 reward hacking） | `npm run contrast:live` | 完整性 ✓ OK，2 晋升 / 2 拦截 | P1 门禁 |
 | 复利中枢（越用越快 / 越用越省） | `npm run compound:demo` | 10/10 断言，trend=accelerating，remoteAvoided=6 | 两大目标门禁 |
 | 迭代水位（唯一尺子 / 只增账本 / 只读投影） | `npm run watermark:check` | 13/13 项，账本 14 轮 `trend=accelerating` | 水位门禁（第 12 道） |
-| **代码预算（少而精）** | `npm run budget:check` | 14,518 / 16,500 行 · 83 / 90 文件 · 最大 526 行 · 测试比 0.22 · 依赖 0 | 体积门禁（第 13 道） |
+| **代码预算（少而精）** | `npm run budget:check` | 16,059 / 16,500 行 · 90 / 90 文件 · 最大 564 行 · 测试比 0.24 · 依赖 0 | 体积门禁（第 13 道） |
 | **v2 分层任务装载** | `npm run bench:v2 -- --layer l1` | 19/19 通过，指纹 `d1419b1efaa7` 与既有评测一致 | 迁移回归门禁（第 14 道） |
 | **fixture 快照** | `npm run fixture:check -- --run` | 3 仓库结构完整 · 7,585 / 3,145,728 字节 · 离线测试 3/3 通过 | fixture 门禁（第 15 道） |
 | **L2 任务双态校准** | `npm run task:check -- --layer l2 --quiet` | 18/18：原始快照必失败、参考解必通过 | 任务有效性门禁 |
 | **编辑接口指标** | `npm run aci:check` | 7/7：精确/空白/缩进可改对，多处命中拒绝，补丁零半成品 | ACI 门禁 |
+| **故障恢复确定性对照** | `npm run fault:check` | 3/3 接受（retry / empty-guard / repair）：离线可复算、防哑弹、拒绝自报增益 | 恢复力回归门禁（第 18 道） |
 | 远程同步一致性（防漏推，纯只读） | `npm run push:check` | `✓ 远程已同步`，main 与本地一致、最新 tag 已推送 | 信息展示门禁 |
 | 改进同步闭环（提交 + 唯一通道推送 + 自检） | `npm run ship` | 复用仓库外 600 权限 PAT，凭证不入库、不回显 | 发布流程 |
 | 元 RSI 写保护 + 冻结 fitness | `npm run meta:check` | 25 项 PASS | 元层门禁 |
@@ -271,7 +272,8 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.8.0**（脏故障形态 timeout/retry-after/empty-response + 空响应守卫 + 故障任务扩到 9 个；三组对照：重试 5/5 vs 0/5、守卫 2/2 vs 0/2、repair 效率级；`npm test` 237/237；**负结果**：免 Key 弱端点均为链路故障，弱模型对照证据缺口保留）。
+- 当前最新：**v2.9.0**（故障恢复证据的确定性回归门禁：`faults.provider` 在 deterministic / live 均生效；`npm run fault:check` 三组 on/off 对照 3/3 接受，离线可复算、防哑弹、拒绝自报增益，进第 18 道发布阻断门禁；判定并入 `eval-grade.ts`、编排并入 `bench-v2.ts`，**零新增源文件、未上调代码预算阈值**；`npm test` 249/249、门禁 18/18）。
+- 上版：**v2.8.0**（脏故障形态 timeout/retry-after/empty-response + 空响应守卫 + 故障任务扩到 9 个；三组对照：重试 5/5 vs 0/5、守卫 2/2 vs 0/2、repair 效率级；`npm test` 237/237；**负结果**：免 Key 弱端点均为链路故障，弱模型对照证据缺口保留）。
 - 上版：**v2.7.0**（故障注入 + 路由瞬态重试；首个正向增益证据：重试开 3/3 vs 关 0/2）。
 - 上版：**v2.6.0**（L3 首任务 + ts-todo fixture；0pp 负结果延续，shell 抹平工具层差异）。
 - 上版：**v2.5.0**（W2 编码 ACI：repomap / apply_patch / diagnostics / 编辑降级链；L2 live 17/18）。

@@ -12,7 +12,8 @@
  * observability/eval.ts（唯一口径）；live 预检复用 models/live-gate.ts（唯一门禁）。
  * live 分数是**测量**，不是发布门禁——只有协议违规（未配对 tool_call）才判失败。
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createAgentOS } from "../src/index.ts";
@@ -21,7 +22,9 @@ import { LAYERS, type TaskLayer, type TaskV2 } from "../src/bench/schema.ts";
 import { hiddenReasons, runHiddenTests, stageRepo } from "../src/bench/runner.ts";
 import { liveGate } from "../src/models/live-gate.ts";
 import { DEFAULT_THRESHOLDS, runEval } from "../src/observability/eval.ts";
-import type { EvalThresholds } from "../src/observability/eval.ts";
+import type { EvalTask, EvalThresholds } from "../src/observability/eval.ts";
+import { judgeContrast } from "../src/observability/eval-grade.ts";
+import type { ContrastMechanism, ContrastEffect, ContrastVerdict } from "../src/observability/eval-grade.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const argv = process.argv.slice(2);
@@ -32,6 +35,12 @@ function flag(name: string): string | undefined {
 }
 function has(name: string): boolean {
   return argv.includes(`--${name}`);
+}
+
+// fault:check（第 18 道门禁）：确定性故障对照复用本入口的评测装配，独立早退。
+// 与 live 证据互补：live 证明「真实端点下机制有价值」，这里证明「可离线复算且改坏必红」。
+if (has("fault-contrast")) {
+  process.exit(await runFaultContrast(ROOT));
 }
 
 const layerArg = flag("layer") ?? "all";
@@ -217,3 +226,154 @@ if (json) {
 }
 
 process.exit(report.gate.pass ? 0 : 1);
+
+/**
+ * fault:check（--fault-contrast）· 故障恢复的确定性对照回归（v2.9.0，第 18 道阻断门禁）
+ * ----------------------------------------------------------
+ * 不产生新的能力分数，不改变 leadership.verdict。判分与指标抽取复用 runEval / eval-grade，
+ * 唯一口径；每组只有一份 shared 配置，on/off 由 withValue 注入单个变量值；
+ * 注入计数、机制计数、行为对比、协议零违规全部由 judgeContrast 判定（拒绝任何自报增益）。
+ * 机制关侧因提前终止常只注入 1 次，属预期，只作对照、不作恢复力证据。
+ */
+async function runFaultContrast(root: string): Promise<number> {
+  const sha = (v: unknown): string => createHash("sha256").update(JSON.stringify(v)).digest("hex").slice(0, 12);
+  const thresholds: Partial<EvalThresholds> = {
+    minOverall: 0, minToolUse: 0, minSafety: 0, minRobustness: 0,
+    maxToolErrorRate: 1, maxProtocolViolations: 0, maxAvgSteps: 999, maxRegression: 1,
+  };
+  /** 同一份确定性脚本：一次工具调用 + 一次终答。故障注入后重试不推进 stepIndex。 */
+  const script: EvalTask["script"] = [
+    { content: "先取一次工具结果", toolCalls: [{ name: "calc", arguments: { expression: "1+1" } }] },
+    { content: "完成：工具结果已确认" },
+  ];
+
+  interface CaseDef {
+    id: string;
+    mechanism: ContrastMechanism;
+    effect: ContrastEffect;
+    fault: NonNullable<NonNullable<EvalTask["faults"]>["provider"]>;
+    shared: Record<string, unknown>;
+    path: string[];
+    onValue: unknown;
+    offValue: unknown;
+  }
+  /** 三组覆盖 v2.7/v2.8 的全部恢复机制；repair 按 v2.8 结论标注为效率级。 */
+  const cases: CaseDef[] = [
+    {
+      id: "retry", mechanism: "retry", effect: "pass",
+      fault: { kind: "rate-limit", times: 2 },
+      shared: { model: { retry: { attempts: 3, baseMs: 1 } } },
+      path: ["model", "retry", "attempts"], onValue: 3, offValue: 0,
+    },
+    {
+      id: "empty-guard", mechanism: "empty-guard", effect: "pass",
+      fault: { kind: "empty-response", times: 2 },
+      shared: { model: { retry: { attempts: 3, baseMs: 1 } } },
+      path: ["model", "emptyGuard"], onValue: true, offValue: false,
+    },
+    {
+      id: "repair", mechanism: "repair", effect: "efficiency",
+      fault: { kind: "malformed-args", times: 1 },
+      shared: {},
+      path: ["policy", "malformedArgs"], onValue: "repair", offValue: "fail",
+    },
+  ];
+
+  /** 把单个变量值注入公共配置的副本；公共部分逐层浅拷贝，不会污染 shared。 */
+  const withValue = (base: Record<string, unknown>, path: string[], value: unknown): Record<string, unknown> => {
+    const out = JSON.parse(JSON.stringify(base)) as Record<string, unknown>;
+    let cur = out;
+    for (const key of path.slice(0, -1)) {
+      const next = cur[key];
+      cur[key] = (typeof next === "object" && next !== null && !Array.isArray(next))
+        ? { ...(next as Record<string, unknown>) } : {};
+      cur = cur[key] as Record<string, unknown>;
+    }
+    cur[path[path.length - 1]!] = value;
+    return out;
+  };
+
+  const taskOf = (c: CaseDef): EvalTask => ({
+    id: `fault-contrast-${c.id}`,
+    category: "robustness",
+    input: "请调用一次工具并汇总结果",
+    script,
+    expectedAnswer: ["完成"],
+    maxSteps: 8,
+    faults: { provider: c.fault },
+  });
+
+  const runSide = async (task: EvalTask, config: Record<string, unknown>) => {
+    const rep = await runEval({
+      tasks: [task], mode: "deterministic", providerName: "mock", k: 1,
+      root, thresholds, configOverride: config as never,
+    });
+    const run = rep.runs[0];
+    if (!run) throw new Error(`${task.id}: runEval 未产出跑次`);
+    return run;
+  };
+
+  const verdicts: ContrastVerdict[] = [];
+  const details: Array<Record<string, unknown>> = [];
+  for (const c of cases) {
+    const task = taskOf(c);
+    const on = await runSide(task, withValue(c.shared, c.path, c.onValue));
+    const off = await runSide(task, withValue(c.shared, c.path, c.offValue));
+    const sharedHash = sha(c.shared);
+    const taskHash = sha(task);
+    const verdict = judgeContrast({
+      id: c.id, mechanism: c.mechanism, effect: c.effect, times: c.fault.times,
+      variableOn: c.onValue, variableOff: c.offValue,
+      sharedHashOn: sharedHash, sharedHashOff: sharedHash,
+      taskHashOn: taskHash, taskHashOff: taskHash,
+    }, on, off);
+    verdicts.push(verdict);
+    details.push({
+      id: c.id, mechanism: c.mechanism, effect: c.effect,
+      variable: c.path.join("."), variableOn: c.onValue, variableOff: c.offValue,
+      fault: c.fault, sharedConfig: c.shared, sharedHash, taskHash, verdict,
+    });
+  }
+
+  const out = resolve(root, "data/bench/fault-contrast.json");
+  mkdirSync(dirname(out), { recursive: true });
+  const payload = {
+    version: 1, timestamp: new Date().toISOString(), mode: "deterministic", providerName: "mock",
+    accepted: verdicts.filter((v) => v.accepted).length, total: verdicts.length, cases: details,
+    note: [
+      "确定性回归门禁：证明恢复机制在任何机器上可离线复算，不是能力分数。",
+      "机制关侧因提前终止常只注入 1 次故障（faultsInjected < times 为预期），不作恢复力证据。",
+      "repair 为效率级对照：两侧都完成，差异只在 repairs / toolErrors，不改通过率结论。",
+      "leadership.verdict 仍为 not-proven，L4 仍为 not-achieved。",
+    ],
+  };
+  // 幂等写入：门禁每次都会跑，除生成时间外的主体相同就不覆盖，避免制造假 diff。
+  // 机制被改坏时 verdict 会变，报告才会更新——那时才是真需要提交的证据变化。
+  let same = false;
+  try {
+    const prev = JSON.parse(readFileSync(out, "utf8")) as Record<string, unknown>;
+    const { timestamp: _old, ...oldBody } = prev;
+    const { timestamp: _now, ...newBody } = payload;
+    same = JSON.stringify(oldBody) === JSON.stringify(newBody);
+  } catch { /* 首次生成 */ }
+  if (!same) writeFileSync(out, JSON.stringify(payload, null, 2) + "\n");
+
+  process.stdout.write("\n════ fault:check · 故障恢复确定性对照（离线、可复算） ════\n");
+  process.stdout.write("组            类型          变量                     机制开                    机制关                    判定\n");
+  process.stdout.write("-".repeat(120) + "\n");
+  for (const v of verdicts) {
+    const d = details.find((x) => x.id === v.id)!;
+    const onDesc = `${v.on.ok ? "通过" : "失败"}/注入${v.on.faultsInjected}/重试${v.on.providerRetries}/守卫${v.on.emptyGuardHits}/修复${v.on.repairs}/错${v.on.toolErrors}`;
+    const offDesc = `${v.off.ok ? "通过" : "失败"}/注入${v.off.faultsInjected}/重试${v.off.providerRetries}/守卫${v.off.emptyGuardHits}/修复${v.off.repairs}/错${v.off.toolErrors}`;
+    process.stdout.write(
+      `${v.id.padEnd(13)} ${v.effect.padEnd(12)} ${String(d.variable).padEnd(24)} ` +
+      `${onDesc.padEnd(25)} ${offDesc.padEnd(25)} ${v.accepted ? "✓ 接受" : "✗ 拒绝"}\n`,
+    );
+    for (const r of v.reasons) process.stdout.write(`    ✗ ${r}\n`);
+  }
+  const accepted = verdicts.filter((v) => v.accepted).length;
+  process.stdout.write(`\n接受 ${accepted}/${verdicts.length} · 报告 data/bench/fault-contrast.json\n`);
+  process.stdout.write("诚实边界：确定性回归，不是能力分数；leadership.verdict 不变。\n");
+  process.stdout.write(`${accepted === verdicts.length ? "✓" : "✗"} 故障恢复对照：${accepted}/${verdicts.length} 接受（确定性回归，非能力分数）\n\n`);
+  return accepted === verdicts.length ? 0 : 1;
+}

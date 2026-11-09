@@ -12,7 +12,7 @@
  * 用法：npm run project:status
  */
 import { spawnSync } from "node:child_process";
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 interface Gate {
   id: string;
@@ -38,6 +38,7 @@ const GATES: Gate[] = [
   { id: "fixture", label: "fixture 快照完整性 + 离线测试可跑", cmd: "npm run fixture:check", args: ["--run"], timeoutMs: 180_000, gate: true },
   { id: "taskcheck", label: "L2/L3 任务双态校准（快照必失败 / 参考解必通过）", cmd: "npm run task:check", args: ["--layer", "all", "--quiet"], timeoutMs: 180_000, gate: true },
   { id: "aci", label: "编辑接口指标（改对 / 该拒就拒 / 零半成品）", cmd: "npm run aci:check", timeoutMs: 60_000, gate: true },
+  { id: "faultcontrast", label: "故障恢复确定性对照（离线可复算 / 防哑弹）", cmd: "npm run fault:check", timeoutMs: 60_000, gate: true },
   { id: "meta", label: "元 RSI 写保护 + 冻结 fitness", cmd: "npm run meta:check", timeoutMs: 60_000, gate: true },
   { id: "benchmark", label: "基准诚实性测量", cmd: "npm run benchmark:check", timeoutMs: 60_000, gate: true },
   { id: "external", label: "外部证据防伪造", cmd: "npm run external:check", timeoutMs: 60_000, gate: true },
@@ -116,7 +117,8 @@ function section(title: string, gates: Gate[]) {
 console.log("\x1b[1m════════════════════════════════════════════════════════════\x1b[0m");
 console.log("\x1b[1m  bro2 · 产出物健康度报告 (npm run project:status)\x1b[0m");
 console.log("\x1b[1m════════════════════════════════════════════════════════════\x1b[0m");
-console.log(`版本: v2.3.2   判定: leadership.verdict = not-proven   证据阶梯 L4 = not-achieved`);
+const pkgVersion = (JSON.parse(readFileSync("package.json", "utf8")) as { version: string }).version;
+console.log(`版本: v${pkgVersion}   判定: leadership.verdict = not-proven   证据阶梯 L4 = not-achieved`);
 
 const gateRes = section("A. 发布阻断门禁（全绿方可发布）", GATES);
 const infoRes = section("B. 信息展示（不阻断发布）", INFO);

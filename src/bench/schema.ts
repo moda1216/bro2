@@ -92,7 +92,11 @@ export function validateTaskV2(t: TaskV2): string[] {
     if (!f || !kinds.includes(f.kind) || !Number.isInteger(f.times) || f.times < 1 || f.times > 5) {
       p.push(`${label}: faults.provider 需为 kind∈{rate-limit,server-error,malformed-args,timeout,retry-after,empty-response} 且 1≤times≤5（超过 5 次只是烧钱，不测恢复力）`);
     }
-    if (t.liveOnly !== true) p.push(`${label}: 带 provider 故障的任务必须 liveOnly（deterministic 模式下注入无意义）`);
+    // 故障可在两种口径下注入：liveOnly（真实模型）或内置 script（确定性回归，见 fault:check）。
+    // 只有「既非 liveOnly 又无脚本」才会落到 Mock 启发式上，行为不可复算，必须拒绝。
+    if (t.liveOnly !== true && (t.script?.length ?? 0) === 0) {
+      p.push(`${label}: 带 provider 故障的任务须为 liveOnly，或内置 script 作确定性回归（禁止落到启发式 Mock）`);
+    }
   }
   if (t.repo !== undefined && (typeof t.repo !== "string" || !t.repo.trim())) {
     p.push(`${label}: repo 必须是非空字符串`);

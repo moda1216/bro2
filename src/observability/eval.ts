@@ -64,7 +64,10 @@ export interface EvalTask {
   expectedPolicy?: Record<string, string>;
   /** 通过配置/监听注入的故障 */
   fault?: "malformed-args" | "unknown-tool" | "approval-deny" | "step-limit" | "deny-path";
-  /** 真实 provider 故障注入（仅 live 生效）：前 times 次调用注入限流/5xx/畸形参数 */
+  /**
+   * provider 故障注入（deterministic / live 均生效）：前 times 次调用注入限流/5xx/畸形参数。
+   * deterministic 下包装的是脚本化 Mock，用于离线复算恢复力对照（fault:check，第 18 道门禁）。
+   */
   faults?: { provider?: {
     kind: "rate-limit" | "server-error" | "malformed-args" | "timeout" | "retry-after" | "empty-response";
     times: number;
@@ -395,14 +398,19 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
           config: mergeConfigForEval(faultConfig(task, tmp), options.configOverride),
         });
         let flaky: FlakyProvider | undefined;
+        const fault = task.faults?.provider;
+        if (fault) {
+          const base = os.providers.get(providerName);
+          if (!base) throw new Error(`provider 未注册: ${providerName}`);
+          flaky = wrapFlaky(base, fault);
+          os.router.register(providerName, flaky);
+          // 故障对照必须禁用降级：否则瞬时故障会被「切到别的 provider」吸收，
+          // 唯一变量被污染，on/off 差异不再是「机制开关」造成的。
+          // deterministic 下 providerName 为 mock，包装的是脚本化 Mock，离线可复算。
+          os.router.setDefault(providerName);
+          os.router.setStrict(true);
+        }
         if (mode === "live") {
-          const fault = task.faults?.provider;
-          if (fault) {
-            const base = os.providers.get(providerName);
-            if (!base) throw new Error(`provider 未注册: ${providerName}`);
-            flaky = wrapFlaky(base, fault);
-            os.router.register(providerName, flaky);
-          }
           os.router.setDefault(providerName);
           os.router.setStrict(true); // 禁止静默降级到 Mock，否则评测结果失真
         }
