@@ -119,13 +119,15 @@ registry 匿名 blob `sha256:183715c435899…`），**完全跑得起来**：
 python3.11 -m llama_cpp.server \
   --model /root/.cache/bro2-llm/qwen2.5-1.5b.gguf \
   --model_alias qwen2.5:1.5b --host 127.0.0.1 --port 11436 \
-  --n_ctx 8192 --n_threads 4 --n_batch 128 \
+  --n_ctx 4096 --n_threads 4 --n_batch 128 \
   --chat_format chatml-function-calling --verbose false
 ```
 
-配置 `local-qwen15b` 加了 `"stream": false` 与 `"maxTokens": 256`（见 §7 下方说明）。
-实测冷启动 5.4s（n_ctx 2048）/ 大上下文首次 55~77s、稳态 **0.6s**，
-内存 3.4~4.3GB / 8GB，`oom_kill 0`；warmup 后 `preflight` **✓ PASS**（676ms）。
+配置 `local-qwen15b` 加了 `"stream": false` 与 `"maxTokens": 128`（v2.13.0 为 256，
+v2.14.0 为压低纯 CPU 单步生成时长下调）。`n_ctx` 取 **4096**：2048 会撞
+`HTTP 400`（system prompt + 工具定义约需 3700 tokens），8192 冷启动撞 30s 探针窗口，
+4096 是本机 8GB 下的折中。实测冷启动约 10s（含 warmup）、稳态内存
+3.4~4.3GB / 8GB，`oom_kill 0`；warmup 后 `preflight` **✓ PASS**（676ms）。
 
 **真正的病根**：llama.cpp server 的 `chatml-function-calling` handler 在
 `stream: true` + `tool_choice: auto` + tools 下抛
@@ -139,10 +141,37 @@ python3.11 -m llama_cpp.server \
 `n_ctx 2048` 撞 `HTTP 400 requested 3695 tokens`（Agent 光 system prompt + 工具定义
 就要约 3700）；请求无 `max_tokens` 让弱模型生成到上下文上限、单 worker 被占死
 （表现为「端点不可达」但端口在监听）；大 `n_ctx` 冷启动撞 30s 探针窗口。
-处理分别是 `n_ctx 8192`、provider 配 `maxTokens`、评测前 warmup，**未调门禁阈值**。
+处理分别是 `n_ctx 4096`、provider 配 `maxTokens`、评测前 warmup，**未调门禁阈值**。
 
 **§3.1 结论修正与负结果**：本机纯 CPU 多步 live 评测仍在 18 分钟后挂起，
 无法产出 `completed` 轨迹；3/3 全 `provider_error` 的报告按红线删除、不进证据集。
 结论是「本机算力不足以完成多步评测」，不是「1.5B 能力不够」，也不是
 「必须换更大内存」。同理，§3 把 0.5B 归因为「能力下限」不再成立——那批
-0 工具调用发生在链路缺陷之下，不构成能力证据，需重测。
+0 工具调用发生在链路缺陷之下，不构成能力证据，需重测（v2.14.0 已重测，见 §8）。
+
+---
+
+## 8. 链路修通后的单步重测（v2.14.0 · 最终归因）
+
+`npm run weak:probe`（`examples/weak-single-step.ts`）用最短单步任务重测，红线写死
+「只有 `completed` + 协议零违规才算有效测量」；`cancelled` / `guard` /
+`provider_error` 一律记 `insufficient-runtime`，不进证据集。
+
+| 尝试 | 停止原因 | 步数 / 工具调用 | 协议违规 | 耗时 |
+| --- | --- | --- | --- | --- |
+| ① `t01` | `cancelled`（600s 墙钟） | 3 / 2 次 `calc` | 0 | 600s |
+| ② 单步探针 | `guard` | 3 / 2 次 `calc` | 0 | 773s |
+| ③ 单步探针（放宽步数） | `guard`：**连续 3 次相同工具调用，判定为死循环** | 3 / 2 次 `calc` | 0 | 818s |
+
+- warmup：非流式 + 带 tools 返回**规范 `tool_calls`**（10.3s）→ v2.13.0 的适配修复确实生效。
+- **链路结论（已证）**：修复前本地端点 0 工具调用，修复后同一 1.5B 发起 2 次原生
+  `calc` 调用、协议 0 违规 → §3 / `docs/BENCH-v2.md` §5.6 的「能力下限」结论彻底撤销。
+- **能力结论（未测出）**：三次都无 `completed` 轨迹，「1.5B 能否完成一次工具任务」
+  仍是未测出，不写「太弱」也不写「够用」。
+- **瓶颈归因**：纯 CPU 单步约 250~270s；③ 的守卫原文是死循环检测
+  （模型反复调用同一工具、不给终答），这是**行为信号**而非配置问题。
+  再放宽 `loopDetectionThreshold` 只会掩盖测量事实，因此不再重跑。
+  仍**不是「必须换更大内存」**：1.5B 稳态 3.4~4.3GB / 8GB、无 OOM。
+
+报告 `data/bench/v2-localqwen15b-admission.json`（`measurementValid: false`，
+含 `linkProbe` 链路证据）；完整判据见 `docs/BENCH-v2.md` §5.11。

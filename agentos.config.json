@@ -109,10 +109,10 @@
         "apiKeyOptional": true,
         "includeUsage": true,
         "stream": false,
-        "maxTokens": 256,
+        "maxTokens": 128,
         "timeoutMs": 300000,
         "maxRetries": 2,
-        "note": "弱模型对照候选（能力介于 0.5B 与 3B 之间）。GGUF 从 Ollama registry 匿名 blob 下载（941MB，sha256:183715c435899…），llama_cpp.server 单服务降配启动（11436 / n_ctx 2048 / 4 线程 / n_batch 128），实测冷启动 5.4s、稳态内存约 3.4GB / 8GB，规避 3B 并发 OOM 与 30s 冷启动探针超时。属运行时依赖，不进 CI 门禁；keyless 自动发现会跳过本地端点。启动方式见 docs/ENDPOINT-HEALTH.md。"
+        "note": "弱模型对照候选（能力介于 0.5B 与 3B 之间）。GGUF 从 Ollama registry 匿名 blob 下载（941MB，sha256:183715c435899…），llama_cpp.server 单服务降配启动（11436 / n_ctx 4096 / 4 线程 / n_batch 128），稳态内存约 3.4GB / 8GB，规避 3B 并发 OOM 与 30s 冷启动探针超时。n_ctx 2048 会撞 HTTP 400（system prompt + 工具定义约需 3700 tokens），maxTokens 128 用于压低纯 CPU 单步生成时长。属运行时依赖，不进 CI 门禁；keyless 自动发现会跳过本地端点。启动方式见 docs/ENDPOINT-HEALTH.md。"
       },
       "kilo": {
         "type": "openai",

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "sourceHash": "0142e5f1e71f",
+  "sourceTaskCount": 37,
+  "counts": {
+    "dev": 12,
+    "holdout": 15,
+    "ood": 10
+  },
+  "hashes": {
+    "dev": "dcab485b217e",
+    "holdout": "d25c2a496cdb",
+    "ood": "be79fc4aa4a2"
+  },
+  "checks": 31,
+  "verdict": "pass",
+  "note": [
+    "真实任务集三段冻结的输入契约门禁；不是 promote.ts 接入 RSI 主循环，阶段 C 仍停在 B。",
+    "leadership.verdict 仍为 not-proven，L4 仍为 not-achieved；不产生能力分数。"
+  ]
+}

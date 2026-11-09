@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "frozenAt": "2026-11-09T11:10:48.732Z",
+  "rule": "segmentOf(id) = sha1(id)[0] mod 3 → dev/holdout/ood；三段覆盖全部真实任务且互不相交",
+  "sources": [
+    "data/eval-tasks.jsonl",
+    "data/tasks/v2/l2.jsonl"
+  ],
+  "sourceHash": "0142e5f1e71f",
+  "sourceTaskCount": 37,
+  "segments": {
+    "dev": {
+      "ids": [
+        "t07",
+        "t10",
+        "t16",
+        "t17",
+        "t18",
+        "v2-ts-04",
+        "v2-py-01",
+        "v2-py-04",
+        "v2-py-06",
+        "v2-js-03",
+        "v2-js-04",
+        "v2-js-05"
+      ],
+      "hash": "dcab485b217e",
+      "count": 12,
+      "searchAccessible": true
+    },
+    "holdout": {
+      "ids": [
+        "t01",
+        "t02",
+        "t03",
+        "t04",
+        "t06",
+        "t11",
+        "t12",
+        "t13",
+        "t15",
+        "v2-ts-01",
+        "v2-ts-03",
+        "v2-ts-05",
+        "v2-ts-06",
+        "v2-js-01",
+        "v2-js-02"
+      ],
+      "hash": "d25c2a496cdb",
+      "count": 15,
+      "searchAccessible": false
+    },
+    "ood": {
+      "ids": [
+        "t05",
+        "t08",
+        "t09",
+        "t14",
+        "t19",
+        "v2-ts-02",
+        "v2-py-02",
+        "v2-py-03",
+        "v2-py-05",
+        "v2-js-06"
+      ],
+      "hash": "be79fc4aa4a2",
+      "count": 10,
+      "searchAccessible": false
+    }
+  },
+  "note": "OOD 完全只读、holdout 仅发布前验证、dev 允许搜索；任务集一旦冻结，任何改动必须由 segments:check 检出。"
+}

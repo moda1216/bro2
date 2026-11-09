@@ -395,6 +395,87 @@ HTTP 400、无 `max_tokens` 导致生成到上下文上限、大 `n_ctx` 冷启�
 
 ---
 
+### 5.10 W1-06 重定口径：三段任务集真实分层（v2.14.0）
+
+v2.11.0 的 `promotion:check` 把三段晋升铁律做成了判定机器，但喂给它的三段是
+**确定性构造的手搓任务**（`promo-dev` / `promo-holdout` / `promo-ood`），不是项目真实任务集。
+W1-06 原计划「L2 扩到 60 个同质任务」已被 §5.1 的 0pp 负结果否定——继续堆同质任务
+只会得到更多 0pp。因此本版**重定口径而不是扩容**：把现有真实任务集切成三堆并冻结。
+
+| 段 | 用途 | 任务数 | 搜索可达 | 指纹 |
+| --- | --- | --- | --- | --- |
+| `dev` | 练习集：允许用来找改进 | 12 | ✓ | `dcab485b217e` |
+| `holdout` | 留出考试：改进过程不偷看，发布前查退化 | 15 | ✗ | `d25c2a496cdb` |
+| `ood` | 完全留出：最终只读，查过拟合 | 10 | ✗ | `be79fc4aa4a2` |
+
+- **不复制任务定义**：`npm run segments:check` 直接 `loadLayers(root, ["l1","l2"])` 读
+  `data/eval-tasks.jsonl`（19）+ `data/tasks/v2/l2.jsonl`（18）= 37 个真实任务，
+  按 `segmentOf(id) = sha1(id)[0] mod 3` 确定性分堆；同一 id 恒定同段，
+  三段天然互不相交，改任务**内容**不改归属、增删 id 才改变归属。
+- **冻结**：`data/tasks/v2/segments.json` 记录每段 ids、指纹、数量与只读标记，
+  以及整集 `sourceHash = 0142e5f1e71f`。指纹用与 `runEval.taskSetHash` 完全同口径的
+  `sha1(JSON.stringify(tasks))[:12]`，因此**可以直接喂 `judgePromotion`**。
+  任务集一旦冻结，任何改动必须由门禁检出；`--freeze` 是唯一重冻结入口。
+- **第 21 道发布阻断门禁**（`examples/segments-check.ts`，31/31 断言，离线无网络）：
+  校验版本 / 源指纹 / 源任务数 / 三段 ids 与指纹重算一致 / 三段两两不相交 / 非空 /
+  指纹互异 / OOD 与 holdout 只读 / 归属与规则一致；再做**接线验证**：用三段真实指纹
+  构造 `PromotionSpec` 喂 `judgePromotion`，合法晋升须接受、自报增益不参与判定，
+  并叠加 6 个单一变量反例（OOD 混入搜索 / 三段撞车 / 静默缺格 / 任务漂移 /
+  dev 未提升 / OOD 退化）逐一验证拒绝。
+- **改坏必红实测**：把 manifest 里 `ood.hash` 改成 `tampered` 后门禁 `exit=1`，
+  报 `ood 段指纹与重算一致：tampered vs be79fc4aa4a2`；还原后 `31/31` 全绿。
+
+**边界**：这是**输入契约门禁**——证明真实分段能作为判定机器的合法输入，
+**不是** `promote.ts` 把三段接进 RSI 主循环。阶段 C 仍停在 B，不产生能力分数，
+`leadership.verdict` 仍是 `not-proven`。见 `docs/PLAN-TOP-HARNESS.md` §6.2。
+
+---
+
+### 5.11 链路修通后的弱模型单步重测（v2.14.0）
+
+§5.9 撤销「0.5B 能力下限」后，这一格证据是空的：`provider_error` 不算有效测量。
+本版用 `npm run weak:probe`（`examples/weak-single-step.ts`）补测，只问一件事：
+**链路修通后，1.5B 能不能完成一次工具任务**。任务收到最短（一次 `calc` + 终答），
+`maxTokens` 由 256 降到 128，`n_ctx` 取 4096，墙钟只在探针内放宽到 1800s
+（不改全局配置、不改任何门禁阈值）。
+
+红线写死在脚本里：**只有 `stoppedBy === "completed"` 且协议零违规才算有效测量**；
+`cancelled` / `guard` / `provider_error` 一律记 `insufficient-runtime`，
+报告标 `measurementValid: false`，不进能力证据集、不写成「模型太弱」。
+v2.13.0 只挡了 `provider_error`，本版实测发现 `cancelled` 与 `guard` 同样会
+冒充能力结论，必须一起挡。
+
+| 尝试 | 停止原因 | 步数 / 工具调用 | 协议违规 | 耗时 | 有效测量 |
+| --- | --- | --- | --- | --- | --- |
+| ① `t01` 链路探针 | `cancelled`（600s 墙钟） | 3 / 2 次 `calc` | 0 | 600s | 否，报告已删 |
+| ② 单步探针（墙钟 1800s） | `guard` | 3 / 2 次 `calc` | 0 | 773s | 否，`insufficient-runtime` |
+| ③ 单步探针（放宽步数） | `guard`：**检测到连续 3 次相同工具调用，判定为死循环** | 3 / 2 次 `calc` | 0 | 818s | 否，`insufficient-runtime` |
+
+三次**稳定复现同一模式**：warmup 返回规范 `tool_calls`（10.3s）坐实 v2.13.0 的修复；
+进入 Agent 循环后模型会发起原生 `calc` 调用，但随即反复调用同一工具、不给终答，
+被死循环守卫拦下。三次都没有 `completed` 轨迹。
+
+**为什么到此收尾**：③ 已把任务步数放宽、墙钟放宽，剩下的拦截是
+**真实行为信号**（模型自己陷入重复调用）。再放宽 `loopDetectionThreshold`
+只是让它多绕几圈、多烧十几分钟，仍不会产出 `completed`，反而是在掩盖测量事实。
+因此不再重跑，如实记为负结果。
+
+**分层结论**（三层分开写，不混成一句「模型不行」）：
+
+- **链路层已证**：2 次原生 `calc` 调用、协议 0 违规 → v2.10.0「0 工具调用 = 能力下限」
+  彻底撤销，那批 0 是适配缺陷而非能力证据；
+- **能力层未测出**：没有 `completed`，「1.5B 能否完成一次工具任务」仍是**未测出**，
+  既不是「太弱」也不是「够用」；
+- **瓶颈层写明**：本机纯 CPU 单步约 250~270s（3 步即 10~14 分钟），
+  加上弱模型的重复调用倾向，运行时预算内跑不完；**不是「必须换更大内存」**
+  ——1.5B 本身就跑得起来（稳态 3.4~4.3GB / 8GB、无 OOM）。
+
+报告 `data/bench/v2-localqwen15b-admission.json` 标 `measurementValid: false`，
+自带 `linkProbe` 字段保存链路证据，避免删无效报告时把有用信息一起删掉。
+`leadership.verdict` 仍 `not-proven`，不产生能力分数。
+
+---
+
 ## 6. 不能下的结论（诚实边界）
 
 - **不是外部基准**：任务、fixture、隐藏断言均为本项目自建，不具备外部有效性；

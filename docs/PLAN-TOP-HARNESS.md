@@ -236,8 +236,12 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 > 确定性回归（v2.9.0）✅：`faults.provider` 在 deterministic / live 均生效，三组 on/off 对照
 > 从「只能靠 kilo 人工跑分」升级为**离线可复算的第 18 道发布阻断门禁**（`npm run fault:check`，
 > 3/3 接受）；零新增源文件、未上调代码预算阈值。边界见 `docs/BENCH-v2.md` §5.5。
-> **W1-06 暂缓**：账本里它是下一个任务卡，但「L2 扩到 60 个同质任务」已被 0pp 负结果否定；
-> 继续堆同质任务只会得到更多 0pp，先补齐可放大差异的场景与确定性回归底座再扩容。
+> **W1-06 已重定口径交付（v2.14.0）**：原「L2 扩到 60 个同质任务」被 0pp 负结果否定，
+> 不再堆同质任务。改为把**现有 37 个真实任务**（l1 19 + l2 18）按 `sha1(id)` 确定性切成
+> `dev 12 / holdout 15 / ood 10` 三堆、冻结指纹、互不相交、OOD 完全只读；
+> `npm run segments:check`（第 21 道门禁）离线验证真实分段可复核、改坏必红，
+> 并把三段真实指纹接进 `judgePromotion` 作为合法输入。详见 `docs/BENCH-v2.md` §5.10。
+> 边界：这是**输入契约门禁**，不是 `promote.ts` 接入 RSI 主循环，阶段 C 仍停在 B。
 
 | 层 | 用途 | 规模 | 判定方式 |
 | --- | --- | --- | --- |
@@ -264,6 +268,9 @@ CAS = Score / (TotalTokens × UnitPrice + WallClockSeconds × 0.001)
 - `npm run bench:v2 -- --layer l2 --repeat 3` 跑通，产出 `data/bench/v2-<model>-<ts>.json`。
 - 同一模型 3 次重复，总分标准差 **< 0.05**（否则判定为评测噪声，先修任务再谈能力）。
 - 任务集**分层留出**：L2 内再切 `dev`（40）/ `holdout`（20），`holdout` 只在发布前跑。
+  → **v2.14.0 已按重定口径交付**：不扩到 60，改为现有 37 个真实任务三段冻结
+  （`dev 12 / holdout 15 / ood 10`），`npm run segments:check` 钉住三段指纹、互不相交、
+  OOD 完全只读与「真实分段可作为判定机器输入」。扩容本身仍被 0pp 负结果否定，不再排期。
 - 至少 2 个任务能让最小 harness 与 bro2 产生 **≥ 20pp** 差距（证明任务有区分度）。
 
 **LOC 预算**：源 ≤ 700 / 测试 ≤ 350（任务集是数据，不计入代码预算）
@@ -644,9 +651,11 @@ npm run auto:status    # 五个战役的 done/total、阻塞项、最近 5 条 j
 > **v2.11.0 已交付这道前置闸门（判定机器层）**：`judgePromotion`（并入 `eval-grade.ts`）
 > 把三段晋升铁律做成离线可复算的纯判定，`npm run promotion:check`（第 19 道门禁）以
 > 真实 `runEval` 三段分数验证「合法晋升接受 / 12 个违规信号全拒绝 / OOD 退化即阻断」。
-> 但**这是闸门，不是 `promote.ts` 接入 RSI 主循环**：真实 dev/holdout/OOD 任务集分层
-> 仍待 W1-06 重定口径（0pp 负结果后策略性阻塞）。阶段 C 仍需这一接入后才成立，
-> 现在停在 B 是如实状态，不虚报。见 `docs/BENCH-v2.md` §5.7。
+> 但**这是闸门，不是 `promote.ts` 接入 RSI 主循环**。真实 dev/holdout/OOD 任务集分层
+> 已于 **v2.14.0** 按重定口径交付（37 个真实任务三段冻结 + 第 21 道输入契约门禁），
+> 三段真实指纹已能作为判定机器的合法输入；**仍缺 `promote.ts` 把三段接进 RSI 主循环**。
+> 阶段 C 仍需这一接入后才成立，现在停在 B 是如实状态，不虚报。
+> 见 `docs/BENCH-v2.md` §5.7 / §5.10。
 >
 > **v2.12.0 补上目标 2 的另一半结构闭环**：端点体检结果（v2.10.0）此前只落文档，
 > `endpoint` 域经验「只写不读」；现折叠为跨会话先验注入 `KeylessAggregator.score()`、

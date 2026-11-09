@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-09T11:39:07.232Z",
+  "providerName": "local-qwen15b",
+  "mode": "live",
+  "measurementValid": false,
+  "verdict": "insufficient-runtime",
+  "stoppedBy": "guard",
+  "steps": 3,
+  "toolCalls": 2,
+  "protocolViolations": 0,
+  "latencyMs": 818381,
+  "ok": false,
+  "reasons": [
+    "停止原因 guard ≠ completed",
+    "终答未包含期望内容 [\"100\"]"
+  ],
+  "answer": "任务终止：检测到连续 3 次相同工具调用，判定为死循环。请调整指令后重试。",
+  "taskSetHash": "c423cc2bf0ca",
+  "linkProbe": {
+    "steps": 3,
+    "toolCalls": 2,
+    "tools": [
+      "calc",
+      "calc"
+    ],
+    "stoppedBy": "cancelled",
+    "protocolViolations": 0
+  },
+  "note": [
+    "链路证据：v2.13.0 修复前本地端点 0 工具调用；修复后同一 1.5B 发起 2 次原生 calc 调用，撤销「0.5B 能力下限」结论。",
+    "能力结论只在 completed 轨迹下成立；cancelled / guard / provider_error 一律记 insufficient-runtime，不进证据集。",
+    "三次实测稳定复现 3 步 / 2 次工具调用 / 协议 0 违规；第三次守卫原文为「检测到连续 3 次相同工具调用，判定为死循环」，属运行时与模型行为约束，不是能力结论。",
+    "leadership.verdict 仍为 not-proven，L4 仍为 not-achieved；本次是链路/准入证据，不是能力分数。"
+  ]
+}
