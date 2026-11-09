@@ -11,14 +11,14 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.10.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.11.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
 | 架构 | 8 层：kernel / models / context / tools / memory / cognition / delegation / governance / observability / interfaces |
 | 唯一真相源 | `Trajectory`（每次运行的轨迹日志，不可变追加） |
 | 源代码规模 | 68 个 `src/*.ts` + 4 个入口/脚本 `.ts` + 1 个 Web 入口 HTML + 1 个 Python 本地推理服务 |
-| 测试规模 | 29 个测试文件；`npm test` **249** 项全绿 |
+| 测试规模 | 30 个测试文件；`npm test` **261** 项全绿 |
 | 诚实判定 | `leadership.verdict = not-proven`；证据阶梯 L4 = `not-achieved`（不伪造外部基准） |
 | 仓库状态 | 已初始化 git，初始提交 `v2.0.0` tag；`.gitignore` 隔离运行时产物 |
 | 版本控制 | git（提交粒度 = 逻辑交付单元；发布 = tag + CHANGELOG 条目） |
@@ -31,7 +31,7 @@
 
 | 验收项 | 命令 | 当前结果 | 性质 |
 | --- | --- | --- | --- |
-| 单元测试 + e2e + 故障注入 | `npm test` | **249 / 249 PASS** | 交付门禁 |
+| 单元测试 + e2e + 故障注入 | `npm test` | **261 / 261 PASS** | 交付门禁 |
 | CI 可移植性（测试不得依赖本机环境事实） | `npm test` → `tests/remote-sync.test.ts` 第 6 项 | 有/无凭证两环境均 6/6 | 防复发门禁 |
 | 能力矩阵结构自检 | `npm run verify` | 23 项 PASS | 结构门禁 |
 | 行为策略代码分支实证 | `npm run policy:check` | 19 项 PASS | 策略门禁 |
@@ -45,6 +45,7 @@
 | **L2 任务双态校准** | `npm run task:check -- --layer l2 --quiet` | 18/18：原始快照必失败、参考解必通过 | 任务有效性门禁 |
 | **编辑接口指标** | `npm run aci:check` | 7/7：精确/空白/缩进可改对，多处命中拒绝，补丁零半成品 | ACI 门禁 |
 | **故障恢复确定性对照** | `npm run fault:check` | 3/3 接受（retry / empty-guard / repair）：离线可复算、防哑弹、拒绝自报增益 | 恢复力回归门禁（第 18 道） |
+| **三段晋升判据** | `npm run promotion:check` | 合法晋升 1/1 接受（三段分数由 `runEval` 真实产出：dev 0→1、holdout/ood 1→1）+ 12 个受控违规信号全部拒绝；OOD 退化即阻断、自报增益不参与 | 阶段 C 前置闸门（第 19 道） |
 | 远程同步一致性（防漏推，纯只读） | `npm run push:check` | `✓ 远程已同步`，main 与本地一致、最新 tag 已推送 | 信息展示门禁 |
 | 改进同步闭环（提交 + 唯一通道推送 + 自检） | `npm run ship` | 复用仓库外 600 权限 PAT，凭证不入库、不回显 | 发布流程 |
 | 元 RSI 写保护 + 冻结 fitness | `npm run meta:check` | 25 项 PASS | 元层门禁 |
@@ -272,7 +273,8 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.10.0**（免 Key 端点体检与聚合器健康度修复：15 个端点匿名实测双层归因、新增匿名 `ovhcloud` 后端、复活 `llm7`、按实测重排聚合器优先级、本地 0.5B 服务归位；**负结果**：0.5B L2 准入 0/3、0 工具调用，弱模型证据缺口原因升级为「能力下限」；`npm test` 249/249、门禁 18/18）。
+- 当前最新：**v2.11.0**（三段晋升判据：`judgePromotion` 要求 dev 严格提升 / holdout·OOD 不退化 / OOD 完全只读 / 三段无缺格 / 任务集冻结 / 协议 0 / 完整性通过，自报增益绝不参与判定；`npm run promotion:check` 第 19 道门禁以真实 `runEval` 三段分数验证合法晋升 1/1 接受、12 个违规信号全拒绝，退化即阻断；阶段 C 前置闸门。判定并入 `eval-grade.ts`、编排并入 `bench-v2.ts`，**零新增源文件、未上调阈值**；`npm test` 261/261、门禁 19/19）。
+- 上版：**v2.10.0**（免 Key 端点体检与聚合器健康度修复：15 个端点匿名实测双层归因、新增匿名 `ovhcloud` 后端、复活 `llm7`、按实测重排聚合器优先级、本地 0.5B 服务归位；**负结果**：0.5B L2 准入 0/3、0 工具调用，弱模型证据缺口原因升级为「能力下限」；`npm test` 249/249、门禁 18/18）。
 - 上版：**v2.9.0**（故障恢复证据的确定性回归门禁：`faults.provider` 在 deterministic / live 均生效；`npm run fault:check` 三组 on/off 对照 3/3 接受，离线可复算、防哑弹、拒绝自报增益，进第 18 道发布阻断门禁；判定并入 `eval-grade.ts`、编排并入 `bench-v2.ts`，**零新增源文件、未上调代码预算阈值**；`npm test` 249/249、门禁 18/18）。
 - 上版：**v2.8.0**（脏故障形态 timeout/retry-after/empty-response + 空响应守卫 + 故障任务扩到 9 个；三组对照：重试 5/5 vs 0/5、守卫 2/2 vs 0/2、repair 效率级；`npm test` 237/237；**负结果**：免 Key 弱端点均为链路故障，弱模型对照证据缺口保留）。
 - 上版：**v2.7.0**（故障注入 + 路由瞬态重试；首个正向增益证据：重试开 3/3 vs 关 0/2）。

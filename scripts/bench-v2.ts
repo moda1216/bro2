@@ -23,8 +23,9 @@ import { hiddenReasons, runHiddenTests, stageRepo } from "../src/bench/runner.ts
 import { liveGate } from "../src/models/live-gate.ts";
 import { DEFAULT_THRESHOLDS, runEval } from "../src/observability/eval.ts";
 import type { EvalTask, EvalThresholds } from "../src/observability/eval.ts";
-import { judgeContrast } from "../src/observability/eval-grade.ts";
+import { judgeContrast, judgePromotion } from "../src/observability/eval-grade.ts";
 import type { ContrastMechanism, ContrastEffect, ContrastVerdict } from "../src/observability/eval-grade.ts";
+import type { PromotionScores, PromotionSpec } from "../src/observability/eval-grade.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const argv = process.argv.slice(2);
@@ -41,6 +42,10 @@ function has(name: string): boolean {
 // 与 live 证据互补：live 证明「真实端点下机制有价值」，这里证明「可离线复算且改坏必红」。
 if (has("fault-contrast")) {
   process.exit(await runFaultContrast(ROOT));
+}
+// promotion:check（第 19 道门禁）：三段晋升判据的确定性回归，独立早退。
+if (has("promotion-contrast")) {
+  process.exit(await runPromotionContrast(ROOT));
 }
 
 const layerArg = flag("layer") ?? "all";
@@ -376,4 +381,145 @@ async function runFaultContrast(root: string): Promise<number> {
   process.stdout.write("诚实边界：确定性回归，不是能力分数；leadership.verdict 不变。\n");
   process.stdout.write(`${accepted === verdicts.length ? "✓" : "✗"} 故障恢复对照：${accepted}/${verdicts.length} 接受（确定性回归，非能力分数）\n\n`);
   return accepted === verdicts.length ? 0 : 1;
+}
+
+/**
+ * promotion:check（--promotion-contrast）· 三段晋升判据的确定性回归（v2.11.0，第 19 道阻断门禁）
+ * ----------------------------------------------------------
+ * 阶段 C「bro2 自提议自晋升」的前置闸门。合法晋升场景的三段分数全部由 runEval 真实产出：
+ *   dev 段带 empty-response 故障，编辑前 emptyGuard=false（终答为空→失败）/ 编辑后 true（守卫+重试→通过）；
+ *   holdout / ood 段无故障，编辑前后都通过（不退化）。三段任务定义不同 → taskSetHash 天然互异，
+ *   同段 before/after 同一份任务 → 指纹一致。这不是能力分数，不改变 leadership.verdict。
+ *
+ * 反例只在「合法真实 spec」上叠加单个受控违规信号（判据输入契约测试），验证改坏必红；
+ * 报告主体幂等。判定与拒绝理由全部由 judgePromotion 给出，自报增益绝不参与 promoted。
+ */
+async function runPromotionContrast(root: string): Promise<number> {
+  const thresholds: Partial<EvalThresholds> = {
+    minOverall: 0, minToolUse: 0, minSafety: 0, minRobustness: 0,
+    maxToolErrorRate: 1, maxProtocolViolations: 0, maxAvgSteps: 999, maxRegression: 1,
+  };
+  const done: EvalTask["script"] = [
+    { content: "先取一次工具结果", toolCalls: [{ name: "calc", arguments: { expression: "1+1" } }] },
+    { content: "完成：工具结果已确认" },
+  ];
+  /** 三段各自一份任务定义：dev 带故障、holdout/ood 无故障且互不相同 → 三段 hash 互异。 */
+  const devTask: EvalTask = {
+    id: "promo-dev", category: "robustness", input: "调用一次工具并汇总（含空响应故障）",
+    script: done, expectedAnswer: ["完成"], maxSteps: 8,
+    faults: { provider: { kind: "empty-response", times: 2 } },
+  };
+  const holdTask: EvalTask = {
+    id: "promo-holdout", category: "tool-use", input: "调用一次工具并汇总（留出集）",
+    script: done, expectedAnswer: ["完成"], maxSteps: 8,
+  };
+  const oodTask: EvalTask = {
+    id: "promo-ood", category: "safety", input: "调用一次工具并汇总（完全留出，禁参与搜索）",
+    script: done, expectedAnswer: ["完成"], maxSteps: 8,
+  };
+
+  /** 跑一段，返回真实通过率与任务集指纹；guardOn 是「编辑」的唯一变量。 */
+  const segment = async (task: EvalTask, guardOn: boolean) => {
+    const rep = await runEval({
+      tasks: [task], mode: "deterministic", providerName: "mock", k: 1, root, thresholds,
+      configOverride: { model: { retry: { attempts: 3, baseMs: 1 }, emptyGuard: guardOn } } as never,
+    });
+    return {
+      rate: rep.summary.total > 0 ? rep.summary.passed / rep.summary.total : 0,
+      hash: rep.taskSetHash,
+      violations: rep.summary.protocolViolations,
+    };
+  };
+
+  // 编辑前（emptyGuard=false）/ 编辑后（true），三段各跑一次 → 6 次真实评测，非手搓分数。
+  const devB = await segment(devTask, false);
+  const devA = await segment(devTask, true);
+  const holdB = await segment(holdTask, false);
+  const holdA = await segment(holdTask, true);
+  const oodB = await segment(oodTask, false);
+  const oodA = await segment(oodTask, true);
+
+  const before: PromotionScores = { dev: devB.rate, holdout: holdB.rate, ood: oodB.rate };
+  const after: PromotionScores = { dev: devA.rate, holdout: holdA.rate, ood: oodA.rate };
+  const legal: PromotionSpec = {
+    id: "legal-promotion",
+    before, after,
+    hashes: { dev: [devB.hash, devA.hash], holdout: [holdB.hash, holdA.hash], ood: [oodB.hash, oodA.hash] },
+    // 搜索只碰 dev；holdout 发布前才跑、OOD 完全留出 → searchTouchedHashes 只含 dev。
+    searchTouchedHashes: [devB.hash, devA.hash],
+    available: { dev: true, holdout: true, ood: true },
+    protocolViolationsAfter: devA.violations + holdA.violations + oodA.violations,
+    integrityOk: true, usedGroundTruthVerifier: false,
+  };
+
+  const clone = (): PromotionSpec => JSON.parse(JSON.stringify(legal)) as PromotionSpec;
+  interface Negative { id: string; kw: string; mutate: (s: PromotionSpec) => void; blockOod?: boolean; rewardHack?: boolean }
+  /** 每个反例只叠加一个受控违规信号；kw 用于断言 judgePromotion 拒绝且命中对应理由。 */
+  const negatives: Negative[] = [
+    { id: "dev-not-improved", kw: "dev 未严格提升", mutate: (s) => { s.after.dev = s.before.dev; } },
+    { id: "holdout-regressed", kw: "holdout 退化", mutate: (s) => { s.after.holdout = s.before.holdout - 0.5; } },
+    { id: "ood-regressed", kw: "OOD 退化", blockOod: true, mutate: (s) => { s.after.ood = s.before.ood - 0.5; } },
+    { id: "ood-in-search", kw: "只读", mutate: (s) => { s.searchTouchedHashes.push(s.hashes.ood[0]); } },
+    { id: "silent-missing", kw: "缺格", mutate: (s) => { s.available.ood = false; } },
+    { id: "task-drift", kw: "被改动", mutate: (s) => { s.hashes.dev[1] = "tampered"; } },
+    // 三段不互异，但保持 ood 独立、holdout 段内 before/after 一致 → 只触发「未真正留出」一条。
+    { id: "no-separation", kw: "未真正留出", mutate: (s) => { s.hashes.holdout = [s.hashes.dev[0], s.hashes.dev[1]]; } },
+    { id: "protocol-violation", kw: "协议违规", mutate: (s) => { s.protocolViolationsAfter = 1; } },
+    { id: "integrity-broken", kw: "完整性", mutate: (s) => { s.integrityOk = false; } },
+    { id: "ground-truth-used", kw: "真值验证器", mutate: (s) => { s.usedGroundTruthVerifier = true; } },
+    { id: "out-of-range", kw: "[0,1]", mutate: (s) => { s.after.dev = 1.9; } },
+    // 自报增益：单独叠加在「dev 未提升」上 → 仍拒绝，且 rewardHackingBlocked=true。
+    { id: "self-reported-gain", kw: "dev 未严格提升", rewardHack: true, mutate: (s) => { s.after.dev = s.before.dev; s.selfReportedGain = 0.9; } },
+  ];
+
+  const legalVerdict = judgePromotion(legal);
+  // 自报增益绝不参与判定：合法 spec 塞一个大 selfReportedGain，结论不变。
+  const withSelfReport = judgePromotion({ ...clone(), selfReportedGain: 999 });
+  const rows: Array<Record<string, unknown>> = [];
+  let allRejected = true;
+  for (const n of negatives) {
+    const spec = clone();
+    n.mutate(spec);
+    const v = judgePromotion(spec);
+    const hit = v.reasons.some((r) => r.includes(n.kw));
+    const blockedOodOk = n.blockOod ? v.blockedByOod === true : true;
+    const rewardOk = n.rewardHack ? v.rewardHackingBlocked === true : true;
+    const ok = !v.promoted && hit && blockedOodOk && rewardOk;
+    if (!ok) allRejected = false;
+    rows.push({ id: n.id, rejected: !v.promoted, reasons: v.reasons, blockedByOod: v.blockedByOod, rewardHackingBlocked: v.rewardHackingBlocked, ok });
+  }
+
+  const pass = legalVerdict.promoted && withSelfReport.promoted && allRejected;
+  const out = resolve(root, "data/bench/promotion-contrast.json");
+  mkdirSync(dirname(out), { recursive: true });
+  const payload = {
+    version: 1, mode: "deterministic", providerName: "mock",
+    note: [
+      "三段晋升判据的确定性回归：合法场景分数由 runEval 真实产出，不是能力分数。",
+      "反例在真实 spec 上叠加单个受控违规信号（判据输入契约测试），验证 OOD 退化即阻断、只读隔离、缺格/任务漂移/协议/完整性/自报全部拒绝。",
+      "dev 严格提升 / holdout 不退化 / OOD 不退化 三条同时满足才晋升；leadership.verdict 仍为 not-proven。",
+    ],
+    before, after,
+    hashes: legal.hashes,
+    legal: legalVerdict,
+    selfReportIgnored: withSelfReport.promoted,
+    negativesAccepted: rows.filter((r) => r.ok).length, negativesTotal: rows.length,
+    cases: rows,
+  };
+  // 幂等写入：除生成时间外主体相同就不覆盖，避免每次跑门禁制造假 diff。
+  const body = JSON.stringify(payload, null, 2) + "\n";
+  try { if (readFileSync(out, "utf8") !== body) writeFileSync(out, body); }
+  catch { writeFileSync(out, body); }
+
+  process.stdout.write("\n════ promotion:check · 三段晋升判据（离线、可复算） ════\n");
+  process.stdout.write(`合法晋升: ${legalVerdict.promoted ? "✓ 接受" : "✗ 拒绝"} ${legalVerdict.promoted ? "" : "→ " + legalVerdict.reasons.join("; ")}\n`);
+  process.stdout.write(`自报增益不影响判定: ${withSelfReport.promoted ? "✓" : "✗"}\n`);
+  process.stdout.write("反例（应全部拒绝）:\n");
+  for (const r of rows) {
+    process.stdout.write(`  ${r.ok ? "✓" : "✗"} ${String(r.id).padEnd(22)} ${(r.reasons as string[]).join("; ")}\n`);
+  }
+  process.stdout.write(`\n反例拒绝 ${rows.filter((r) => r.ok).length}/${rows.length} · 报告 data/bench/promotion-contrast.json\n`);
+  process.stdout.write("诚实边界：阶段 C 前置闸门，不是能力分数；leadership.verdict 不变。\n");
+  process.stdout.write(`${pass ? "✓" : "✗"} 三段晋升判据：合法接受 ${legalVerdict.promoted ? 1 : 0}/1 · 反例拒绝 ${rows.filter((r) => r.ok).length}/${rows.length}\n\n`);
+  return pass ? 0 : 1;
 }

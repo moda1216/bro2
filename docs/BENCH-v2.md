@@ -299,6 +299,43 @@ chat / SSE / 原生 `tool_calls` 全 PASS。之前「Ollama 未启动」的记�
 
 有效负结果报告：`data/bench/v2-localqwen-l2-admission.json`（0.5B，completed、0 工具调用）。
 
+### 5.7 三段晋升判据的确定性回归门禁（v2.11.0）
+
+作战计划 §6.2 / W4 把 `dev 提升 AND holdout 不退化 AND OOD 不退化` 定为自进化晋升铁律，
+并把「OOD 退化能自动阻断、阻断记录可在 journal 复核」列为**阶段 C（bro2 自提议自晋升）
+的前置**。此前它只是计划书里的纸面判据：代码只有 v1 的 train/holdout 严格提升
+（`src/rsi/loop.ts`），没有 OOD 完全只读通道、缺格 / 任务漂移 / 完整性校验，
+也没有「改坏必红」的离线回归保护。
+
+**`npm run promotion:check`（第 19 道门禁）**：`judgePromotion`（并入
+`src/observability/eval-grade.ts`、与判分同口径）要求一条编辑同时满足十条：
+dev 严格提升 · holdout 不退化 · OOD 不退化 · OOD 完全只读（搜索轨迹不含 OOD 指纹）·
+三段无静默缺格 · 分数 ∈[0,1] 有限值 · 各段任务集编辑前后冻结且三段互异 ·
+协议违规 0 · 完整性 tripwire 通过 · 未启用真值验证器。
+`selfReportedGain` 只进审计与 `rewardHackingBlocked`，**绝不参与 `promoted`**。
+
+合法晋升场景的三段分数**全部由 `runEval` 真实产出**（不是手搓行为摘要）：
+
+| 段 | 任务 | 编辑前 `emptyGuard=false` | 编辑后 `emptyGuard=true` | Δ |
+| --- | --- | --- | --- | --- |
+| dev | 带 `empty-response` 故障 | 终答为空 → 失败 **0** | 守卫 + 重试 → 通过 **1** | **+1** |
+| holdout | 无故障（留出集） | 通过 **1** | 通过 **1** | 0 |
+| ood | 无故障（完全留出） | 通过 **1** | 通过 **1** | 0 |
+
+三段任务定义互异 → `taskSetHash` 天然互异；同段 before/after 同一份任务 → 指纹一致。
+合法晋升被接受；再在同一份真实 spec 上叠加 12 个受控违规信号
+（dev 不提升 / holdout 退化 / OOD 退化 / OOD 参与搜索 / 静默缺格 / 任务漂移 /
+未真正留出 / 协议违规 / 完整性失败 / 真值验证器 / 分数越界 / 自报增益），
+逐一验证拒绝且命中对应理由。报告 `data/bench/promotion-contrast.json` 幂等写入。
+
+**边界**：这是**阶段 C 前置闸门 + 确定性回归门禁**，不是能力分数。它证明
+「晋升判定机器可离线复算、退化即阻断」，不证明任何 harness 编辑真实有效；
+三段是确定性构造的留出集，真实任务集的 dev/holdout/OOD 分层仍待 W1-06 重定口径
+（该任务已按 0pp 负结果策略性阻塞）。`leadership.verdict` 保持 `not-proven`。
+
+> 反模式：为了让晋升通过而放宽 `tolerance`、把退化段标成 `available: false` 之外的值、
+> 或用自报 `scoreGain` 替代行为分数——三者都会让阶段 C 失去「可证伪」的意义。
+
 ---
 
 ## 6. 不能下的结论（诚实边界）

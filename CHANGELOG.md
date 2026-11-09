@@ -10,6 +10,47 @@
 
 ---
 
+## [2.11.0] — 2026-11-09 · 三段晋升判据：阶段 C「自提议自晋升」的前置闸门（MINOR）
+
+**解决的问题**：作战计划 §6.2 / W4 把 `dev 提升 AND holdout 不退化 AND OOD 不退化`
+定为自进化晋升的铁律，并明确「阶段 C（bro2 自己 propose→probe→晋升）的前置是
+`promote.ts` 能在 OOD 退化时**自动阻断**、且阻断记录可在 journal 复核；做不到就停在 B」。
+但截至 v2.10.0 这套三段判据只写在计划书里，代码只有 v1 的 train/holdout 严格提升
+（`src/rsi/loop.ts`），**没有 OOD 完全只读通道、没有缺格/任务漂移/完整性校验**，
+更没有「改坏必红」的离线回归保护——和 v2.9.0 之前的故障恢复证据一样，是纸面判据。
+
+**改动**（零新增源文件：判定并入 `eval-grade.ts`、编排并入 `bench-v2.ts`）：
+
+- `judgePromotion`（`src/observability/eval-grade.ts`）：一段 harness 编辑能否晋升，
+  必须同时满足 **dev 严格提升 · holdout 不退化 · OOD 不退化 · OOD 完全只读 ·
+  三段无静默缺格 · 分数 ∈[0,1] · 任务集前后冻结且三段互异 · 协议违规 0 ·
+  完整性 tripwire 通过 · 未启用真值验证器**。任一不满足即拒绝并在 `reasons`
+  给出可复核数值（如「OOD 退化 −0.5 超过容差 0：退化即阻断」），
+  `blockedByOod` 单独标记供 journal 追溯。判定**只认三段真实行为分数 + 冻结任务集指纹**，
+  `selfReportedGain` 只进审计与 `rewardHackingBlocked` 标记，绝不参与 `promoted`
+  （沿用 `live-contrast` / v2.9.0 防 reward hacking 红线）。
+- `npm run promotion:check`（`--promotion-contrast`，**第 19 道发布阻断门禁**）：
+  合法晋升场景的三段分数**全部由 `runEval` 真实产出**——dev 段带 `empty-response`
+  故障，编辑前 `emptyGuard=false`（终答为空→失败 0）/ 编辑后 `true`（守卫+重试→通过 1），
+  holdout/ood 无故障且任务定义互异（指纹天然互异），编辑前后均通过（不退化）。
+  实测 `dev 0→1、holdout 1→1、ood 1→1`，三段 hash 互异 → 合法晋升被接受。
+  再在**同一份真实 spec** 上叠加 12 个受控违规信号（dev 不提升 / holdout 退化 /
+  OOD 退化 / OOD 参与搜索 / 静默缺格 / 任务漂移 / 未真正留出 / 协议违规 /
+  完整性失败 / 真值验证器 / 分数越界 / 自报增益），逐一验证拒绝且命中对应理由。
+  报告 `data/bench/promotion-contrast.json` 幂等写入（除时间外主体不变则不覆盖）。
+- `tests/promotion.test.ts`：12 项判据行为契约单测（含容差边界、NaN、自报不参与、
+  `rewardHackingBlocked`），保证判据本身「改坏必红」。
+
+**诚实边界**：这是**阶段 C 前置闸门 + 确定性回归门禁**，不是能力分数。它证明的是
+「晋升判定机器在任何机器上可离线复算、退化即阻断」，不证明任何 harness 编辑真实有效；
+三段是确定性构造的留出集（真实任务集尚待 W1-06 重定 dev/holdout/OOD 分层口径，
+该任务已按 0pp 负结果策略性阻塞）。`leadership.verdict = not-proven`、L4 `not-achieved`
+均不变。零新增源文件（90/90）、未上调任何代码预算阈值。
+
+`npm test` **261/261**、发布门禁 **19/19** 全绿。
+
+---
+
 ## [2.10.0] — 2026-11-09 · 免 Key 端点体检、聚合器健康度修复与弱模型能力下限（MINOR）
 
 **解决的问题**：v2.8 把 4 个免 Key 弱端点的失败笼统记为「链路故障」，本地 0.5B 记为

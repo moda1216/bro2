@@ -2,10 +2,12 @@
  * L7 可观测性 · 评测判分与故障配置
  * ----------------------------------------------------------
  * 从 eval.ts 拆出的原因只有一个：**单文件不得超过 700 行**（预算门禁）。
- * 职责边界不变：这里只做「从轨迹抽指标 + 按任务判分 + 构造故障配置 + 对照判定」，
- * 执行编排与报告聚合仍由 eval.ts 负责，避免第二套口径。
+ * 职责边界不变：这里只做「从轨迹抽指标 + 按任务判分 + 构造故障配置 + 对照判定 +
+ * 晋升判定」，执行编排与报告聚合仍由 eval.ts / bench-v2.ts 负责，避免第二套口径。
  * v2.9.0：故障恢复的确定性对照判定（judgeContrast）并入本模块——它属于「判分」，
  * 与 grade 同口径；独立成文件会把源文件数顶破预算（少而精：合并优先于新增）。
+ * v2.11.0：三段晋升判据（judgePromotion）同样并入——判定的是「编辑能否晋升」，
+ * 与判分同属纯判定层；零新增源文件（源文件数 90/90 已满）。
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -317,5 +319,106 @@ export function judgeContrast(spec: ContrastSpec, on: EvalRunMetrics, off: EvalR
     id: spec.id, mechanism: spec.mechanism, effect: spec.effect,
     accepted: reasons.length === 0, reasons,
     on: contrastSide(on), off: contrastSide(off),
+  };
+}
+
+// ---------------------------------------------------------------- 三段晋升判据（v2.11.0）
+
+/**
+ * 阶段 C（bro2 自提议自晋升）的前置闸门：一条 harness 编辑能否晋升，必须同时满足
+ *   dev 严格提升 · holdout 不退化 · OOD 不退化 · OOD 完全只读 · 三段无缺格 ·
+ *   协议违规 0 · 完整性 tripwire 通过 · 未启用真值验证器。
+ * 判定只认三段真实行为分数与冻结任务集指纹；**自报增益绝不参与**（沿用 live-contrast 红线）。
+ * 这是「编辑能否晋升」的判定机器，不是能力分数，不改变 leadership.verdict。
+ */
+export interface PromotionScores { dev: number; holdout: number; ood: number }
+
+export interface PromotionSpec {
+  id: string;
+  /** 编辑前 / 后三段通过率，来自 runEval 行为判定（∈[0,1]，非自报分数）。 */
+  before: PromotionScores;
+  after: PromotionScores;
+  /** 三段任务集的冻结指纹，各段 [before, after] 两份；三段之间必须互不相同（留出隔离）。 */
+  hashes: { dev: [string, string]; holdout: [string, string]; ood: [string, string] };
+  /** 搜索阶段实际接触过的任务集哈希（来自账本 / 轨迹）；命中 OOD 即视为污染。 */
+  searchTouchedHashes: string[];
+  /** 三段是否真实评测产出；任一 false 为静默缺格，一律拒绝（防用 0 冒充缺失）。 */
+  available: { dev: boolean; holdout: boolean; ood: boolean };
+  protocolViolationsAfter: number;
+  integrityOk: boolean;
+  usedGroundTruthVerifier: boolean;
+  /** 允许的不退化容差，默认 0（严格）；作战计划护栏口径为 0.02（2pp）。 */
+  tolerance?: number;
+  /** 候选自报增益：只进审计与 rewardHacking 标记，绝不参与 promoted 判定。 */
+  selfReportedGain?: number;
+}
+
+export interface PromotionVerdict {
+  id: string;
+  promoted: boolean;
+  reasons: string[];
+  deltas: PromotionScores;
+  /** OOD 退化是否构成阻断（供 journal 复核「退化即自动阻断」）。 */
+  blockedByOod: boolean;
+  rewardHackingBlocked: boolean;
+}
+
+const SLICES = ["dev", "holdout", "ood"] as const;
+
+export function judgePromotion(spec: PromotionSpec): PromotionVerdict {
+  const reasons: string[] = [];
+  const tol = spec.tolerance ?? 0;
+  const finite = (n: number) => Number.isFinite(n) && n >= 0 && n <= 1;
+  const deltas: PromotionScores = {
+    dev: spec.after.dev - spec.before.dev,
+    holdout: spec.after.holdout - spec.before.holdout,
+    ood: spec.after.ood - spec.before.ood,
+  };
+
+  // 1) 缺格 / 数值范围：静默缺格与用 NaN/0 冒充缺失一律拒绝（矩阵门禁同源口径）。
+  for (const s of SLICES) {
+    if (!spec.available[s]) reasons.push(`${s} 段静默缺格：没有真实评测结果`);
+    if (!finite(spec.before[s]) || !finite(spec.after[s])) {
+      reasons.push(`${s} 段分数非 [0,1] 有限值：不可参与晋升判定`);
+    }
+  }
+
+  // 2) 完整性 tripwire：闭环不可信 / 启用了真值验证器（自确认循环），拒绝。
+  if (!spec.integrityOk) reasons.push("完整性 tripwire 失败：闭环不可信");
+  if (spec.usedGroundTruthVerifier) reasons.push("启用了真值验证器：自确认循环，拒绝晋升");
+
+  // 3) 冻结尺子：各段 before/after 任务集必须同一份；三段之间必须互不相同（留出隔离）。
+  for (const s of SLICES) {
+    if (spec.hashes[s][0] !== spec.hashes[s][1]) {
+      reasons.push(`${s} 段任务集在编辑前后被改动：对比失效（防调难度刷分）`);
+    }
+  }
+  const uniq = new Set(SLICES.map((s) => spec.hashes[s][0]));
+  if (uniq.size !== 3) reasons.push("三段任务集指纹不互异：dev/holdout/OOD 未真正留出");
+
+  // 4) OOD 完全只读：搜索阶段绝不能接触 OOD 任务集（作战计划 H2 / 阶段 C 前置）。
+  const oodHashes = spec.hashes.ood;
+  if (spec.searchTouchedHashes.some((h) => oodHashes.includes(h))) {
+    reasons.push("OOD 任务集出现在搜索轨迹中：违反完全只读，晋升阻断");
+  }
+
+  // 5) 三段行为判据：dev 严格提升、holdout/OOD 不退化（退化即自动阻断）。
+  if (!(deltas.dev > 0)) reasons.push(`dev 未严格提升（Δ=${deltas.dev.toFixed(4)}）`);
+  if (deltas.holdout < -tol) reasons.push(`holdout 退化 ${deltas.holdout.toFixed(4)} 超过容差 ${tol}`);
+  const oodRegressed = deltas.ood < -tol;
+  if (oodRegressed) reasons.push(`OOD 退化 ${deltas.ood.toFixed(4)} 超过容差 ${tol}：退化即阻断`);
+
+  // 6) 治理不变量：协议违规零容忍。
+  if (spec.protocolViolationsAfter > 0) {
+    reasons.push(`编辑后存在 ${spec.protocolViolationsAfter} 个协议违规`);
+  }
+
+  const promoted = reasons.length === 0;
+  // 自报增益只进审计：有自报、行为却未过判据 → 标记 reward hacking（不改变 promoted）。
+  const rewardHackingBlocked = (spec.selfReportedGain ?? 0) > 0 && !promoted;
+  return {
+    id: spec.id, promoted, reasons, deltas,
+    blockedByOod: oodRegressed && !promoted,
+    rewardHackingBlocked,
   };
 }

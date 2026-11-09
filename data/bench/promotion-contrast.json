@@ -1,0 +1,171 @@
+{
+  "version": 1,
+  "mode": "deterministic",
+  "providerName": "mock",
+  "note": [
+    "三段晋升判据的确定性回归：合法场景分数由 runEval 真实产出，不是能力分数。",
+    "反例在真实 spec 上叠加单个受控违规信号（判据输入契约测试），验证 OOD 退化即阻断、只读隔离、缺格/任务漂移/协议/完整性/自报全部拒绝。",
+    "dev 严格提升 / holdout 不退化 / OOD 不退化 三条同时满足才晋升；leadership.verdict 仍为 not-proven。"
+  ],
+  "before": {
+    "dev": 0,
+    "holdout": 1,
+    "ood": 1
+  },
+  "after": {
+    "dev": 1,
+    "holdout": 1,
+    "ood": 1
+  },
+  "hashes": {
+    "dev": [
+      "3a3b2670d28f",
+      "3a3b2670d28f"
+    ],
+    "holdout": [
+      "8f6b5e743d3e",
+      "8f6b5e743d3e"
+    ],
+    "ood": [
+      "d77d2eef7117",
+      "d77d2eef7117"
+    ]
+  },
+  "legal": {
+    "id": "legal-promotion",
+    "promoted": true,
+    "reasons": [],
+    "deltas": {
+      "dev": 1,
+      "holdout": 0,
+      "ood": 0
+    },
+    "blockedByOod": false,
+    "rewardHackingBlocked": false
+  },
+  "selfReportIgnored": true,
+  "negativesAccepted": 12,
+  "negativesTotal": 12,
+  "cases": [
+    {
+      "id": "dev-not-improved",
+      "rejected": true,
+      "reasons": [
+        "dev 未严格提升（Δ=0.0000）"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "holdout-regressed",
+      "rejected": true,
+      "reasons": [
+        "holdout 退化 -0.5000 超过容差 0"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "ood-regressed",
+      "rejected": true,
+      "reasons": [
+        "OOD 退化 -0.5000 超过容差 0：退化即阻断"
+      ],
+      "blockedByOod": true,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "ood-in-search",
+      "rejected": true,
+      "reasons": [
+        "OOD 任务集出现在搜索轨迹中：违反完全只读，晋升阻断"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "silent-missing",
+      "rejected": true,
+      "reasons": [
+        "ood 段静默缺格：没有真实评测结果"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "task-drift",
+      "rejected": true,
+      "reasons": [
+        "dev 段任务集在编辑前后被改动：对比失效（防调难度刷分）"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "no-separation",
+      "rejected": true,
+      "reasons": [
+        "三段任务集指纹不互异：dev/holdout/OOD 未真正留出"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "protocol-violation",
+      "rejected": true,
+      "reasons": [
+        "编辑后存在 1 个协议违规"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "integrity-broken",
+      "rejected": true,
+      "reasons": [
+        "完整性 tripwire 失败：闭环不可信"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "ground-truth-used",
+      "rejected": true,
+      "reasons": [
+        "启用了真值验证器：自确认循环，拒绝晋升"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "out-of-range",
+      "rejected": true,
+      "reasons": [
+        "dev 段分数非 [0,1] 有限值：不可参与晋升判定"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": false,
+      "ok": true
+    },
+    {
+      "id": "self-reported-gain",
+      "rejected": true,
+      "reasons": [
+        "dev 未严格提升（Δ=0.0000）"
+      ],
+      "blockedByOod": false,
+      "rewardHackingBlocked": true,
+      "ok": true
+    }
+  ]
+}

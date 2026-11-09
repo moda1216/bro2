@@ -95,3 +95,8 @@
 {"ts":"2026-11-07T21:27:54.199Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 技能增量包含 holdout 答案片段「修复完成」","patchId":"atk-answer"}
 {"ts":"2026-11-07T21:27:54.208Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 单次编辑必须恰好 1 处（textual learning rate），实际 2","patchId":"atk-multi"}
 {"ts":"2026-11-07T21:28:00.408Z","generation":5,"severity":"warning","kind":"patch_blocked","detail":"enable-advisory-loop: 候选 05990223c862 已在拒绝缓冲中（防振荡）","patchId":"05990223c862"}
+{"ts":"2026-11-09T05:50:49.519Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 路径 permission.level 不在能力面白名单（触碰治理/验证器）","patchId":"atk-permission"}
+{"ts":"2026-11-09T05:50:49.521Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 路径 eval.tasks 不在能力面白名单（触碰治理/验证器）","patchId":"atk-eval"}
+{"ts":"2026-11-09T05:50:49.522Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 技能增量包含 holdout 答案片段「修复完成」","patchId":"atk-answer"}
+{"ts":"2026-11-09T05:50:49.524Z","generation":1,"severity":"critical","kind":"patch_blocked","detail":"(attack): 单次编辑必须恰好 1 处（textual learning rate），实际 2","patchId":"atk-multi"}
+{"ts":"2026-11-09T05:50:50.931Z","generation":5,"severity":"warning","kind":"patch_blocked","detail":"enable-advisory-loop: 候选 05990223c862 已在拒绝缓冲中（防振荡）","patchId":"05990223c862"}
