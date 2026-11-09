@@ -10,6 +10,30 @@
 
 ---
 
+## [2.17.0] — 2026-11-09 · 只增账本 git 历史完整性门禁（ledger:check）（PATCH）
+
+**解决的问题**：`watermark-check` 只校验账本的**当前态**（结构完整 / 只读 / 视图与账本一致），
+但「只增账本」不变量从未在 **git 历史级**被验证——理论上可借改写历史藏掉一次失败记录，伪造「全绿账本」。
+本版把该不变量升级为 git 历史级可验证的发布阻断门禁。
+
+**改动**（代码预算 **16,499/16,500**、90/90 文件，不升阈值；净 +1 行 = `project-status.ts` 登记项；
+`examples/ledger-append-only-check.ts` 与 `package.json` 脚本均不计预算）：
+- `examples/ledger-append-only-check.ts`（**第 24 道发布阻断门禁** `ledger:check`）：对
+  `data/plan/journal.jsonl` / `data/plan/lessons.jsonl` 两本**真正只增**的账本，
+  逐对相邻 commit 校验「旧版本条目序列是新版本条目序列的前缀」——删除 / 重排 / 语义改写任一即阻断。
+  条目级（非字节级）比对：每条记录规范化为 canonical 形式（忽略键序与空白），纯格式化放行、语义篡改必抓。
+  零运行时依赖、零外部算力；CI 浅克隆历史不足时优雅降级（跳过比较，绝不误红）。
+- `.github/workflows/ci.yml`：`actions/checkout` 改 `fetch-depth: 0`（取全量历史），
+  使历史级门禁在 CI 真实生效；仓库小，代价可忽略。
+- `scripts/project-status.ts` 登记 `ledger` 门禁。
+
+**口径诚实说明**：`data/plan/backlog.jsonl` 未纳入本门禁——其性质为「任务定义，人写一次，偶需修正」，
+历史上确有对既有条目的语义改写（W1-03 依赖 `W1-04 → W1-02` 的一次修正），不满足严格只增不变量；
+重写 git 历史被禁止，故门禁只覆盖真正只增的 journal / lessons 两本。该历史改写已记入 `lessons.jsonl` 供复盘。
+
+**诚实边界（不产生能力分数）**：本版是**账本诚实性基础设施**，不涉及模型能力、不推动 `verdict`
+（`leadership.verdict` 仍 `not-proven`、`L4` 仍 `not-achieved`）。见 `docs/BENCH-v2.md` §5.14。
+
 ## [2.16.0] — 2026-11-09 · P0.5-c 成本晋升目标（remoteAvoided↑ 且分数不降才纳入晋升）（MINOR）
 
 **解决的问题**：P0.5-a/c 的学习型路由已把 `remoteAvoided` 经验回写路由，但成本**从未进入 evolve 晋升判据**——

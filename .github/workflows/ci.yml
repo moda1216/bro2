@@ -15,6 +15,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # 取全量历史：ledger:check（第 24 道门禁）需跨 commit 校验只增账本前缀不变量
+          fetch-depth: 0
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4

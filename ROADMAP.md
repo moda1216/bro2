@@ -144,6 +144,11 @@ v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者�
   （成本退化即阻断、不参与 `promoted`）；`examples/p0.5c-check.ts` 第 23 道门禁 6/6 断言。
   诚实边界：`cost` 只是判定机器，真实 `remoteAvoided` 信号需 **hybrid 评测**接入（确定性评测域
   的 mock 无远程/本地之分），live 接线待打通。见 `docs/BENCH-v2.md` §5.13。
+- **v2.17.0** 把「只增账本」不变量升级为 **git 历史级可验证**的发布阻断门禁（不产生能力分数）：
+  `examples/ledger-append-only-check.ts` 第 24 道门禁对 `journal.jsonl`/`lessons.jsonl` 两本真正只增账本
+  逐对相邻 commit 校验条目序列前缀不变量（条目级 canonical 比对，删除/重排/语义篡改必抓、纯格式化放行）；
+  `ci.yml` 改 `fetch-depth: 0` 让其在 CI 生效。`backlog.jsonl` 因历史上有一次良性语义改写（W1-03 依赖
+  W1-04→W1-02）不纳入。见 `docs/BENCH-v2.md` §5.14。
 - v2.12.0 的端点健康经验接线补的是**目标 2「越用越稳」的结构闭环**：端点体检结果不再
   只落文档，而是折叠成跨会话先验注入 `KeylessAggregator.score()`、成败再回写只增账本，
   解决「健康态进程内、重启清零」。`npm run endpoint:check`（第 20 道门禁）离线验证

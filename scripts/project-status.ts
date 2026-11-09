@@ -48,6 +48,7 @@ const GATES: Gate[] = [
   { id: "preflight", label: "接入门禁防误判 / 证据隔离", cmd: "npm run preflight:check", timeoutMs: 60_000, gate: true },
   { id: "phasec", label: "阶段 C 接入（judgePromotion 消费真实三段 / OOD 只读 / 退化写 journal）", cmd: "npm run phasec:check", timeoutMs: 60_000, gate: true },
   { id: "p0.5c", label: "P0.5-c 成本晋升目标（remoteAvoided↑ 且分数不降才纳入晋升）", cmd: "npm run p0.5c:check", timeoutMs: 60_000, gate: true },
+  { id: "ledger", label: "只增账本 git 历史完整性（journal/lessons 跨 commit 不可删改）", cmd: "npm run ledger:check", timeoutMs: 60_000, gate: true },
   { id: "livesmoke", label: "live 链路自检（仿真，非能力分）", cmd: "npm run live:smoke", timeoutMs: 60_000, gate: false },
 ];
 

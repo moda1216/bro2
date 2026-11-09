@@ -527,6 +527,29 @@ promotion:check / phasec:check 同口径）。本版不声称成本已被实时�
 （演进 fixture 是确定性脚本回放、弱模型又跑不完多步任务）。`tests/rsi.test.ts` 端到端契约
 仍 9/9 通过（含 `promoted >= 3` / `holdoutCurve` 上升 / `loopDetection === "exact"`）。
 
+### 5.14 只增账本 git 历史完整性门禁（v2.17.0）
+
+`watermark-check`（第 12 道）只校验账本的**当前态**（结构完整 / 只读 / 视图与账本一致），但「只增账本」
+不变量从未在 **git 历史级**被验证——理论上可借改写历史藏掉一次失败记录，伪造「全绿账本」。本版把该
+不变量升级为 git 历史级可验证的发布阻断门禁。
+
+改动（预算 16,499/16,500，净 +1 行 = `project-status.ts` 登记项；门禁脚本在 `examples/`、不计入预算）：
+
+1. `examples/ledger-append-only-check.ts` + `npm run ledger:check`（**第 24 道发布阻断门禁**）：对
+   `data/plan/journal.jsonl` / `data/plan/lessons.jsonl` 两本**真正只增**的账本，逐对相邻 commit 校验
+   「旧版本条目序列是新版本条目序列的前缀」——删除 / 重排 / 语义改写任一即阻断。
+   条目级（非字节级）比对：每条记录规范化为 canonical 形式（忽略键序与空白），纯格式化放行、语义篡改必抓。
+   零运行时依赖、零外部算力；CI 浅克隆历史不足时优雅降级（跳过比较，绝不误红）。
+2. `.github/workflows/ci.yml`：`actions/checkout` 改 `fetch-depth: 0`（取全量历史），使历史级门禁在 CI 真实生效。
+
+**口径诚实说明**：`data/plan/backlog.jsonl` 未纳入——其性质为「任务定义，人写一次，偶需修正」，历史上确有
+对既有条目的语义改写（W1-03 依赖 `W1-04 → W1-02` 的一次修正），不满足严格只增不变量；重写 git 历史被禁止，
+故门禁只覆盖真正只增的 journal / lessons 两本。
+
+**诚实边界**：本版是**账本诚实性基础设施**，不涉及模型能力、不推动 `verdict`（`leadership.verdict` 仍
+`not-proven`、L4 仍 `not-achieved`）。
+
+
 ---
 
 ## 6. 不能下的结论（诚实边界）
