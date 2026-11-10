@@ -113,3 +113,17 @@ test("自报增益 + 行为未过判据 → rewardHackingBlocked=true（仍拒�
   assert.equal(v.promoted, false);
   assert.equal(v.rewardHackingBlocked, true);
 });
+
+test("外部真值 oracle 作独立佐证：不阻断晋升、只进审计", () => {
+  const v = judgePromotion(legal({ usedExternalOracle: true }));
+  assert.equal(v.promoted, true, v.reasons.join("; "));
+  assert.equal(v.externalOracleCorroborated, true);
+});
+
+test("外部真值 oracle 与 harness 内部验证器互斥：后者仍拒绝晋升，前者仍标记佐证", () => {
+  const v = judgePromotion(legal({ usedGroundTruthVerifier: true, usedExternalOracle: true }));
+  assert.equal(v.promoted, false);
+  assert.ok(v.reasons.some((r) => r.includes("真值验证器")));
+  assert.equal(v.externalOracleCorroborated, true);
+});
+

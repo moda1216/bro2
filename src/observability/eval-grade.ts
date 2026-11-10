@@ -374,13 +374,8 @@ export function judgeContrast(spec: ContrastSpec, on: EvalRunMetrics, off: EvalR
 
 // ---------------------------------------------------------------- 三段晋升判据（v2.11.0）
 
-/**
- * 阶段 C（bro2 自提议自晋升）的前置闸门：一条 harness 编辑能否晋升，必须同时满足
- *   dev 严格提升 · holdout 不退化 · OOD 不退化 · OOD 完全只读 · 三段无缺格 ·
- *   协议违规 0 · 完整性 tripwire 通过 · 未启用真值验证器。
- * 判定只认三段真实行为分数与冻结任务集指纹；**自报增益绝不参与**（沿用 live-contrast 红线）。
- * 这是「编辑能否晋升」的判定机器，不是能力分数，不改变 leadership.verdict。
- */
+/** 阶段 C 前置闸门：编辑能否晋升只看三段真实行为分数 + 冻结指纹；**自报增益绝不参与**（live-contrast 红线）。 */
+/** 治理不变量：协议违规 0 · 完整性 tripwire · OOD 完全只读 · 未启用 harness 内部「真值验证器」（自确认循环）。v2.22.0 起允许 agent 不可见 reference 的「外部真值 oracle」作独立佐证，但只进审计、绝不影响 promoted。 */
 export interface PromotionScores { dev: number; holdout: number; ood: number }
 
 export interface PromotionSpec {
@@ -396,7 +391,8 @@ export interface PromotionSpec {
   available: { dev: boolean; holdout: boolean; ood: boolean };
   protocolViolationsAfter: number;
   integrityOk: boolean;
-  usedGroundTruthVerifier: boolean;
+  usedGroundTruthVerifier: boolean; // harness 内部真值验证器：读自身行为自我确认 → 拒绝晋升（自确认循环）
+  usedExternalOracle?: boolean; // 外部真值 oracle（agent 不可见 reference）作独立佐证；只进审计、不影响 promoted
   /** 允许的不退化容差，默认 0（严格）；作战计划护栏口径为 0.02（2pp）。 */
   tolerance?: number;
   /** 候选自报增益：只进审计与 rewardHacking 标记，绝不参与 promoted 判定。 */
@@ -412,6 +408,7 @@ export interface PromotionVerdict {
   /** OOD 退化是否构成阻断（供 journal 复核「退化即自动阻断」）。 */
   blockedByOod: boolean;
   rewardHackingBlocked: boolean;
+  externalOracleCorroborated: boolean; // 外部真值 oracle 独立佐证标记；只进审计、不参与 promoted 判定
 }
 
 const SLICES = ["dev", "holdout", "ood"] as const;
@@ -474,5 +471,6 @@ export function judgePromotion(spec: PromotionSpec): PromotionVerdict {
     id: spec.id, promoted, reasons, deltas,
     blockedByOod: oodRegressed && !promoted,
     rewardHackingBlocked,
+    externalOracleCorroborated: spec.usedExternalOracle ?? false,
   };
 }

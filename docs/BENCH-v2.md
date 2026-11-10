@@ -588,6 +588,22 @@ v2.20.0 只交付了 oracle 原语，尚无任务集消费它。本版补上**�
 
 **诚实边界**：本版仍不产生能力分数、`verdict` 仍 `not-proven`、L4 仍 `not-achieved`。真值任务集是「让能力提升相对独立真值」的测量面，能力结论仍需在 train/holdout/OOD 三段用独立真值对照。
 
+### 5.17 晋升闸门放行外部真值 oracle 佐证（v2.22.0）
+
+v2.21.0 把 oracle 接成了可运行评测，但 RSI 晋升闸门 `judgePromotion` 仍 blanket 拒绝**任何**「真值验证器」
+（`usedGroundTruthVerifier` → 拒绝），这道铁律写于 oracle 出现之前。本版把二者**区分**清楚：
+
+- **harness 内部真值验证器**（`usedGroundTruthVerifier`）：读 harness **自身行为**自我确认 → 自确认循环 / reward hacking → **仍拒绝晋升**（红线不动）。
+- **外部真值 oracle**（`usedExternalOracle`，v2.22.0 新增可选）：只读 agent **实际产出** vs agent **不可见** `reference`，**外部可证伪**，是自确认的对立面 → **放行**，但仅作独立佐证记入审计（`PromotionVerdict.externalOracleCorroborated`），**不阻断、不喂 `promoted`**。
+
+由此：
+
+1. 三段晋升在「三段真实行为分数 + 冻结指纹」铁律之外，多一层**相对独立真值**的佐证，且这层佐证无法被 harness 自操纵（reference agent 不可见）；
+2. 自确认循环仍被硬挡——外部 oracle 与内部验证器**互斥**：同一 spec 同时开两者时，内部验证器仍拒晋升、外部 oracle 仍标记佐证；
+3. `judgePromotion` 仍是「编辑能否晋升」的判定机器，不是能力分数，`verdict` 仍 `not-proven`、L4 仍 `not-achieved`。
+
+契约测试 `tests/promotion.test.ts` 12→14：外部 oracle 佐证**不阻断晋升**且 `externalOracleCorroborated=true`；二者**互斥**时内部验证器仍拒、外部 oracle 仍标记。同步精简该段头注释（7→2 行，净省 2 行预算）。
+
 ---
 
 ## 6. 不能下的结论（诚实边界）

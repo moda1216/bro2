@@ -10,6 +10,36 @@
 
 ---
 
+## [2.22.0] — 2026-11-10 · 晋升闸门放行外部真值 oracle 佐证（MINOR）
+
+> 跨步说明：继 v2.20.0（oracle 原语）/ v2.21.0（真值任务集）连续自主推进后，本版把「外部真值 oracle」
+> 接入 RSI 晋升闭环的**审计层**——让三段晋升能相对独立真值佐证，同时仍以铁律防自确认循环。
+
+**解决的问题**：v2.11.0 的 `judgePromotion` 有一道铁律「`usedGroundTruthVerifier` 为真 → 拒绝晋升」，
+用于防「harness 用自身内部行为验证器自我确认」（自确认循环 / reward hacking）。但 v2.20.0 引入的
+**外部真值 oracle** 性质根本不同：它只读 agent **实际产出** vs agent **不可见** `reference`，是**外部可证伪**，
+恰恰是自确认的**对立面**。旧铁律把二者一视同仁全部拒绝，导致外部 oracle 无法进入晋升闭环。
+
+**改动（`src/observability/eval-grade.ts`，净省 2 行预算）**：
+- `PromotionSpec` 新增可选 `usedExternalOracle?: boolean`（agent 不可见 reference 的外部真值 oracle 佐证开关）；
+- `PromotionVerdict` 新增 `externalOracleCorroborated: boolean`（只进审计，绝不影响 `promoted`）；
+- `judgePromotion` 语义收紧为**两类验证器互斥**：
+  - `usedGroundTruthVerifier`（harness 内部、读自身行为）→ 仍**拒绝晋升**（自确认循环，红线不动）；
+  - `usedExternalOracle`（agent 不可见 reference、外部可证伪）→ **允许**，但仅作独立佐证记入审计，不阻断、不喂 `promoted`；
+- 同步精简该段头注释（7 行→2 行），净省 2 行预算空间。
+
+**测试契约（`tests/promotion.test.ts`，12 → 14 项）**：新增两项——
+- 外部 oracle 佐证**不阻断晋升**、且 `externalOracleCorroborated=true`；
+- 外部 oracle 与 harness 内部验证器**互斥**：后者仍拒绝晋升、前者仍标记佐证。
+
+**诚实边界（不变）**：本版**不产生能力分数**，`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`。
+外部 oracle 只让「晋升相对独立真值」多一层佐证，绝不替代三段真实行为分数与冻结指纹铁律；晋升结论仍由
+`judgePromotion` 真实三段判据驱动。能力增益结论仍需 train/holdout/OOD 三段独立真值对照。
+
+**代码预算**：**16,497/16,500**、88/90 文件、单文件最大 584、运行时依赖 0、测试/源 0.27；未上调阈值、未新增源文件、未新增依赖。
+
+---
+
 ## [2.21.0] — 2026-11-10 · 真值任务集评测落地（MINOR）
 
 > 跨步说明：本版把 v2.20.0 埋下的「外部真值 oracle」原语真正用起来——建成一组带 `reference` 的

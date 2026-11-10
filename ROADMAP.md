@@ -157,6 +157,11 @@ v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者�
   （导出集合不变、53 项单测全绿），腾出 2 源文件槽位。仍是诚实基元、不产生能力分数，
   `leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`；要落能力增益结论，还需把 oracle 接入
   真实（非脚本化）任务集并对 train/holdout/OOD 三段用独立真值对照。见 `docs/BENCH-v2.md` §5.15。
+- **v2.22.0** 把 v2.20.0 的 oracle 接入 **RSI 晋升闭环的审计层**：`judgePromotion` 铁律收紧为「两类验证器互斥」——
+  harness 内部真值验证器（读自身行为、自确认循环）仍拒晋升；外部真值 oracle（agent 不可见 `reference`、外部可证伪）
+  放行但仅作独立佐证记入审计、绝不影响 `promoted`。`PromotionSpec` 新增可选 `usedExternalOracle`、verdict 新增
+  `externalOracleCorroborated`；`tests/promotion.test.ts` 12→14（外部 oracle 不阻断晋升且被标记；二者互斥时前者仍拒、后者仍标记）。
+  净省 2 行预算。仍不产生能力分数、`verdict` 仍 `not-proven`、L4 仍 `not-achieved`；晋升结论仍由三段真实行为分数 + 冻结指纹驱动。
 - **v2.21.0** 把 v2.20.0 的 oracle 原语**用起来**——建成 `data/truth-tasks.jsonl`（10 项任务，覆盖三类 oracle
   与全部 `EvalCategory`，truth-01/06 叠合 `expectedTools`+文件真值命中），接通 `runEval→grade→oracle→summary`
   全链路，新增 `eval:truth`/`eval:truth:live`（独立基线 `data/truth-baseline.json` 不污染主回归基线）。

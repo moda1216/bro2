@@ -41,7 +41,8 @@
       "ood": 0
     },
     "blockedByOod": false,
-    "rewardHackingBlocked": false
+    "rewardHackingBlocked": false,
+    "externalOracleCorroborated": false
   },
   "selfReportIgnored": true,
   "negativesAccepted": 12,
