@@ -157,6 +157,18 @@ v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者�
   （导出集合不变、53 项单测全绿），腾出 2 源文件槽位。仍是诚实基元、不产生能力分数，
   `leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`；要落能力增益结论，还需把 oracle 接入
   真实（非脚本化）任务集并对 train/holdout/OOD 三段用独立真值对照。见 `docs/BENCH-v2.md` §5.15。
+- **v2.25.0** 顺着 v2.24.0「判据不可随可操纵输入浮动」的同一根红线，把**量尺本身**钉死：
+  取证发现 `scripts/loc-budget.ts` 直接把 `data/plan/budget.json` 的 `limits` 当 `<=` 判据，
+  而 `tests/` 无任何锁定、`project-status` 的 `budget` 门禁又正好读这个可改文件、
+  `guardrails.ts` 注释还误称「门禁阈值在写保护面内」（实际 `budget.json` 不在 `PROTECTED_FILES`）——
+  把 `sourceLines 16500→20000` 所有预算门禁立即通过，前 6 版所有「预算纪律守住」可被一行 JSON 静默抹掉。
+  修法**不硬禁、留合法通道**：新增 `tests/budget-integrity.test.ts`（预算豁免 4 项）冻结 `FLOOR`，
+  断言 `limits` 只能 ≤ FLOOR、`runtimeDependencies` 恒 0、`note` 留痕约定仍在；下调随时允许、
+  上调须先改 FLOOR + 在 `docs/BENCH-v2.md` 记理由，否则 `npm test` 挂 → `test` 门禁挂 → 发布阻断。
+  可证伪反证实测：临时改 20000 精确 fail、还原干净；`raisedLimits()` 合规/下调/逐个上调对照证明非恒真。
+  前提已核实：`budget.json` 全仓纯只读无写回。诚实边界：锁尺子不锁能力，未覆盖「`loc-budget.ts` 源码被改」
+  （属写保护面/git diff），不虚报全面防篡改。`npm test` 290/290、门禁 24/24、预算 16,498/16,500、
+  零新增源文件/依赖、未上调阈值；仍不产生能力分数、`verdict` 仍 `not-proven`、L4 仍 `not-achieved`。见 `docs/BENCH-v2.md` §5.20。
 - **v2.24.0** 先**证伪自己的第一直觉、否决一个放水修复**（自主迭代的一棒，不是新能力域）：
   探针实测发现 v2.23.0 绝对零错 veto 在「truth 基线本就 <1」时会**无差别否决所有候选、RSI 自锁**
   （MIX truth 集通过率恒 0.5、与候选 state 无关：真实组 `promoted=4/veto=0`，MIX 组 `promoted=0/veto=4`，
