@@ -11,14 +11,14 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.22.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.23.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
 | 架构 | 8 层：kernel / models / context / tools / memory / cognition / delegation / governance / observability / interfaces |
 | 唯一真相源 | `Trajectory`（每次运行的轨迹日志，不可变追加） |
 | 源代码规模 | 68 个 `src/*.ts` + 4 个入口/脚本 `.ts` + 1 个 Web 入口 HTML + 1 个 Python 本地推理服务 |
-| 测试规模 | 32 个测试文件；`npm test` **279** 项全绿 |
+| 测试规模 | 33 个测试文件；`npm test` **284** 项全绿 |
 | 诚实判定 | `leadership.verdict = not-proven`；证据阶梯 L4 = `not-achieved`（不伪造外部基准） |
 | 仓库状态 | 已初始化 git，初始提交 `v2.0.0` tag；`.gitignore` 隔离运行时产物 |
 | 版本控制 | git（提交粒度 = 逻辑交付单元；发布 = tag + CHANGELOG 条目） |
@@ -31,7 +31,7 @@
 
 | 验收项 | 命令 | 当前结果 | 性质 |
 | --- | --- | --- | --- |
-| 单元测试 + e2e + 故障注入 | `npm test` | **279 / 279 PASS** | 交付门禁 |
+| 单元测试 + e2e + 故障注入 | `npm test` | **284 / 284 PASS** | 交付门禁 |
 | CI 可移植性（测试不得依赖本机环境事实） | `npm test` → `tests/remote-sync.test.ts` 第 6 项 | 有/无凭证两环境均 6/6 | 防复发门禁 |
 | 能力矩阵结构自检 | `npm run verify` | 23 项 PASS | 结构门禁 |
 | 行为策略代码分支实证 | `npm run policy:check` | 19 项 PASS | 策略门禁 |
@@ -39,7 +39,7 @@
 | 对比式改进 live 闭环（防 reward hacking） | `npm run contrast:live` | 完整性 ✓ OK，2 晋升 / 2 拦截 | P1 门禁 |
 | 复利中枢（越用越快 / 越用越省） | `npm run compound:demo` | 10/10 断言，trend=accelerating，remoteAvoided=6 | 两大目标门禁 |
 | 迭代水位（唯一尺子 / 只增账本 / 只读投影） | `npm run watermark:check` | 13/13 项，账本 14 轮 `trend=accelerating` | 水位门禁（第 12 道） |
-| **代码预算（少而精）** | `npm run budget:check` | 16,499 / 16,500 行 · 88 / 90 文件 · 最大 584 行 · 测试比 0.27 · 依赖 0 | 体积门禁（第 13 道） |
+| **代码预算（少而精）** | `npm run budget:check` | 16,498 / 16,500 行 · 88 / 90 文件 · 最大 584 行 · 测试比 0.27 · 依赖 0 | 体积门禁（第 13 道） |
 | **v2 分层任务装载** | `npm run bench:v2 -- --layer l1` | 19/19 通过，指纹 `d1419b1efaa7` 与既有评测一致 | 迁移回归门禁（第 14 道） |
 | **fixture 快照** | `npm run fixture:check -- --run` | 3 仓库结构完整 · 7,585 / 3,145,728 字节 · 离线测试 3/3 通过 | fixture 门禁（第 15 道） |
 | **L2 任务双态校准** | `npm run task:check -- --layer l2 --quiet` | 18/18：原始快照必失败、参考解必通过 | 任务有效性门禁 |
@@ -57,6 +57,7 @@
 | 基准诚实性测量 | `npm run benchmark:check` | 21 项 PASS | 基准门禁 |
 | 外部证据防伪造 | `npm run external:check` | **38 / 38 PASS** | 反自证门禁 |
 | 真值任务集评测（外部可证伪评分） | `npm run eval:truth` | 10/10 通过、总体 100%、五类全绿、协议违规 0（确定性全链路；live 经 kilo 端点实测 7/10·overall 0.7，端点工具能力不稳，非干净基准） | 真值评测门禁 |
+| 外部真值段接入 evolve 晋升（独立 veto 可证伪） | `node --test tests/evolve-truth-veto.test.ts` | 3/3 PASS（全过组正常晋升·零 veto；恒失败组零晋升·veto≥1·账本留痕；正反对照证明 promoted 差异只由 veto 造成） | 晋升闭环门禁 |
 | live 链路自检（仿真，非能力分） | `npm run live:smoke` | 17 项 PASS | 链路门禁 |
 | 接入门禁防误判 / 证据隔离 | `npm run preflight:check` | 37 项 PASS | 接入门禁 |
 | 免费 API 可达性探针 | `npm run free:probe` | 6 家可达（含 pollinations 无 Key）、正确报缺 Key | 接入门禁 |
@@ -280,7 +281,8 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.22.0**（晋升闸门放行外部真值 oracle 佐证：把 v2.20.0 的 `oracle` 原语接入 RSI 晋升闭环**审计层**——`PromotionSpec` 新增可选 `usedExternalOracle`、verdict 新增 `externalOracleCorroborated`，仅作独立佐证记入审计、绝不影响 `promoted`；同时收紧 `judgePromotion` 铁律，使「harness 内部真值验证器（读自身行为、自确认循环）」与「外部真值 oracle（agent 不可见 reference、外部可证伪）」**互斥**——前者仍拒晋升、后者放行但只审计。`tests/promotion.test.ts` 12→14（外部 oracle 不阻断晋升且被标记；二者互斥时内部验证器仍拒、外部 oracle 仍标记）。净省 2 行预算。`npm test` 281/281、门禁 24/24、预算 16,497/16,500、零新增源文件/依赖、未上调阈值；`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`）。
+- 当前最新：**v2.23.0**（外部真值段接入 evolve 晋升闭环 + 独立 veto：把 v2.22.0 那个「可用但从未被喂」的 `usedExternalOracle` 变成运行时真实生效的独立约束——`runEvolve` 加载 `data/truth-tasks.jsonl`，在三段判据（`judgePromotion`）通过之后、真正晋升之前，用 `evaluate(影子 root, 候选 state, truth)` 复核候选**实际产出**（终答/文件）相对 agent 不可见 `reference`，聚合 `summary.overall` 到 `truthCurve`；`truthRate<1`（任一 oracle 未过）即**独立 veto** 该候选、`truthVetoes+=1`、账本 reason 明确写「外部真值 veto」，三段判据语义与 v2.22.0 红线完全不动；`usedExternalOracle` 由运行时真实喂入（`truth.length>0`）；`EvolveReport` 新增 `truthCurve`/`truthVetoes`，`formatEvolveReport` 输出「外部真值 1 → 1 · veto N」可观测行。决定性前提已探针实测：候选 `state` 经 `makeShadowRoot` 注入影子 config 的 budget/policy 会改变 guard/grounding/step-ceiling，默认 state truth 通过率 1.0、`maxSteps=1` 时降到 0.4 且 4 个 oracle 失败——truth 段是**可证伪、非恒定绿灯**的独立信号。新增 `tests/evolve-truth-veto.test.ts` 3 项正反对照（隔离 root 只换 truth 集、三段 verdict 序列相同、唯一变量是外部真值通过率：全过组 promoted≥1·零 veto，恒失败组 promoted=0·veto≥1·账本留痕）。truth 段仅在三段已过时跑、每代最多 +1 评测；按「删优先于加」精简 loop.ts 多处 JSDoc 腾出预算。`npm test` 284/284、门禁 24/24、预算 16,498/16,500、零新增源文件/依赖、未上调阈值；`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`，truth 段是正确性零退化护栏、不是能力增益测量面）。
+- 上版：**v2.22.0**（晋升闸门放行外部真值 oracle 佐证：把 v2.20.0 的 `oracle` 原语接入 RSI 晋升闭环**审计层**——`PromotionSpec` 新增可选 `usedExternalOracle`、verdict 新增 `externalOracleCorroborated`，仅作独立佐证记入审计、绝不影响 `promoted`；同时收紧 `judgePromotion` 铁律，使「harness 内部真值验证器（读自身行为、自确认循环）」与「外部真值 oracle（agent 不可见 reference、外部可证伪）」**互斥**——前者仍拒晋升、后者放行但只审计。`tests/promotion.test.ts` 12→14（外部 oracle 不阻断晋升且被标记；二者互斥时内部验证器仍拒、外部 oracle 仍标记）。净省 2 行预算。`npm test` 281/281、门禁 24/24、预算 16,497/16,500、零新增源文件/依赖、未上调阈值；`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`）。
 - 上版：**v2.21.0**（真值任务集评测落地：把 v2.20.0 的外部真值 `oracle` 原语真正用起来——新建 `data/truth-tasks.jsonl`（10 项任务，覆盖 `answer-matches-reference`/`answer-equals-reference`/`file-contains-reference` 三类 oracle 与全部 `EvalCategory`，truth-01/06 同时要求 `expectedTools`+文件真值命中，叠合「真调工具」与「真产正确结果」两条独立证据），接通 `runEval→grade→oracle→summary` 全链路；新增 `eval:truth`/`eval:truth:live` 脚本（独立基线 `data/truth-baseline.json` 避免污染主回归基线），`data/truth-baseline.json`/`data/eval-live-report.json` 进 `.gitignore`。确定性 `eval:truth` 10/10、总体 100%、五类全绿；live 经 kilo 端点实测 7/10·overall 0.7（oracle 正确标记 truth-09 未外部拒绝危险请求），端点工具能力不稳、非干净基准。`npm test` 279/279、门禁 24/24、预算 16,499/16,500、零新增源文件/依赖、未上调阈值；`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`）。
 - 上版：**v2.20.0**（外部真值 oracle 评测 + RSI 子系统收敛：把重叠的三件套 `src/rsi/contrast.ts`+`live-contrast.ts`+`compound.ts` 合并为单一 `src/rsi/contrast.ts`（525 行/3 文件 → ~465 行/1 文件，导出集合不变、53 项相关单测全绿），腾出 2 源文件槽位、净省 ~60 行预算；新增 `EvalTask.oracle` 外部真值评测原语（内置 `answer-matches-reference`/`answer-equals-reference`/`file-contains-reference`），grading 只读 agent 实际产出与 agent 不可见 `reference` 比对、绝不读 harness 内部行为指标，把「自指评分」变「外部可证伪评分」，并经 `runOne→grade()` 汇入 `summary.overall` 使 RSI 晋升相对独立真值；新增 `tests/external-grade.test.ts` 6 项。`npm test` 279/279、门禁 24/24、预算 16,499/16,500、零新增依赖、未上调阈值）。
 - 上版：**v2.17.0**（只增账本 git 历史完整性门禁：`watermark-check` 只校验账本当前态，本版把「只增账本」升级为 git 历史级可验证的发布阻断门禁——`examples/ledger-append-only-check.ts` 第 24 道门禁对 `journal.jsonl`/`lessons.jsonl` 两本真正只增账本逐对相邻 commit 校验条目序列前缀不变量（条目级 canonical 比对，删除/重排/语义篡改必抓、纯格式化放行），`ci.yml` 改 `fetch-depth: 0` 让其在 CI 生效；backlog.jsonl 因历史上有一次良性语义改写（W1-03 依赖 W1-04→W1-02）不纳入。`npm test` 273/273、门禁 24/24、预算 16,499/16,500、净 +1 行、未上调阈值）。

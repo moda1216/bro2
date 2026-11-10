@@ -1,16 +1,5 @@
-/**
- * bro2 · 自我改进主循环（L3 能力面 + 受限 L4 元层）
- *
- * 单代流程：
- *   完整性 tripwire → train/holdout 基线评测 → 失败挖掘 → 按先验排序生成单原子候选
- *   → 写保护校验 → 影子 train → 影子 holdout → 单调晋升 / 回滚 → 账本 → 先验更新
- *
- * 晋升判据（全部同时满足）：
- *   train 严格提升 · train 门禁 PASS · holdout 严格提升 · holdout 门禁 PASS
- *   · 协议违规 = 0 · 保护面完整 · patch 在白名单且不在拒绝缓冲 · 漂移未越界
- * 任一不满足即回滚；候选从未接触真实运行时。
- */
-import { writeFileSync, rmSync, appendFileSync } from "node:fs";
+/** bro2 自我改进主循环（L3 + 受限 L4）：tripwire → 三段基线 → 挖掘 → 单原子候选 → 影子评测 → 单调晋升/回滚 → 账本 → 先验。任一判据不满足即回滚；晋升 = 三段提升/不退化 + 外部真值零退化（v2.23.0 独立 veto）。 */
+import { writeFileSync, rmSync, appendFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { runEval, loadTasks } from "../observability/eval.ts";
 import type { EvalReport, EvalTask, EvalThresholds } from "../observability/eval.ts";
@@ -34,10 +23,7 @@ import type {
 } from "./types.ts";
 import { shortHash, DEFAULT_META, LEAN_OPERATOR_SET } from "./types.ts";
 
-/**
- * evolve 用相对提升判据，绝对分数下限交给主评测门禁；
- * 但协议违规零容忍与工具错误率上限保持不变，避免"提升"以正确性为代价。
- */
+/** evolve 用相对提升判据，绝对下限交主门禁；协议违规零容忍、工具错误率上限不变，"提升"不以正确性为代价。 */
 const EVOLVE_THRESHOLDS: EvalThresholds = {
   minOverall: 0,
   minToolUse: 0,
@@ -51,17 +37,13 @@ const EVOLVE_THRESHOLDS: EvalThresholds = {
 
 export interface EvolveOptions {
   root: string;
-  /** 只诊断与提议，不写回 state / strategy（仍写账本，保证可审计）。 */
+  /** dryRun：只诊断不写回 state/strategy（仍写账本）；reset：复位到初始次优状态与先验。 */
   dryRun?: boolean;
-  /** 复位到初始次优状态与初始先验，用于可复现演示。 */
   reset?: boolean;
   generations?: number;
   /** 测试通道：注入候选验证 tripwire（置于候选队列最前）。 */
   injectedPatches?: Patch[];
-  /**
-   * 改进机制自身的状态（meta RSI）。缺省为 DEFAULT_META，
-   * 与未引入元层之前的行为完全一致；元候选在隔离的 scratch 里评估。
-   */
+  /** 改进机制状态（meta RSI），缺省 DEFAULT_META（与未引入元层前一致）；元候选在隔离 scratch 评估。 */
   meta?: MetaState;
   /** 账本 / 报告隔离目录，供 meta RSI 影子评测使用，避免污染真实只增账本。 */
   scratchDir?: string;
@@ -106,8 +88,7 @@ function ledgerBase(
 export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
   const root = options.root;
   const paths = evolvePaths(root, options.scratchDir);
-  // 已通过冻结 fitness 晋升的元改进会真正作用于下一次 evolve（Imp_t → Imp_{t+1}）；
-  // meta RSI 的影子评测显式传入 options.meta 覆盖，保证公平比较。
+  // 冻结 fitness 晋升的元改进作用于下一次 evolve；meta 影子评测显式传 options.meta 覆盖，保证公平比较。
   const meta = options.meta ?? loadMetaState(root);
   const dryRun = options.dryRun === true;
   const train = loadTasks(paths.train);
@@ -132,9 +113,13 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
   let plateau = 0;
   const trainCurve: number[] = [];
   const holdoutCurve: number[] = [];
+  // 外部真值段（v2.23.0）：独立真值任务集，存在才启用；缺失时降级为空、向后兼容旧 root。
+  const truthPath = join(root, "data", "truth-tasks.jsonl");
+  const truth = existsSync(truthPath) ? loadTasks(truthPath) : [];
+  const truthCurve: number[] = [];
+  let truthVetoes = 0;
   let stoppedBy = "max-generations";
 
-  // 账本写入统一收口到一个 helper（少而精：原散落 6 处 ledger.append 合并，避免重复与漂移）。
   const appendLed = (
     generation: number, patch: Patch, decision: string, reason: string,
     stBefore: EvolvableState, stAfter: EvolvableState, extra: Record<string, unknown> = {},
@@ -287,8 +272,7 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
       evalRuns += 1;
       const oodAfter = await evaluate(root, candidateState, ood);
       evalRuns += 1;
-      // 阶段 C：用三段晋升铁律（judgePromotion）作为真实晋升闸门——
-      // dev 严格提升 · holdout/OOD 不退化 · OOD 完全只读（搜索只碰 dev）· 协议零违规 · 完整性通过。
+      // 阶段 C：三段晋升铁律 judgePromotion（dev 提升 · holdout/OOD 不退化 · OOD 只读 · 协议零违规 · 完整性）。
       const verdict = judgePromotion({
         id: p.id,
         before: { dev: trainBefore.summary.overall, holdout: holdoutBefore.summary.overall, ood: oodBefore.summary.overall },
@@ -303,10 +287,20 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
         protocolViolationsAfter: trainAfter.summary.protocolViolations,
         integrityOk: changed.length === 0,
         usedGroundTruthVerifier: false,
+        usedExternalOracle: truth.length > 0, // v2.23.0：运行时真实启用外部真值段作独立佐证
         tolerance: 0,
       });
 
-      if (verdict.promoted) {
+      // 外部真值段（v2.23.0）：三段行为分数之外，独立复核候选实际产出 vs 不可见 reference，零退化才晋升。
+      let truthVeto = false;
+      if (verdict.promoted && truth.length) {
+        const tr = await evaluate(root, candidateState, truth);
+        evalRuns += 1;
+        truthCurve.push(tr.summary.overall);
+        truthVeto = tr.summary.overall < 1;
+        if (truthVeto) truthVetoes += 1;
+      }
+      if (verdict.promoted && !truthVeto) {
         const parentState = state;
         state = candidateState;
         drift += p.changes.length;
@@ -332,13 +326,14 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
       rec.rejected += 1;
       strategy = noteRejected(strategy, p.id);
       if (verdict.blockedByOod) journalOodBlock(verdict.reasons);
-      appendLed(gen, p, "rejected", `三段门禁未过：${verdict.reasons.join("；")}`, state, candidateState, {
+      const why = truthVeto ? `外部真值 veto：oracle 通过率 ${truthCurve.at(-1)!.toFixed(2)}<1` : `三段门禁未过：${verdict.reasons.join("；")}`;
+      appendLed(gen, p, "rejected", why, state, candidateState, {
         trainBefore: trainBefore.summary.overall, trainAfter: trainAfter.summary.overall,
         holdoutBefore: holdoutBefore.summary.overall, holdoutAfter: holdoutAfter.summary.overall,
         gatePass: holdoutAfter.gate.pass, protocolViolations: holdoutAfter.summary.protocolViolations,
-        integrityOk: true,
+        integrityOk: true, truthVeto,
       });
-      say(`  ✗ 拒绝 ${p.operator}: ${verdict.reasons[0] ?? "三段门禁未过"}`);
+      say(`  ✗ 拒绝 ${p.operator}: ${why}`);
     }
 
     // ---- 受限 L4：改进机制自身由本代实证成败更新 ----
@@ -377,6 +372,8 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
     evalRuns,
     trainCurve,
     holdoutCurve,
+    truthCurve,
+    truthVetoes,
     finalState: state,
     finalStrategy: strategy,
     meta,
@@ -412,6 +409,7 @@ export function formatEvolveReport(report: EvolveReport): string {
   lines.push("  【曲线】");
   lines.push(`   train   ${report.trainCurve.join(" → ") || "（无）"}`);
   lines.push(`   holdout ${report.holdoutCurve.join(" → ") || "（无）"}`);
+  lines.push(`   外部真值 ${(report.truthCurve ?? []).join(" → ") || "（未启用）"}  ·  veto ${report.truthVetoes ?? 0}`);
   lines.push("");
   lines.push("  【治理与防作弊】");
   lines.push(`   保护面完整性  ${report.integrity.ok ? "✓ 未变更" : `✗ 变更: ${report.integrity.changed.join(", ")}`}（${report.integrity.files} 文件）`);

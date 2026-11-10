@@ -157,6 +157,15 @@ v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者�
   （导出集合不变、53 项单测全绿），腾出 2 源文件槽位。仍是诚实基元、不产生能力分数，
   `leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`；要落能力增益结论，还需把 oracle 接入
   真实（非脚本化）任务集并对 train/holdout/OOD 三段用独立真值对照。见 `docs/BENCH-v2.md` §5.15。
+- **v2.23.0** 把「相对独立真值」从**审计标记**升级为**运行时真实生效的独立晋升约束**：
+  `runEvolve` 加载 `data/truth-tasks.jsonl`，三段判据（`judgePromotion`）通过后、真正晋升前，用
+  `evaluate(影子 root, 候选 state, truth)` 复核候选**实际产出** vs agent 不可见 `reference`，
+  `truthRate<1` 即**独立 veto** 晋升（账本留痕「外部真值 veto」），`usedExternalOracle` 由运行时真实喂入；
+  `EvolveReport` 新增 `truthCurve`/`truthVetoes` 可观测。决定性前提已探针实测：候选 state 影响 guard/
+  grounding/step-ceiling → truth 通过率可从 1.0 掉到 0.4，是**可证伪、非恒定绿灯**的独立信号。
+  `tests/evolve-truth-veto.test.ts` 3 项正反对照（唯一变量=外部真值通过率）。truth 段仅三段已过时跑、
+  每代最多 +1 评测；按「删优先于加」精简 loop.ts JSDoc 腾预算。仍是正确性零退化护栏、不产生能力分数，
+  `verdict` 仍 `not-proven`、L4 仍 `not-achieved`。见 `docs/BENCH-v2.md` §5.18。
 - **v2.22.0** 把 v2.20.0 的 oracle 接入 **RSI 晋升闭环的审计层**：`judgePromotion` 铁律收紧为「两类验证器互斥」——
   harness 内部真值验证器（读自身行为、自确认循环）仍拒晋升；外部真值 oracle（agent 不可见 `reference`、外部可证伪）
   放行但仅作独立佐证记入审计、绝不影响 `promoted`。`PromotionSpec` 新增可选 `usedExternalOracle`、verdict 新增

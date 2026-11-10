@@ -10,6 +10,52 @@
 
 ---
 
+## [2.23.0] — 2026-11-10 · 外部真值段接入 evolve 晋升闭环 + 独立 veto（MINOR）
+
+> 跨步说明：继 v2.20.0 oracle 原语 / v2.21.0 真值任务集 / v2.22.0 晋升闸门放行佐证之后，本版把
+> 之前「可用的审计字段」变成**运行时真实生效的独立晋升约束**——evolve 在每次三段判据通过时，真的跑一遍
+> 带 agent 不可见 `reference` 的真值任务集，oracle 零退化才晋升。这是「自主迭代不停」的连续一棒。
+
+**解决的问题**：v2.22.0 的 `usedExternalOracle` 只是 `judgePromotion` 的一个**可选审计字段**，但 `runEvolve`
+从未喂它、更没有在晋升时真正跑过 truth 任务集——「相对独立真值」仍停留在审计标记层，是一块只进
+`externalOracleCorroborated` 的仪表盘，挡不住任何错误晋升。三段判据读的是 trajectory 内部行为指标
+（toolErrors / protocol / guards），理论上存在「内部指标看起来提升了、实际产出却错了」的盲区。
+
+**改动（`src/rsi/loop.ts` + `src/rsi/types.ts`，删优先于加）**：
+- `runEvolve` 运行时**加载独立真值任务集** `data/truth-tasks.jsonl`（缺失则降级为空、向后兼容旧 root）；
+- 三段判据（`judgePromotion`）通过之后、**真正晋升之前**，用 `evaluate(影子 root, 候选 state, truth)` 复核
+  候选的**实际产出**（终答 / 文件）相对 agent 不可见 `reference`，聚合 `summary.overall` 到 `truthCurve`；
+- **独立 veto**：`truthRate < 1`（任一 oracle 未通过）→ 拒绝该候选晋升、`truthVetoes += 1`、
+  账本 reason 明确写「外部真值 veto」（与「三段门禁未过」区分），三段判据语义与 v2.22.0 红线**完全不动**；
+- `judgePromotion` 的 `usedExternalOracle` 由**运行时真实喂入**（`truth.length > 0`），不再是死字段；
+- `EvolveReport` 新增 `truthCurve`（逐次复核通过率）/ `truthVetoes`（独立否决数），
+  `formatEvolveReport` 输出「外部真值 1 → 1 → … · veto N」可观测行（兼容旧报告对象）。
+- 成本可控：truth 段**仅在三段已过时**才跑，每代最多 +1 次评测（晋升即 break）；
+  按「删优先于加」精简该文件多处 JSDoc / 头注释，净省出预算，未新增源文件 / 依赖、未上调阈值。
+
+**决定性前提（已探针实测，非假设）**：候选 `state` 经 `makeShadowRoot` 注入影子 config 的 `budget`/`policy`，
+会改变 guard / grounding / step-ceiling 是否拦下脚本回放，从而改变 truth 终答 / 文件能否产出——
+默认 state 下 truth 通过率 `1.0`，`maxSteps=1` 时降到 `0.4` 且 4 个 oracle 判定失败。
+故 truth 段是**可证伪、非恒定绿灯**的独立外部真值信号，不是摆设。
+
+**测试契约（`tests/evolve-truth-veto.test.ts`，新增 3 项，正反对照可证伪）**：
+隔离 root 软链真实 config/presets/skills、复制三段任务集、注入可切换的 truth 集、scratchDir 隔离账本；
+三段判据完全不看 truth，两组的 `verdict.promoted` 序列相同，**唯一变量是外部真值通过率**：
+- 全过组 → `truthCurve` 全 1、`truthVetoes=0`、`promoted≥1`；
+- 恒失败组（reference 与脚本产出不可能匹配）→ `truthCurve` 出现 `<1`、`truthVetoes≥1`、`promoted=0`、
+  账本留下「外部真值 veto」证据；
+- 正反对照断言 `promoted` 的差异**只由 veto 造成**。
+
+**诚实边界（不变）**：本版**不产生能力分数**，`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`。
+truth 段是「正确性零退化」的**独立护栏**（与三段行为分数正交），不是能力增益测量面；
+能力结论仍需 train/holdout/OOD 三段独立真值对照。确定性脚本回放证明的是「机制可证伪地生效」，
+不是「模型变强」。
+
+**验证**：`npm test` **284/284**（原 281 + 新增 3）、`project:status` **24/24 阻断 + 2/2 信息项**、
+`eval:truth` 不受影响；代码预算 **16,498/16,500**、88/90 文件、单文件最大 584、运行时依赖 0、测试/源 0.27。
+
+---
+
 ## [2.22.0] — 2026-11-10 · 晋升闸门放行外部真值 oracle 佐证（MINOR）
 
 > 跨步说明：继 v2.20.0（oracle 原语）/ v2.21.0（真值任务集）连续自主推进后，本版把「外部真值 oracle」
