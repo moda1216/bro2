@@ -11,7 +11,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.17.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.20.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
@@ -279,7 +279,8 @@
 
 - 语义化版本 `MAJOR.MINOR.PATCH`：破坏性架构变更 / 新增能力域 / 修复或证据更新。
 - 发布动作：feature 完成 → 跑 `npm run project:status` 全绿 → `git tag -a vX.Y.Z` → 追加 `CHANGELOG.md` 条目 → 同步本登记册 §3 状态。
-- 当前最新：**v2.17.0**（只增账本 git 历史完整性门禁：`watermark-check` 只校验账本当前态，本版把「只增账本」升级为 git 历史级可验证的发布阻断门禁——`examples/ledger-append-only-check.ts` 第 24 道门禁对 `journal.jsonl`/`lessons.jsonl` 两本真正只增账本逐对相邻 commit 校验条目序列前缀不变量（条目级 canonical 比对，删除/重排/语义篡改必抓、纯格式化放行），`ci.yml` 改 `fetch-depth: 0` 让其在 CI 生效；backlog.jsonl 因历史上有一次良性语义改写（W1-03 依赖 W1-04→W1-02）不纳入。`npm test` 273/273、门禁 24/24、预算 16,499/16,500、净 +1 行、未上调阈值）。
+- 当前最新：**v2.20.0**（外部真值 oracle 评测 + RSI 子系统收敛：把重叠的三件套 `src/rsi/contrast.ts`+`live-contrast.ts`+`compound.ts` 合并为单一 `src/rsi/contrast.ts`（525 行/3 文件 → ~465 行/1 文件，导出集合不变、53 项相关单测全绿），腾出 2 源文件槽位、净省 ~60 行预算；新增 `EvalTask.oracle` 外部真值评测原语（内置 `answer-matches-reference`/`answer-equals-reference`/`file-contains-reference`），grading 只读 agent 实际产出与 agent 不可见 `reference` 比对、绝不读 harness 内部行为指标，把「自指评分」变「外部可证伪评分」，并经 `runOne→grade()` 汇入 `summary.overall` 使 RSI 晋升相对独立真值；新增 `tests/external-grade.test.ts` 6 项。`npm test` 279/279、门禁 24/24、预算 16,499/16,500、零新增依赖、未上调阈值）。
+- 上版：**v2.17.0**（只增账本 git 历史完整性门禁：`watermark-check` 只校验账本当前态，本版把「只增账本」升级为 git 历史级可验证的发布阻断门禁——`examples/ledger-append-only-check.ts` 第 24 道门禁对 `journal.jsonl`/`lessons.jsonl` 两本真正只增账本逐对相邻 commit 校验条目序列前缀不变量（条目级 canonical 比对，删除/重排/语义篡改必抓、纯格式化放行），`ci.yml` 改 `fetch-depth: 0` 让其在 CI 生效；backlog.jsonl 因历史上有一次良性语义改写（W1-03 依赖 W1-04→W1-02）不纳入。`npm test` 273/273、门禁 24/24、预算 16,499/16,500、净 +1 行、未上调阈值）。
 - 上版：**v2.16.0**（P0.5-c 成本晋升目标：`judgePromotion` 的 `PromotionSpec` 新增可选 `cost` 字段，判定机器加第 7 条铁律「能力不降前提下远程调用不得上升」（成本退化即阻断、不参与 promoted）；`examples/p0.5c-check.ts` 第 23 道门禁 6/6 断言：真实三段分数喂判定机器，能力晋升+成本不升→晋升、能力晋升+成本反升→阻断、成本不越权覆盖能力、未传成本→向后兼容。诚实边界：不产生能力分数，`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`；`cost` 只是判定机器，真实 `remoteAvoided` 信号需 hybrid 评测接入（确定性评测域 mock 无远程/本地之分）。`npm test` 273/273、门禁 23/23、预算 16,498/16,500、零新增源文件、未上调阈值）。
 - 上版：**v2.15.0**（阶段 C 接入 RSI 主循环：`runEvolve` 晋升闸门换成 `judgePromotion` 三段铁律（dev 严格提升 / holdout·OOD 不退化 / OOD 完全只读 / 协议零违规），新增真实 OOD 段 `data/evolve/ood.jsonl`（只读退化探针，默认状态即应通过、改进不得使其退化），OOD 退化自动阻断并写 `journal` 可复核（`W4-C-ood-block`）；散落 6 处 `ledger.append` 收口到 `appendLed` helper、删 `efficiencyTiebreak` 特殊分支；`evolvePaths` 暴露 `ood` 段、OOD 纳入写保护面。`npm run phasec:check` 第 22 道门禁 7/7 断言：判定机器消费真实三段、OOD 退化即阻断且写 journal、搜索只碰 dev。诚实边界：不产生能力分数，`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`，缺口从「缺接入」变成「缺一次真实能力增益的测量」；`npm test` 273/273、门禁 22/22、预算 16,492/16,500（反而 freed 5 行）、零新增源文件、未上调阈值）。
 - 上版：**v2.13.0**（接入门禁组合路径盲点修复：`complete()` 硬编码流式 + llama.cpp handler 拒绝「流式+自动工具选择」→ 本地端点 preflight 全绿却零工具调用；provider 新增 `stream`/`maxTokens` 可配（默认不变）、非流式解析回规范 `tool_calls`、探针补「流式+带 tools」组合观测与 `max_tokens`，`toolCalling=native` 硬门槛不放水；`tests/nonstream.test.ts` 5/5。1.5B 实测链路修通（preflight PASS、稳态 0.6s、无 OOM），但本机纯 CPU 多步评测 18 分钟挂起，`provider_error` 报告按红线删除；历史「0.5B 能力下限」结论因链路缺陷撤销、需重测。测量机器修复，不是能力分数；`npm test` 273/273、门禁 20/20，零新增源文件、未上调阈值）。

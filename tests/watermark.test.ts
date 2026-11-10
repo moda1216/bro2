@@ -12,8 +12,8 @@ import {
 } from "../src/rsi/velocity.ts";
 import type { AttemptRecord } from "../src/rsi/velocity.ts";
 import { ExperienceBank, failureSignature } from "../src/rsi/experience.ts";
-import { compoundProbe } from "../src/rsi/compound.ts";
-import type { PendingCandidate } from "../src/rsi/compound.ts";
+import { compoundProbe } from "../src/rsi/contrast.ts";
+import type { PendingCandidate } from "../src/rsi/contrast.ts";
 import {
   buildWatermark, formatWatermark, renderWatermarkHtml, WATERMARK_VERSION,
 } from "../src/rsi/watermark.ts";

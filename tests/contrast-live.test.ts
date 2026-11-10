@@ -14,7 +14,7 @@ import type { EvalRunMetrics } from "../src/observability/eval.ts";
 import {
   toRunSummary, baselineFromRuns, evaluateLiveCandidates,
   LiveContrastVerifier,
-} from "../src/rsi/live-contrast.ts";
+} from "../src/rsi/contrast.ts";
 import type { LiveCandidate, RunSummary } from "../src/rsi/index.ts";
 
 const metrics = (over: Partial<EvalRunMetrics> = {}): EvalRunMetrics => ({

@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ExperienceBank, failureSignature, requestSignature } from "../src/rsi/experience.ts";
 import { VelocityLedger } from "../src/rsi/velocity.ts";
-import { compoundProbe } from "../src/rsi/compound.ts";
+import { compoundProbe } from "../src/rsi/contrast.ts";
 import { LearnedRoutePolicy } from "../src/models/route-experience.ts";
 import type { LLMRequest } from "../src/models/base.ts";
 import type { LiveCandidate, RunSummary } from "../src/rsi/index.ts";

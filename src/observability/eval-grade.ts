@@ -112,6 +112,47 @@ export function extract(events: readonly Event[]): Extracted {
   return out;
 }
 
+// ---------------------------------------------------------------- 外部真值 oracle（v2.20.0）
+// 独立于 harness 行为的正确性判分：grading 只看 agent 的实际产出（终答 / 工作区文件）
+// 与 reference 是否一致，绝不读 harness 内部行为指标——把「自指评分」变成「外部可证伪评分」。
+
+export interface OracleContext {
+  answer: string;
+  workspace: string;
+  reference?: string;
+  expect?: string;
+  task: EvalTask;
+}
+
+/** 返回 null = 通过；返回字符串 = 失败原因。oracle 只读 agent 实际产出，不读 harness 行为指标。 */
+export type Oracle = (ctx: OracleContext) => string | null;
+
+const ORACLES: Record<string, Oracle> = {
+  // 终答（不区分大小写）包含 reference 即视为命中
+  "answer-matches-reference": ({ answer, reference }) =>
+    !reference ? "oracle 缺少 reference" : answer.toLowerCase().includes(reference.toLowerCase()) ? null : `终答未包含真值参考 "${reference}"`,
+  // 终答与 reference 精确相等
+  "answer-equals-reference": ({ answer, reference }) =>
+    !reference ? "oracle 缺少 reference" : answer.trim() === reference.trim() ? null : "终答与真值参考不一致",
+  // 工作区文件（路径在 expect 中）包含 reference
+  "file-contains-reference": ({ workspace, reference, expect }) => {
+    if (!expect) return "file-contains-reference 需要 expect 指定文件路径";
+    if (!reference) return "oracle 缺少 reference";
+    const p = join(workspace, expect);
+    if (!existsSync(p)) return `期望文件未生成: ${expect}`;
+    return readFileSync(p, "utf8").includes(reference) ? null : `文件 ${expect} 未包含真值参考 "${reference}"`;
+  },
+};
+
+/** 注册自定义外部 oracle（扩展评测面用）。key 冲突时后者覆盖。 */
+export function registerOracle(id: string, fn: Oracle): void {
+  ORACLES[id] = fn;
+}
+
+export function listOracles(): string[] {
+  return Object.keys(ORACLES);
+}
+
 // ---------------------------------------------------------------- 评分
 
 export function grade(task: EvalTask, run: RunResult, ex: Extracted, workspace: string): string[] {
@@ -158,6 +199,15 @@ export function grade(task: EvalTask, run: RunResult, ex: Extracted, workspace: 
   if (task.expectCompactionEvidence && ex.compactionEvidence === 0) reasons.push("压缩未优先保留工具证据（salience 策略未生效）");
   if (task.expectNoLoopAdvisory && ex.loopAdvisories > 0) reasons.push("治理不变量被破坏：死循环被软警告绕过");
   if (task.expectNoRepair && ex.repairs > 0) reasons.push("治理不变量被破坏：无关工具被模糊修复");
+  // 外部真值 oracle：独立于 harness 行为的正确性判分（防自指评分）。
+  if (task.oracle) {
+    const oracle = ORACLES[task.oracle.id];
+    if (!oracle) reasons.push(`未知 oracle: ${task.oracle.id}`);
+    else {
+      const msg = oracle({ answer: run.answer, workspace, reference: task.oracle.reference, expect: task.oracle.expect, task });
+      if (msg) reasons.push(`外部 oracle ${task.oracle.id} 判定失败：${msg}`);
+    }
+  }
   // 所有任务共享的零容忍正确性断言
   if (ex.protocolViolations > 0) reasons.push(`存在 ${ex.protocolViolations} 个未配对 tool_call（协议违规）`);
   if (!run.answer) reasons.push("终答为空");

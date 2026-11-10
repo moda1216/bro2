@@ -148,7 +148,15 @@ v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者�
   `examples/ledger-append-only-check.ts` 第 24 道门禁对 `journal.jsonl`/`lessons.jsonl` 两本真正只增账本
   逐对相邻 commit 校验条目序列前缀不变量（条目级 canonical 比对，删除/重排/语义篡改必抓、纯格式化放行）；
   `ci.yml` 改 `fetch-depth: 0` 让其在 CI 生效。`backlog.jsonl` 因历史上有一次良性语义改写（W1-03 依赖
-  W1-04→W1-02）不纳入。见 `docs/BENCH-v2.md` §5.14。
+  W1-04→W1-02）  不纳入。见 `docs/BENCH-v2.md` §5.14。
+- **v2.20.0** 把「自指评分」升级为**外部真值 oracle 评测**，并收敛 RSI 子系统：
+  `EvalTask.oracle` + 注册表（内置 `answer-matches-reference` / `answer-equals-reference` /
+  `file-contains-reference`），grading 只读 agent 实际产出与 agent 不可见 `reference` 比对、绝不读
+  harness 内部行为指标，并经 `runOne→grade()` 汇入 `summary.overall`，使未来 RSI 晋升相对独立真值。
+  同时把重叠的三件套 `contrast.ts`+`live-contrast.ts`+`compound.ts` 合并为单一 `contrast.ts`
+  （导出集合不变、53 项单测全绿），腾出 2 源文件槽位。仍是诚实基元、不产生能力分数，
+  `leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`；要落能力增益结论，还需把 oracle 接入
+  真实（非脚本化）任务集并对 train/holdout/OOD 三段用独立真值对照。见 `docs/BENCH-v2.md` §5.15。
 - v2.12.0 的端点健康经验接线补的是**目标 2「越用越稳」的结构闭环**：端点体检结果不再
   只落文档，而是折叠成跨会话先验注入 `KeylessAggregator.score()`、成败再回写只增账本，
   解决「健康态进程内、重启清零」。`npm run endpoint:check`（第 20 道门禁）离线验证

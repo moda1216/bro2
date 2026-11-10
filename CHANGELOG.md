@@ -10,6 +10,40 @@
 
 ---
 
+## [2.20.0] — 2026-11-10 · 外部真值 oracle 评测 + RSI 子系统收敛（MINOR）
+
+> 跨步说明：本版一次性合并了三处实质性改动（RSI 子系统收敛 + 外部真值评测原语 + 门禁/文档同步），
+> 不再像 v2.15→v2.17 那样逐版拆成微小 PATCH，故版本号直接跳到 v2.20.0 以反映步幅。
+
+**解决的问题（朝向「诚实可验证自演进」的关键一步）**：此前的 `grade()` 只能断言 harness 自身的
+**行为分支是否触发**（`expectedTools` / `expectRepair` / `expectGroundingReject` …），属于「自指评分」——
+agent 让框架内部行为「看起来对了」就能通过，未必真的产出了正确结果。这正是项目反复自陈的诚实天花板
+（leadership.verdict 长期 `not-proven`、L4 `not-achieved`）：能力提升缺乏独立真值对照。
+
+**改动 1 · RSI 子系统收敛（删优先于加）**：把重叠严重的三件套
+`src/rsi/contrast.ts` + `src/rsi/live-contrast.ts` + `src/rsi/compound.ts`（525 行 / 3 文件）合并为
+单一 `src/rsi/contrast.ts`（~465 行 / 1 文件）。对外导出集合完全不变（tests / examples / bin 零改动，
+53 项相关单测全绿）；消除层叠包装（`live-contrast` 包裹 `contrast`、`compound` 再包裹 `live-contrast`）
+带来的重复。腾出 2 个源文件槽位、净省 ~60 行预算空间。
+
+**改动 2 · 外部真值 oracle 评测（新能力域）**：在 `src/observability/eval-grade.ts` 引入独立于 harness
+行为的正确性判分原语——`EvalTask.oracle` + 注册表（内置 `answer-matches-reference` /
+`answer-equals-reference` / `file-contains-reference`）。grading 只读 agent 的**实际产出**（终答 /
+工作区文件）与一份 agent 不可见的 `reference` 比对，**绝不读 harness 内部行为指标**。由此：
+- agent 只能靠「真正产出正确结果」通过 oracle，无法靠内部行为分支「看起来对了」蒙混；
+- oracle 判定经 `runOne → grade()` 自然汇入 `summary.overall`，使 RSI 闭环的「晋升」相对独立真值，
+  而非框架自我确认——为未来「非自指的能力增益测量」补上缺失的诚实基元。
+- 新增 `tests/external-grade.test.ts`（6 项）直接验证 oracle 的通过/失败/未知 id/独立性。
+
+**改动 3 · 门禁与文档同步**：`npm test` 279/279（原 273 + 新 6）；`npm run project:status` 24/24 阻断门禁 + 2/2 信息项不变。
+
+**口径诚实说明**：本版**不产生能力分数**，不构成能力声明；`leadership.verdict` 仍 `not-proven`、L4 仍
+`not-achieved`。oracle 只是「把自指评分变成外部可证伪评分」的**基元**——要真正给出能力增益结论，仍需
+把 oracle 接入真实（非脚本化）任务集，并对 train/holdout/OOD 三段用独立真值对照（接力 P0.5-c 的
+`judgePromotion` 三段铁律）。确定性评测域的 mock 无远程/本地之分，故 live 真值对照留待 hybrid 评测接入。
+
+**代码预算**：**16,499/16,500**、88/90 文件（收敛腾出 2 槽位）、单文件最大 584、运行时依赖 0、测试/源 0.27；未上调阈值、未新增依赖。
+
 ## [2.17.0] — 2026-11-09 · 只增账本 git 历史完整性门禁（ledger:check）（PATCH）
 
 **解决的问题**：`watermark-check` 只校验账本的**当前态**（结构完整 / 只读 / 视图与账本一致），

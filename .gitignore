@@ -10,6 +10,7 @@ node_modules/
 # 运行时会话与系统日志（每次运行再生，不进版本库）
 data/sessions/
 data/system.jsonl
+data/evolve/journal.jsonl
 data/workspace/
 data/local-llm-stats.json
 data/memory/long-term.json

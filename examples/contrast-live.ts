@@ -15,8 +15,8 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runEval, loadTasks } from "../src/observability/eval.ts";
 import type { EvalTask } from "../src/observability/eval.ts";
-import { baselineFromRuns, LiveContrastVerifier } from "../src/rsi/live-contrast.ts";
-import type { LiveCandidate } from "../src/rsi/live-contrast.ts";
+import { baselineFromRuns, LiveContrastVerifier } from "../src/rsi/contrast.ts";
+import type { LiveCandidate } from "../src/rsi/contrast.ts";
 import type { RunSummary } from "../src/rsi/contrast.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");

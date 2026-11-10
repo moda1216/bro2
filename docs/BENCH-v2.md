@@ -549,6 +549,26 @@ promotion:check / phasec:check 同口径）。本版不声称成本已被实时�
 **诚实边界**：本版是**账本诚实性基础设施**，不涉及模型能力、不推动 `verdict`（`leadership.verdict` 仍
 `not-proven`、L4 仍 `not-achieved`）。
 
+### 5.15 外部真值 oracle 评测（v2.20.0）
+
+此前 `grade()` 只能断言 harness 自身的**行为分支是否触发**（`expectedTools` / `expectRepair` /
+`expectGroundingReject` …），属于「自指评分」——agent 让框架内部行为「看起来对了」就能通过，未必真的
+产出正确结果。这正是项目反复自陈的诚实天花板（`leadership.verdict` 长期 `not-proven`、L4 `not-achieved`）：
+能力提升缺乏独立真值对照。
+
+本版在 `src/observability/eval-grade.ts` 引入**独立于 harness 行为的正确性判分**原语：
+- `EvalTask.oracle`：任务可声明一个 oracle（含 agent 不可见的 `reference`）；
+- 注册表（内置 `answer-matches-reference` / `answer-equals-reference` / `file-contains-reference`），可经 `registerOracle` 扩展；
+- `grade()` 在既有断言之后调用 oracle，只读 agent 的实际产出（终答 / 工作区文件）与 `reference` 比对，**绝不读 harness 内部行为指标**。
+
+由此：
+1. agent 只能靠「真正产出正确结果」通过 oracle，无法靠内部行为分支「看起来对了」蒙混；
+2. oracle 判定经 `runOne → grade()` 自然汇入 `summary.overall`——带 oracle 的任务集据此计算通过率，使 RSI 闭环的「晋升」相对独立真值，而非框架自我确认；
+3. `tests/external-grade.test.ts`（6 项）直接验证：命中 / 未命中 / 未知 id / 大小写不敏感 / 文件真值 / 产出独立性。
+
+**诚实边界**：oracle 只是「把自指评分变成外部可证伪评分」的**基元**，不产生能力分数、不推动 `verdict`
+（`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`）。要真正给出能力增益结论，仍需把 oracle 接入
+**真实（非脚本化）**任务集，并对 train/holdout/OOD 三段用独立真值对照（接力 P0.5-c 的 `judgePromotion` 三段铁律）。
 
 ---
 

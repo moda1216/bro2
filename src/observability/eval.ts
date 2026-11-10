@@ -81,6 +81,21 @@ export interface EvalTask {
   deterministicOnly?: boolean;
   /** 依赖真实模型能力（无脚本），deterministic 模式跳过 */
   liveOnly?: boolean;
+  /**
+   * 外部真值 oracle（v2.20.0）：独立于 harness 行为的正确性判分。
+   * grading 只看 agent 的实际产出（终答 / 工作区文件）与 reference 是否一致，
+   * 绝不读 harness 内部行为指标——把「自指评分」变成「外部可证伪评分」。
+   * 仅当提供 oracle 时生效，与既有 expected* 断言正交；用于让 RSI 闭环的
+   * 「能力提升」是相对独立真值的提升，而非框架自我确认。
+   */
+  oracle?: {
+    /** 注册的 oracle 名（如 "answer-matches-reference" / "file-contains-reference"）。 */
+    id: string;
+    /** 真值参考，agent 不可见；由 oracle 与 agent 实际产出比对。 */
+    reference?: string;
+    /** 附加期望（如 file-contains-reference 期望的文件路径）。 */
+    expect?: string;
+  };
 }
 
 export interface EvalRunMetrics {

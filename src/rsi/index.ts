@@ -23,10 +23,10 @@ export {
 export {
   toRunSummary, baselineFromRuns, evaluateLiveCandidates,
   LiveContrastVerifier, failureSignals as contrastFailureSignals,
-} from "./live-contrast.ts";
+} from "./contrast.ts";
 export type {
   LiveCandidate, LiveDecision, LiveContrastReport,
-} from "./live-contrast.ts";
+} from "./contrast.ts";
 export {
   behavioralContrast, failureSignals, proposeProbeCompose,
 } from "./contrast.ts";
@@ -44,8 +44,8 @@ export {
   VelocityLedger, MIN_SAMPLES, TREND_EPSILON, velocityPath, velocitySnapshotFrom,
 } from "./velocity.ts";
 export type { AttemptRecord, VelocitySnapshot, VelocityTrend } from "./velocity.ts";
-export { compoundProbe, EXPLORE_SLOTS } from "./compound.ts";
-export type { CompoundOptions, CompoundResult, PendingCandidate } from "./compound.ts";
+export { compoundProbe, EXPLORE_SLOTS } from "./contrast.ts";
+export type { CompoundOptions, CompoundResult, PendingCandidate } from "./contrast.ts";
 
 // 迭代水位看板（只读投影 + HTML/Markdown 渲染，判定口径仍只有冻结尺子一份）
 export {
