@@ -45,6 +45,18 @@ const FAIL_TRUTH =
 
 const PASS_TRUTH = readFileSync(join(REAL_ROOT, "data", "truth-tasks.jsonl"), "utf8");
 
+// v2.24.0 诊断场景：5 项恒过 + 5 项恒败，通过与 state 无关 → 整体通过率恒定 0.5。
+// 即「基线本就未满」且「候选相对基线零退化」，正是会被误判成「可解锁」、从而诱导放水的场景。
+const MIX_TRUTH =
+  Array.from({ length: 5 }, (_, i) => JSON.stringify({
+    id: `mix-ok-${i}`, category: "tool-use", input: "x", maxSteps: 3,
+    script: [{ content: "OKTOKEN" }], oracle: { id: "answer-matches-reference", reference: "OKTOKEN" },
+  })).join("\n") + "\n" +
+  Array.from({ length: 5 }, (_, i) => JSON.stringify({
+    id: `mix-no-${i}`, category: "tool-use", input: "x", maxSteps: 3,
+    script: [{ content: "ACTUAL" }], oracle: { id: "answer-equals-reference", reference: "NEVER_MATCH" },
+  })).join("\n") + "\n";
+
 async function evolve(truthTasks: string) {
   const root = makeRoot(truthTasks);
   const scratch = mkdtempSync(join(tmpdir(), "bro2-truth-scratch-"));
@@ -81,4 +93,33 @@ test("正反对照：唯一变量是外部真值通过率，promoted 的差异�
   assert.ok(pass.report.promoted > fail.report.promoted, "全过组晋升数必须严格大于恒失败组");
   assert.equal(fail.report.promoted, 0);
   assert.ok(pass.report.truthVetoes === 0 && fail.report.truthVetoes >= 1);
+});
+
+// ---- v2.24.0：否决「相对基线零退化」放水方案 + 基线异常 fail-closed 可诊断 ----
+test("基线<1 时仍绝对零错 fail-closed（不放水），且根因可诊断", async () => {
+  const { report, ledger } = await evolve(MIX_TRUTH);
+  assert.equal(report.promoted, 0, "基线 0.5、候选也是 0.5，相对零退化也绝不晋升（否决放水方案）");
+  assert.ok(report.truthVetoes >= 1, "绝对零错未被突破，仍逐候选 veto");
+  assert.ok(report.truthCurve.length >= 1 && report.truthCurve.every((r) => r === 0.5),
+    `候选外部真值通过率恒定 0.5（与基线相等），实际 ${report.truthCurve}`);
+  assert.match(ledger, /事实基线 0\.50/, "账本必须写明事实基线数值（基线 vs 当前 state 实测，非候选）");
+  assert.match(ledger, /基线未满=任务集\/环境异常，fail-closed 需核查/,
+    "账本必须能一眼区分『基线/环境异常』而非误报为『候选退化』");
+});
+
+test("诊断口径结构化：写明事实基线数值与根因，两个恒<1 集一致不放水", async () => {
+  // 说明：三段判据要求 train 提升，能通过三段的候选很难单独破坏 oracle，
+  // 因此「基线满分→候选退化」分支在端到端里近乎不可达（v2.23.0 起 truth 恒<1 多源于任务集/环境本身）。
+  // 本测试诚实锁定可达的一侧：基线未满时根因标注精确、且不误标为候选退化。
+  const mix = await evolve(MIX_TRUTH);
+  const fail = await evolve(FAIL_TRUTH);
+  for (const { ledger } of [mix, fail]) {
+    assert.match(ledger, /事实基线 \d+\.\d{2}/, "账本必须写明事实基线数值（基线 state 实测）");
+    assert.match(ledger, /fail-closed 需核查/, "基线未满 → 环境异常根因口径");
+    assert.doesNotMatch(ledger, /候选引入退化/, "基线未满时不得误标为候选退化");
+  }
+  // 两种基线异常（0.5 / 恒失败）都不放水，绝对零错红线一致。
+  assert.equal(mix.report.promoted, 0);
+  assert.equal(fail.report.promoted, 0);
+  assert.equal(mix.report.truthVetoes > 0 && fail.report.truthVetoes > 0, true);
 });

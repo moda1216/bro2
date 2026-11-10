@@ -1,4 +1,4 @@
-/** bro2 自我改进主循环（L3 + 受限 L4）：tripwire → 三段基线 → 挖掘 → 单原子候选 → 影子评测 → 单调晋升/回滚 → 账本 → 先验。任一判据不满足即回滚；晋升 = 三段提升/不退化 + 外部真值零退化（v2.23.0 独立 veto）。 */
+/** bro2 自我改进主循环（L3 + 受限 L4）：tripwire → 三段基线 → 挖掘 → 单原子候选 → 影子评测 → 单调晋升/回滚 → 账本 → 先验。任一判据不满足即回滚；晋升 = 三段提升/不退化 + 外部真值绝对零错（v2.24.0 独立 veto + 基线异常可诊断；基线<1 时 fail-closed 为预期安全行为）。 */
 import { writeFileSync, rmSync, appendFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { runEval, loadTasks } from "../observability/eval.ts";
@@ -41,7 +41,6 @@ export interface EvolveOptions {
   dryRun?: boolean;
   reset?: boolean;
   generations?: number;
-  /** 测试通道：注入候选验证 tripwire（置于候选队列最前）。 */
   injectedPatches?: Patch[];
   /** 改进机制状态（meta RSI），缺省 DEFAULT_META（与未引入元层前一致）；元候选在隔离 scratch 评估。 */
   meta?: MetaState;
@@ -147,7 +146,6 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
       s[key] += 1;
       genStats[name] = s;
     };
-    // ---- tripwire 0：写保护评测面完整性 ----
     const changed = diffIntegrity(baselineIntegrity, computeIntegrity(root));
     if (changed.length > 0) {
       incidents.append({
@@ -173,6 +171,8 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
     evalRuns += 1;
     trainCurve.push(trainBefore.summary.overall);
     holdoutCurve.push(holdoutBefore.summary.overall);
+    const truthBefore = truth.length ? (await evaluate(root, state, truth)).summary.overall : 1;
+    if (truth.length) evalRuns += 1; // v2.24.0 事实基线：仅用于诊断「基线是否已满分」，不改变绝对零错 veto 判据
 
     const signals = mineFailures(trainBefore, {
       evidenceLimit: meta.evidenceLimit,
@@ -291,13 +291,13 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
         tolerance: 0,
       });
 
-      // 外部真值段（v2.23.0）：三段行为分数之外，独立复核候选实际产出 vs 不可见 reference，零退化才晋升。
+      // 外部真值段：三段之外独立复核候选实际产出 vs 不可见 reference，绝对零错才晋升（基线<1 时 fail-closed 属预期，见账本诊断）。
       let truthVeto = false;
       if (verdict.promoted && truth.length) {
         const tr = await evaluate(root, candidateState, truth);
         evalRuns += 1;
         truthCurve.push(tr.summary.overall);
-        truthVeto = tr.summary.overall < 1;
+        truthVeto = tr.summary.overall < 1; // 绝对零错护栏（不放水）；基线 truthBefore 仅供诊断
         if (truthVeto) truthVetoes += 1;
       }
       if (verdict.promoted && !truthVeto) {
@@ -326,7 +326,7 @@ export async function runEvolve(options: EvolveOptions): Promise<EvolveReport> {
       rec.rejected += 1;
       strategy = noteRejected(strategy, p.id);
       if (verdict.blockedByOod) journalOodBlock(verdict.reasons);
-      const why = truthVeto ? `外部真值 veto：oracle 通过率 ${truthCurve.at(-1)!.toFixed(2)}<1` : `三段门禁未过：${verdict.reasons.join("；")}`;
+      const why = truthVeto ? `外部真值 veto：绝对零错 ${truthCurve.at(-1)!.toFixed(2)}<1（事实基线 ${truthBefore.toFixed(2)}；${truthBefore < 1 ? "基线未满=任务集/环境异常，fail-closed 需核查" : "候选引入退化"}）` : `三段门禁未过：${verdict.reasons.join("；")}`;
       appendLed(gen, p, "rejected", why, state, candidateState, {
         trainBefore: trainBefore.summary.overall, trainAfter: trainAfter.summary.overall,
         holdoutBefore: holdoutBefore.summary.overall, holdoutAfter: holdoutAfter.summary.overall,
@@ -409,7 +409,7 @@ export function formatEvolveReport(report: EvolveReport): string {
   lines.push("  【曲线】");
   lines.push(`   train   ${report.trainCurve.join(" → ") || "（无）"}`);
   lines.push(`   holdout ${report.holdoutCurve.join(" → ") || "（无）"}`);
-  lines.push(`   外部真值 ${(report.truthCurve ?? []).join(" → ") || "（未启用）"}  ·  veto ${report.truthVetoes ?? 0}`);
+  lines.push(`   外部真值 ${(report.truthCurve ?? []).join(" → ") || "（未启用）"}  ·  veto ${report.truthVetoes ?? 0}  ·  判据 绝对零错（基线/退化诊断见账本）`);
   lines.push("");
   lines.push("  【治理与防作弊】");
   lines.push(`   保护面完整性  ${report.integrity.ok ? "✓ 未变更" : `✗ 变更: ${report.integrity.changed.join(", ")}`}（${report.integrity.files} 文件）`);

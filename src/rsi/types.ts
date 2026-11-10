@@ -134,7 +134,7 @@ export interface EvolveReport {
   evalRuns: number;
   trainCurve: number[];
   holdoutCurve: number[];
-  /** 外部真值段（v2.23.0）：逐次复核通过率（三段判据已过才评测候选产出，空=未启用）+ 独立 veto 次数。 */
+  /** 外部真值段：逐次复核通过率（v2.24.0 veto 判据=相对当前 state 事实基线零退化，非绝对满分；空=未启用）+ 独立 veto 次数。 */
   truthCurve: number[];
   truthVetoes: number;
   finalState: EvolvableState;

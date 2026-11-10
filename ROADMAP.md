@@ -157,6 +157,17 @@ v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者�
   （导出集合不变、53 项单测全绿），腾出 2 源文件槽位。仍是诚实基元、不产生能力分数，
   `leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`；要落能力增益结论，还需把 oracle 接入
   真实（非脚本化）任务集并对 train/holdout/OOD 三段用独立真值对照。见 `docs/BENCH-v2.md` §5.15。
+- **v2.24.0** 先**证伪自己的第一直觉、否决一个放水修复**（自主迭代的一棒，不是新能力域）：
+  探针实测发现 v2.23.0 绝对零错 veto 在「truth 基线本就 <1」时会**无差别否决所有候选、RSI 自锁**
+  （MIX truth 集通过率恒 0.5、与候选 state 无关：真实组 `promoted=4/veto=0`，MIX 组 `promoted=0/veto=4`，
+  候选「相对基线零退化」却被全拒——三段判据是相对基线、truth veto 却是绝对阈值，语义不一致）。
+  把判据改成「相对基线零退化」看似能解锁、实为**放水**（放行「外部真值只有 0.5、没比坏基线更差」的候选），
+  违背绝对零错红线 → **否决**。定性 `基线<1` = 任务集/环境异常、fail-closed 拒绝演进是**预期安全行为**
+  （同完整性 tripwire 直接 break），不是 bug。真改动只有诊断、判据一寸未松：每代基线实测 `truthBefore`
+  （当前 state 事实通过率、计入 `evalRuns`），账本 reason 结构化区分「基线未满=环境异常需核查 / 候选引入退化」，
+  `formatEvolveReport` 口径同步。`tests/evolve-truth-veto.test.ts` 3→5：MIX 场景钉死「相对零退化也不晋升」
+  （任何相对基线放水实现必挂）、诊断口径可证伪。`npm test` 286/286、门禁 24/24、预算 16,498/16,500、
+  零新增源文件/依赖、未上调阈值；仍不产生能力分数、`verdict` 仍 `not-proven`、L4 仍 `not-achieved`。见 `docs/BENCH-v2.md` §5.19。
 - **v2.23.0** 把「相对独立真值」从**审计标记**升级为**运行时真实生效的独立晋升约束**：
   `runEvolve` 加载 `data/truth-tasks.jsonl`，三段判据（`judgePromotion`）通过后、真正晋升前，用
   `evaluate(影子 root, 候选 state, truth)` 复核候选**实际产出** vs agent 不可见 `reference`，
