@@ -1,6 +1,6 @@
 {
   "name": "bro2",
-  "version": "2.25.0",
+  "version": "2.26.0",
   "type": "module",
   "description": "bro2 · 通用 Agent 运行时（含 RSI 有界可验证自我改进）— 零第三方依赖",
   "license": "MIT",
@@ -53,6 +53,7 @@
     "benchmark": "node --experimental-strip-types --no-warnings bin/agentos.ts benchmark",
     "benchmark:check": "node --experimental-strip-types --no-warnings examples/benchmark-check.ts",
     "external:check": "node --experimental-strip-types --no-warnings examples/external-check.ts",
+    "position:check": "node --experimental-strip-types --no-warnings examples/position-check.ts",
     "project:status": "node --experimental-strip-types --no-warnings scripts/project-status.ts",
     "test": "node --experimental-strip-types --no-warnings --test tests/*.test.ts",
     "auto:next": "node --experimental-strip-types --no-warnings bin/autopilot.ts next",

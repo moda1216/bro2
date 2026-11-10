@@ -157,6 +157,19 @@ v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者�
   （导出集合不变、53 项单测全绿），腾出 2 源文件槽位。仍是诚实基元、不产生能力分数，
   `leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`；要落能力增益结论，还需把 oracle 接入
   真实（非脚本化）任务集并对 train/holdout/OOD 三段用独立真值对照。见 `docs/BENCH-v2.md` §5.15。
+- **v2.26.0** 一次**方向性裁决**，不是又一版治理门禁：回答「能力水位究竟如何、有无公开对比参照、如何突破定位、如何发现高 ROI 方向」。
+  联网取证 2026 公开参照系，确认外部世界有四层成熟参照（公开榜单 / 锁定 harness 协议 / 同模型增益实证 / harness-RSI 赛道），
+  且 arXiv 2605.23950 的 Binding Constraint Thesis 直接为 `Model + Harness = Agent` 背书（harness 方差≈模型 7.8×、6/9 排名翻转）。
+  诚实诊断 bro2：内部 L0/L1/L2 达成、L3 partial、**L4 not-achieved、verdict not-proven、外部证据 0 条**；
+  `overall=1.0` 是 mock 脚本回放、`overall=0.7` 是弱端点 10 题 k=1，**都不是能力分数**。
+  根因不是「没 GPU/没 Key」，而是 ① 外部证据通道被动且从未启用 ② `PLAN-TOP-HARNESS.md` 计划齐备但 W5-05 被 W5-01→04 依赖链压在末尾、执行度为零
+  ③ 过去 6 版全投治理/防篡改层（`The Scaffold Effect`：该层对 pass rate 影响仅≈2pp）。
+  新增三份预算豁免资产：`data/reference-landscape.json`（14 条外部参照逐条带来源/日期/证据等级、`bro2Measured=false`、`notL4Evidence`）、
+  `examples/position-check.ts`（17 项断言定位视图，防自指：外部数字绝不算 bro2 成绩）、`docs/CAPABILITY-POSITION.md`（诊断 + ROI 判据）。
+  backlog 新增 `P0-POSITION` 三条把 W5-05 从依赖链解耦，`npm run auto:next` 实测指向 `P0-01`（Harbor 协议接入验证，零 Key 可做）；
+  明确点破诚实陷阱：**确定性 mock 差分对照不能冒充能力对照**（脚本回放、模型不参与评分），第一组真实 Δ 必须有可工具调用的模型端点。
+  ROI 判据：`Δ(外部锁定 harness 可证伪增益) ÷ 实现成本`，无法产生可测 Δ 的改动 ROI=0。零 `src` 改动、零新增门禁、不改 L4/verdict、不写 `external-results.json`。
+  `npm test` 290/290、门禁 24/24、预算 16,498/16,500、`position:check` 17/17。见 `docs/CAPABILITY-POSITION.md`。
 - **v2.25.0** 顺着 v2.24.0「判据不可随可操纵输入浮动」的同一根红线，把**量尺本身**钉死：
   取证发现 `scripts/loc-budget.ts` 直接把 `data/plan/budget.json` 的 `limits` 当 `<=` 判据，
   而 `tests/` 无任何锁定、`project-status` 的 `budget` 门禁又正好读这个可改文件、

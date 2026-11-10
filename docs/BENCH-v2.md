@@ -731,6 +731,41 @@ v2.24.0 否决了「判据随基线浮动」，但代码预算门禁的判据（
 **验证**：`npm test` 290/290（原 286 + 4）、门禁 24/24 + 2/2、预算 16,498/16,500 ·
 88/90 文件 · 最大 584 行 · 测试比 0.27 · 依赖 0；零新增源文件 / 依赖、未上调阈值。
 
+### 5.21 能力水位定位与 ROI 转向裁决（v2.26.0）
+
+**这不是第 7 版治理门禁，而是一次方向性裁决。** §6「不能下的结论」守了 6 个版本的诚实边界是对的，但
+「尺子是否诚实」被反复加固，却始终没把尺子放到公开赛道上量一次。本版回答：能力水位究竟如何 /
+有无公开对比参照 / 如何突破完成定位 / 如何发现高 ROI 方向。详见 `docs/CAPABILITY-POSITION.md`。
+
+**定位结论（由真实报告驱动，非口头宣称）**：`assessEvidenceLadder` 实测 `achievedLevels=[0,1,2]`、
+L3 `partial`、**L4 `not-achieved`**、`verdict` **`not-proven`**、外部证据 **0 条**。
+`overall=1.0` 是 mock 脚本回放（模型智能不参与评分）、`overall=0.7` 是 kilo 免 Key 端点 10 题 k=1——
+沿用 §6 的口径，**两者都不是能力分数**。诚实结论：内部 L0–L2 达成且可复核，外部可比尺子上**尚未测量**。
+
+**外部参照系（联网取证 2026-11-10，14 条，见 `data/reference-landscape.json`）**：四层成熟参照——
+公开榜单（Pro 61.5% / TB4.0 64.85% 仍有区分度，GAIA/WebArena/Verified 饱和或退役）、
+锁定 harness 协议（Harbor / mini-swe-agent / Terminus-2 / AgentCompass 已把 W5-01→04 想自建的东西开源化）、
+同模型增益实证（arXiv 2605.23950：+9.5~16.6pp、harness 方差≈模型 7.8×、6/9 排名翻转）、
+harness-RSI 赛道（RRSI 64.6→78.7 等，都在公开基准交出可复现分数）。
+每条标注 `evidenceTier`(primary/secondary) 与 `bro2Measured=false`，顶层 `notL4Evidence=true`——
+**外部成绩绝不进入 bro2 名下、不写入 `external-results.json`、不提升 L4**。
+
+**关键诚实修正**：初稿曾把「零 Key deterministic 差分对照」列为 P0 可做项，自查后删除。确定性 mock 是
+脚本回放、模型智能不参与评分（§6 已确认），换 harness 量不出能力 Δ——用它冒充「能力定位」正是本项目全程防的
+空转仪表盘。零 Key 沙箱唯一诚实可做是**协议接入验证**；第一组真实对照数必须有可工具调用的模型端点。
+
+**ROI 判据与 P0 解耦**：`ROI ≈ 外部可证伪增益 Δ ÷ 实现成本`，Δ 须能在锁定 harness 公开对照里量出，
+否则 ROI=0。据此把 `backlog W5-05`（原被 W5-01→04 依赖链压在末尾、执行度为零）解耦为 `P0-POSITION` 三条，
+`npm run auto:next` 实测已指向 **`P0-01`**（Harbor 协议接入验证）。
+
+**可证伪性**：`examples/position-check.ts`（`npm run position:check`，17/17）从真实报告读水位、断言防自指隔离、
+渲染「bro2 在哪一格」定位表，只读、不产生能力分数、不写证据文件。若未来有人把外部数字记成 bro2 成绩、
+或偷偷导入 `external-results.json` 自封 L4，这些断言立即 fail。
+
+**诚实边界**：不产生能力分数、不提升 L4、不改 `verdict`（仍 `not-proven`）、零 `src` 改动、零新增门禁/依赖、
+未上调阈值；§2 全部数字为外部第三方成绩/研究结论、按周变动、未经 bro2 复核。定位完成 ≠ 能力达标。
+`npm test` 290/290、门禁 24/24 + 2/2、预算 16,498/16,500、`position:check` 17/17。
+
 ---
 
 ## 6. 不能下的结论（诚实边界）

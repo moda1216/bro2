@@ -10,6 +10,46 @@
 
 ---
 
+## [2.26.0] — 2026-11-10 · 能力水位定位与 ROI 转向裁决（MINOR）
+
+> **性质**：一次方向性诊断与下一阶段裁决，**不是能力版本，也不是第 7 版治理门禁**。
+> 回答四问：能力水位究竟如何 / 有没有公开对比参照 / 如何突破完成定位 / 如何发现高 ROI 改进方向。
+> 全部产出在预算豁免区（`data/` `docs/` `examples/` `backlog`），**零 `src` 改动、零新增门禁、零新增依赖、未上调阈值**。
+
+**结论先行**：bro2 能力水位 = **内部可验证、外部未测量**。不是「弱」，也不是「领先」，是**在公开可比尺子上还没有坐标**。
+`data/benchmark-report.json` 实测 `achievedLevels=[0,1,2]`、L3 `partial`、**L4 `not-achieved`**、`verdict` **`not-proven`**、外部证据导入 **0 条**。
+`overall=1.0` 是 mock 脚本回放（模型智能不参与评分）、`overall=0.7` 是 kilo 免 Key 端点 10 题 k=1（工具能力不稳）——
+按 `docs/BENCH-v2.md §6` 自述，**两者都不是能力分数**。
+
+**外部参照：有，而且与 bro2 命题高度对齐**（联网取证 2026-11-10，见 `data/reference-landscape.json` 14 条）：
+- 公开榜单：SWE-bench Pro 61.5%±3.1、Terminal-Bench 4.0 64.85%±3.11 仍有区分度；GAIA/OSWorld-Verified/WebArena/τ² 已饱和；SWE-bench Verified 因 59.4% 抽查题缺陷 + 污染于 2026-02 事实退役。榜单明确不采信厂商自报分，因为「vendors run their own harnesses」。
+- 锁定 harness 协议（**关键发现**）：`Harbor`（`harbor run --dataset X --agent Y --model Z`，支持自定义 agent）、`mini-swe-agent`（100 行、MIT、bash-only）、`Terminus-2`、`AgentCompass` 已把 `W5-01→04` 想自建的能力开源化——**W5-05 不需要等 13 周依赖链**。
+- 同模型增益实证（arXiv 2605.23950 一手）：固定 Opus 4.5 换 harness 45.9%→55.4%（+9.5pp）、Cline vs SWE-agent +16.6pp、TB2.0 +13.7pp、HAL 跨 scaffold 近 48pp；harness 方差≈模型 7.8×、6/9 排名翻转。
+- harness-RSI 赛道（bro2 公开同类）：RRSI 64.6→78.7、Meta-Harness 76.4%、ModularRSI、AHE——**都在公开基准上交出可复现分数**，bro2 只在自建域内自证。
+
+**根因不是「没 GPU/没 Key」**（表层借口），而是三条结构性事实：① 外部证据通道 `external.ts` 被动导入且从未启用（`data/benchmark/` 为空）；
+② `docs/PLAN-TOP-HARNESS.md`（HLR≥0.30、五战役、13 周）与 `backlog W5-05` 早已登记但**执行度为零**、`data/bench/external/` 不存在、无任何 HLR 测量命令；
+③ 过去 6 版（v2.20→v2.25）全投治理/防篡改层，而 `The Scaffold Effect` 实证该层对 pass rate 影响仅≈2pp（主要影响成本）——**边际收益拐点，不是努力不够**。
+
+**新增交付物**（均可离线复核）：
+- `data/reference-landscape.json`：14 条外部公开参照，逐条带 `source`/`url`/`retrievedAt`/`evidenceTier`(primary 5 / secondary 9)/`bro2Relevance`，全部 `bro2Measured=false`，顶层 `notL4Evidence=true`——**外部数字绝不算 bro2 成绩**。
+- `examples/position-check.ts` + `npm run position:check`：17/17 断言的定位视图。从真实 `assessEvidenceLadder` 读水位，防自指断言（外部参照 ≠ bro2 成绩、`external-results.json` 通道为空、L4/verdict 不变），渲染「bro2 在哪一格」对照表 + ROI 缺口。**只读、不产生能力分数、不写证据文件**。
+- `docs/CAPABILITY-POSITION.md`：完整诊断 + 四问回答 + 突破路径 + 可复用 ROI 判据。
+- `data/plan/backlog.jsonl` 新增 `P0-POSITION` 三条：`P0-01` Harbor 协议接入验证（零 Key 可做、deps=[]）、`P0-02` 同模型对照（需可工具调用端点）、`P0-03` Context 紧窗口压缩。按 `select.ts` 的 id 升序选择，`npm run auto:next` 实测已从 W5 链切到 **`P0-01`**——解耦真的生效，不是纸面登记。
+
+**突破定位与 ROI 判据**：`ROI(方向) ≈ 外部可证伪增益 Δ ÷ 实现成本`，且 Δ 必须能在锁定 harness 的公开对照里被量出来；无法产生可测 Δ 的改动 ROI=0。
+四筛选器：公开实证优先 → 解锁性优先 → 依赖链最短优先 → 诚实成本计入分母。据此 **P0 同模型对照为最高 ROI**，P1 Context 紧窗口压缩次之（外部实证 F2P 28%→49%、跨模型免调参），「再加治理门禁」本阶段淘汰。
+退出信号可证伪：Δ≤0 → 诚实降级为「可验证 RSI 研究台」；换 holdout 模型 Δ 消失 → 判过拟合；去掉 RSI 分数不变 → 改进来自任务集过拟合。
+
+**诚实修正**：初稿曾写「零 Key 可做 deterministic 差分对照」，自查后删除——确定性 mock 是脚本回放、模型智能不参与评分，换 harness 量不出能力 Δ，那会是空转仪表盘。零 Key 沙箱里唯一诚实可做的是**协议接入验证**；第一组真实对照数必须有可工具调用的模型端点参与，本版不虚报已完成。
+
+**诚实边界**：不产生能力分数、不提升 L4、不改 `verdict`（仍 `not-proven`）、不写 `external-results.json`、不把任何外部成绩记入 bro2 名下；§2 全部数字是外部第三方成绩/研究结论、按周变动、未经 bro2 复核。定位完成 ≠ 能力达标，bro2 在公开尺子上仍是 `not-measured`。
+过去 6 版治理工作未被否定（UC Berkeley RDI 8/8 基准可 reward-hack 证明其必要），只是被外部证据判定为边际拐点——本版是 ROI 裁决，不是翻案。
+
+**验证**：`npm test` **290/290**、门禁 **24/24 + 2/2**、预算 **16,498/16,500**（88/90 文件、依赖 0）、`position:check` **17/17**、`auto:next` 指向 P0-01。
+
+---
+
 ## [2.25.0] — 2026-11-10 · 代码预算阈值防暗调（冻结量尺）（MINOR）
 
 > 跨步说明：延续「自主迭代不停」。顺着 v2.24.0 否决「判据随基线浮动」的同一根红线往下查，
