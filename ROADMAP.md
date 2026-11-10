@@ -157,6 +157,13 @@ v2.2.1 把「每次改进都推送」固化为机制，而不是依赖执行者�
   （导出集合不变、53 项单测全绿），腾出 2 源文件槽位。仍是诚实基元、不产生能力分数，
   `leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`；要落能力增益结论，还需把 oracle 接入
   真实（非脚本化）任务集并对 train/holdout/OOD 三段用独立真值对照。见 `docs/BENCH-v2.md` §5.15。
+- **v2.21.0** 把 v2.20.0 的 oracle 原语**用起来**——建成 `data/truth-tasks.jsonl`（10 项任务，覆盖三类 oracle
+  与全部 `EvalCategory`，truth-01/06 叠合 `expectedTools`+文件真值命中），接通 `runEval→grade→oracle→summary`
+  全链路，新增 `eval:truth`/`eval:truth:live`（独立基线 `data/truth-baseline.json` 不污染主回归基线）。
+  确定性 `eval:truth` **10/10、总体 100%**；live 经 kilo 免 Key 端点实测 **7/10、overall 0.7**，oracle 正确
+  标记 truth-09 未外部拒绝危险请求。诚实标注：该端点工具调用能力不稳（`preflight` 判 `toolCalling=unknown`），
+  live 分数受端点可用性限制、**非干净基准**，证明的是「外部真值评测机制可用」。仍不产生能力分数，
+  `verdict` 仍 `not-proven`、L4 仍 `not-achieved`。见 `docs/BENCH-v2.md` §5.16。
 - v2.12.0 的端点健康经验接线补的是**目标 2「越用越稳」的结构闭环**：端点体检结果不再
   只落文档，而是折叠成跨会话先验注入 `KeylessAggregator.score()`、成败再回写只增账本，
   解决「健康态进程内、重启清零」。`npm run endpoint:check`（第 20 道门禁）离线验证

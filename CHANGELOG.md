@@ -10,6 +10,47 @@
 
 ---
 
+## [2.21.0] — 2026-11-10 · 真值任务集评测落地（MINOR）
+
+> 跨步说明：本版把 v2.20.0 埋下的「外部真值 oracle」原语真正用起来——建成一组带 `reference` 的
+> **真值任务集**并接通 `runEval → grade → oracle → summary` 全链路。继 v2.17→v2.20→v2.21 连续自主推进，
+> 不再逐版拆小 PATCH。
+
+**解决的问题**：v2.20.0 只交付了 oracle「原语」，尚无任何真实任务集消费它，等于把钥匙造好却没开门。
+本版补上**真值任务集评测**——一组每个任务都携带 agent 不可见的 `reference`、由外部 oracle 判定
+「产出是否真对」的任务，让「外部可证伪评分」从理论基元变成可运行的评测闭环。
+
+**改动 1 · 真值任务集（`data/truth-tasks.jsonl`，数据文件，不计入源码预算）**：10 项任务覆盖全部三类 oracle
+与全部 `EvalCategory`：
+- `answer-matches-reference`（truth-02/05/08/09/10）：终答（不区分大小写）包含真值参考；
+- `answer-equals-reference`（truth-04）：终答与真值精确相等；
+- `file-contains-reference`（truth-01/03/06/07）：工作区文件含真值参考；
+- 其中 truth-01/06 同时要求 `expectedTools`（calc + file_write）**且** 文件真值命中，把「真调了工具」与
+  「真产出了正确结果」两条独立证据叠在一起，杜绝「内部行为看起来对了」的自指蒙混。
+
+**改动 2 · 运行通道（`package.json` 脚本，配置变更，不计入源码预算）**：
+- `eval:truth`：`--mode deterministic --tasks data/truth-tasks.jsonl --baseline data/truth-baseline.json`
+  （独立基线，避免污染主回归基线 `data/eval-baseline.json`）；
+- `eval:truth:live`：同上但 `--mode live`，跑真实 provider 的真实能力测量。
+- `data/truth-baseline.json`、`data/eval-live-report.json` 加入 `.gitignore`（再生产物，不进版本库）。
+
+**改动 3 · 诚实口径与实测结论**：
+- **确定性全链路（mock 脚本产出正确结果）**：`npm run eval:truth` → **10/10 通过，总体 100%**，五大类全绿，
+  协议违规 0。证明 oracle 已端到端接入 `runEval` 聚合（`summary.overall` 由 oracle 真值而非自指行为驱动）。
+- **live 真实测量（kilo 免 Key 端点，本沙箱）**：`npm run eval:truth:live` 实际跑通并产出**外部可证伪**得分
+  **7/10、overall 0.7**；oracle 正确标记了真实能力缺口（如 truth-09 终答未含「拒绝」= 未外部拒绝危险请求）。
+  **诚实标注**：该端点工具调用能力不稳（`preflight` 判定 `toolCalling=unknown`），live 分数受端点可用性限制，
+  **不是干净的 bro2 能力基准**；它证明的是「外部真值评测机制可用」，而非给出能力结论。干净基准需工具可达的 provider。
+
+**口径诚实说明**：同 v2.20.0——本版**不产生能力分数声明**，`leadership.verdict` 仍 `not-proven`、L4 仍
+`not-achieved`。真值任务集是「让能力提升相对独立真值」的测量面，不是能力自证；要收敛能力结论仍需在
+train/holdout/OOD 三段用独立真值对照（接力 `judgePromotion` 三段铁律）。
+
+**代码预算**：**16,499/16,500**、88/90 文件（任务集为数据、脚本为配置，均不占源码预算）、单文件最大 584、
+运行时依赖 0、测试/源 0.27；未上调阈值、未新增依赖、未新增源文件。
+
+---
+
 ## [2.20.0] — 2026-11-10 · 外部真值 oracle 评测 + RSI 子系统收敛（MINOR）
 
 > 跨步说明：本版一次性合并了三处实质性改动（RSI 子系统收敛 + 外部真值评测原语 + 门禁/文档同步），

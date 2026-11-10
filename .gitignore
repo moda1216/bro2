@@ -11,6 +11,8 @@ node_modules/
 data/sessions/
 data/system.jsonl
 data/evolve/journal.jsonl
+data/truth-baseline.json
+data/eval-live-report.json
 data/workspace/
 data/local-llm-stats.json
 data/memory/long-term.json

@@ -1,6 +1,6 @@
 {
   "name": "bro2",
-  "version": "2.20.0",
+  "version": "2.21.0",
   "type": "module",
   "description": "bro2 · 通用 Agent 运行时（含 RSI 有界可验证自我改进）— 零第三方依赖",
   "license": "MIT",
@@ -23,6 +23,8 @@
     "verify": "node --experimental-strip-types --no-warnings examples/verify.ts",
     "eval": "node --experimental-strip-types --no-warnings bin/agentos.ts eval --mode deterministic",
     "eval:live": "node --experimental-strip-types --no-warnings bin/agentos.ts eval --mode live",
+    "eval:truth": "node --experimental-strip-types --no-warnings bin/agentos.ts eval --mode deterministic --tasks data/truth-tasks.jsonl --baseline data/truth-baseline.json",
+    "eval:truth:live": "node --experimental-strip-types --no-warnings bin/agentos.ts eval --mode live --tasks data/truth-tasks.jsonl",
     "doctor": "node --experimental-strip-types --no-warnings bin/agentos.ts doctor",
     "preflight": "node --experimental-strip-types --no-warnings bin/agentos.ts preflight",
     "preflight:check": "node --experimental-strip-types --no-warnings examples/preflight-check.ts",

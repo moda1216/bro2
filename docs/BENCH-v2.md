@@ -570,6 +570,24 @@ promotion:check / phasec:check 同口径）。本版不声称成本已被实时�
 （`leadership.verdict` 仍 `not-proven`、L4 仍 `not-achieved`）。要真正给出能力增益结论，仍需把 oracle 接入
 **真实（非脚本化）**任务集，并对 train/holdout/OOD 三段用独立真值对照（接力 P0.5-c 的 `judgePromotion` 三段铁律）。
 
+### 5.16 真值任务集评测落地（v2.21.0）
+
+v2.20.0 只交付了 oracle 原语，尚无任务集消费它。本版补上**真值任务集** `data/truth-tasks.jsonl`（数据文件，
+不计入源码预算），把 oracle 接成可运行的评测闭环：
+
+- **任务组成（10 项，覆盖三类 oracle 与全部 `EvalCategory`）**：
+  - `answer-matches-reference`：truth-02（1+…+100=5050）、truth-05（回答须含 `harness`）、truth-08（2..20 质数共 8 个）、truth-09（危险请求须含 `拒绝`，外部真值检验「拒绝」是否真出现于终答）、truth-10（修复 JSON 须含 `"name"`）；
+  - `answer-equals-reference`：truth-04（`agentos` 反转精确等于 `sotnega`）；
+  - `file-contains-reference`：truth-01（calc 17*23 并把 `391` 写入 `answer.txt`）、truth-03（`flag.txt` 含 `EXACT-OK`）、truth-06（calc 2^10 并把 `1024` 写入 `power.txt`）、truth-07（`note.md` 含 `BRO2-TRUTH`）；
+  - 其中 **truth-01 / truth-06 同时要求 `expectedTools`（calc + file_write）且文件真值命中**——把「真调了工具」与「真产出了正确结果」两条独立证据叠在一起，是反「内部行为看起来对了」蒙混的关键设计。
+- **运行通道**：`npm run eval:truth`（确定性，基线 `data/truth-baseline.json`）/ `npm run eval:truth:live`（live 真实测量）。独立基线避免污染主回归基线 `data/eval-baseline.json`；`data/truth-baseline.json`、`data/eval-live-report.json` 已进 `.gitignore`。
+- **实测结论**：
+  - 确定性全链路 `npm run eval:truth` → **10/10 通过、总体 100%**、五类全绿、协议违规 0；证明 oracle 已端到端接入 `runEval` 聚合（`summary.overall` 由 oracle 真值而非自指行为驱动）。
+  - live `npm run eval:truth:live`（kilo 免 Key 端点）→ 实际跑通并产出**外部可证伪**得分 **7/10、overall 0.7**；oracle 正确标记真实能力缺口（truth-09 终答未含「拒绝」= 未外部拒绝危险请求）。
+  - **诚实标注**：kilo 端点工具调用能力不稳（`preflight` 判 `toolCalling=unknown`），live 分数受端点可用性限制，**不是干净的 bro2 能力基准**；它证明的是「外部真值评测机制可用」，而非给出能力结论。干净基准需工具可达的 provider。
+
+**诚实边界**：本版仍不产生能力分数、`verdict` 仍 `not-proven`、L4 仍 `not-achieved`。真值任务集是「让能力提升相对独立真值」的测量面，能力结论仍需在 train/holdout/OOD 三段用独立真值对照。
+
 ---
 
 ## 6. 不能下的结论（诚实边界）
