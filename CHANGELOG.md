@@ -10,6 +10,34 @@
 
 ---
 
+## [2.27.0] — 2026-11-11 · 走出去测量：第一组外部公开任务对照（MINOR）
+
+> **性质**：把 v2.26.0 的「走上去量一次」变成**已执行的联网实验**，不是第 7 版治理门禁。
+> 零 `src` 改动、零新增运行时依赖、零新增发布门禁、未上调任何阈值；全部产出在 `data/` `docs/` `examples/` `tests/` 豁免区。
+
+**结论先行**：bro2 首次在「**公开任务 + 公开评分器 + 真实模型端点**」上被判分。
+`kilo` 免 Key 端点（preflight PASS、原生 `tool_calls`）+ Docker 公开 pytest 评分器 + Terminal-Bench `original-tasks @ d28711d0`（Apache-2.0）三通道接通：
+**bro2 2/3 · minimal scaffold 1/3 · Δ=+1**（k=1，3 个 easy 任务）。
+这**不是**榜单分数、不是模型能力分数、不写 `external-results.json`、不改 L4 / `leadership.verdict`。
+
+**纠正上一版的一个判断**：`CAPABILITY-POSITION.md §4.1` 把「需可工具调用模型端点」当作资源硬门槛，实测该门槛在本沙箱内**早已满足**（项目内 `kilo` 免 Key 端点 + 原生 tool_calls），git/curl 可取公开任务、Docker 可跑公开 verifier 同样成立——缺的是接线，不是资源。§4.1 的防自指纪律（确定性 mock 量不出 harness Δ）依然正确，本轮只是否定「因此做不了」的结论。
+
+**测量设计（同模型 / 同任务 / 同预算 / 同评分器）**：
+- `examples/fetch-external-tasks.sh` 按固定 commit 拉 3 个公开任务的 instruction / 输入 / 官方解 / 评分器，`SHA256SUMS` 逐文件校验；`upstream/` 已 gitignore，**不搬运 benchmark 原文与 canary 语料**；
+- `examples/tb-verifier.Dockerfile` 固定 `python:3.11-slim + pytest==8.3.3`，按上游硬编码 `/app` 语义执行 `test_outputs.py`；
+- `examples/external-measure.ts` 用 `runEval({ mode:"live", strict:true })` 的 `prepareWorkspace` / `verifyWorkspace` 钩子挂公开输入与公开判分（**零 `src` 改动**）；minimal arm 为单 `shell` 工具 + 线性历史的最小 scaffold；
+- 两 arm 共用 `kilo-auto/free`、12 次模型调用上限、k=1、同一段显式标注的 `/app`→相对路径适配说明；评分器 agent 不可见；
+- **防空转仪表盘**：每个评分器先过「空工作区 fail / 上游官方 `solution.sh` pass / SHA256 匹配」三反证，任一不过即中止、不出报告。
+
+**实测结果**：评分器 3/3 `sound=true`；`analyze-access-logs` 双方均过，`bank-trans-filter` 仅 bro2 过（+1），`assign-seats` 双方均失败（bro2 多输出 `bob, frankie` / `ethan, frankie` 两对错误邻居）。bro2 明细 `10步/9工具`、`6步/5工具`、`8步/12工具`，均为真实模型轨迹，非脚本回放。
+**Δ=+1 在 3 题 k=1 下单题权重 33pp，不构成统计结论**；按 §4.2 必须换 holdout 模型并增大 k 复测，Δ 消失即判过拟合、定位降级为「可验证 RSI 研究台」。
+
+**仍未完成**（如实登记，不算本轮成果）：`P0-01` Harbor 装载 bro2 为自定义 agent、与 `mini-swe-agent` / `Terminus-2` 的第三方可复核对照、跨 holdout 模型复测、扩任务集与 k、长程任务子集。minimal arm 是自实现最小 scaffold，不等价于公开基线 harness。
+
+**产物**：`data/bench/external/{UPSTREAM.json,tasks.jsonl,SHA256SUMS,external-measure-report.json,bro2-eval-report.json}`、`docs/EXTERNAL-MEASUREMENT.md`、`examples/external-measure.ts`、`examples/fetch-external-tasks.sh`、`examples/tb-verifier.Dockerfile`、`tests/external-measure.test.ts`（8 项）、`npm run external:fetch` / `external:measure`。
+
+---
+
 ## [2.26.0] — 2026-11-10 · 能力水位定位与 ROI 转向裁决（MINOR）
 
 > **性质**：一次方向性诊断与下一阶段裁决，**不是能力版本，也不是第 7 版治理门禁**。

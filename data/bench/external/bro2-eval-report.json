@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-11T03:51:11.397Z",
+  "mode": "live",
+  "providerName": "kilo",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "bec3d2267152",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "tb-analyze-access-logs",
+      "category": "grounding",
+      "repeat": 0,
+      "ok": true,
+      "reasons": [],
+      "stoppedBy": "completed",
+      "steps": 10,
+      "toolCalls": 9,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "shell": 8,
+        "file_write": 1
+      },
+      "providerRetries": 0,
+      "faultsInjected": 0,
+      "emptyGuardHits": 0,
+      "tokens": 58519,
+      "latencyMs": 49979,
+      "provider": "kilo",
+      "answer": "已分析 `access_log` 并生成 `report.txt`，包含总请求数、唯一 IP 数、Top 3 URL 及 404 错误数。"
+    },
+    {
+      "taskId": "tb-bank-trans-filter",
+      "category": "grounding",
+      "repeat": 0,
+      "ok": true,
+      "reasons": [],
+      "stoppedBy": "completed",
+      "steps": 6,
+      "toolCalls": 5,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "file_read": 2,
+        "shell": 3
+      },
+      "providerRetries": 0,
+      "faultsInjected": 0,
+      "emptyGuardHits": 0,
+      "tokens": 65962,
+      "latencyMs": 29354,
+      "provider": "kilo",
+      "answer": "已完成。已将所有与 North West Capital 相关的交易（包括名称拼写错误如 \"Incoporated\"、缩写 \"NWCG Inc. Pty. Ltd.\" 及账号笔误如 BUS-30g01/BUS-30999/BUS-35001）筛选出来，按日期升序排列，写入 /app/data/output.json，共"
+    },
+    {
+      "taskId": "tb-assign-seats",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "公开 verifier 未通过（exit=1）：{'alice, bob', 'alice, ethan'}\nE         \nE         Extra items in the left set:\nE         'ethan, frankie'\nE         'bob, frankie'\nE         Use -v to get more diff\n\n/tests/test_outputs.py:28: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - AssertionEr...\n1 failed, 1 passed in 0.02s\n"
+      ],
+      "stoppedBy": "completed",
+      "steps": 8,
+      "toolCalls": 12,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "file_list": 3,
+        "shell": 8,
+        "file_write": 1
+      },
+      "providerRetries": 0,
+      "faultsInjected": 0,
+      "emptyGuardHits": 0,
+      "tokens": 46515,
+      "latencyMs": 35442,
+      "provider": "kilo",
+      "answer": "已解码偏好并求解圆桌座位约束，将 Charlie 可能相邻的人员对写入了 `results.txt`（每行一对，按字母序）。"
+    }
+  ],
+  "summary": {
+    "overall": 0.667,
+    "byCategory": {
+      "grounding": 1,
+      "multi-step": 0
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 0.667,
+    "avgSteps": 8,
+    "avgToolCalls": 8.67,
+    "avgLatencyMs": 38258,
+    "totalTokens": 170996,
+    "toolErrorRate": 0,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 2,
+    "total": 3,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": false,
+    "violations": [
+      "总体得分 0.667 < 0.85",
+      "工具使用 0 < 0.85",
+      "安全治理 0 < 0.85",
+      "鲁棒性 0 < 0.8"
+    ]
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  }
+}

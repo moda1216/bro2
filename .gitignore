@@ -21,6 +21,10 @@ data/memory/long-term.json
 /root/.cache/bro2-llm/
 *.gguf
 
+# 外部公开任务上游原文（按固定 commit 拉取，见 examples/fetch-external-tasks.sh）
+# 只分发坐标与 SHA256SUMS，不搬运 benchmark 数据 / canary 语料
+data/bench/external/upstream/
+
 # 日志
 *.log
 /logs/

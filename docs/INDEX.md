@@ -23,7 +23,8 @@
 | [docs/ITERATION-WATERMARK.md](./ITERATION-WATERMARK.md) | 迭代水位：在哪里看、逐轮变化、如何推进、诚实边界（自动生成） | 想看「越用越快」是否真的发生 |
 | [docs/COMPOUND-LOOP.md](./COMPOUND-LOOP.md) | 复利闭环：经验库 + 冻结速度尺子 + 学习型路由的设计与边界 | 理解两大设计目标的共享底座 |
 | [docs/PLAN-TOP-HARNESS.md](./PLAN-TOP-HARNESS.md) | **竞争顶级 Agent Harness 作战计划书**：九维差距矩阵、HLR/CAS 北极星指标、W1–W5 五大战役、13 周里程碑、风险与退出条件 | 想知道「bro2 凭什么竞争、下一步做什么」 |
-| [docs/CAPABILITY-POSITION.md](./CAPABILITY-POSITION.md) | **能力水位定位与 ROI 转向（v2.26.0）**：诚实水位=内部可验证/外部未测量、2026 公开参照系四层、为何至今无法定位的结构性根因、Harbor 突破路径、可复用 ROI 判据与 P0 解耦 | 想回答「能力到底如何、有没有公开对比、下一步做什么」 |
+| [docs/CAPABILITY-POSITION.md](./CAPABILITY-POSITION.md) | **能力水位定位与 ROI 转向（v2.26.0）**：诚实水位=内部可验证/外部未测量、2026 公开参照系四层、为何至今无法定位的结构性根因、Harbor 突破路径、可复用 ROI 判据与 P0 解耦（§8 记录 v2.27.0 已走出去测量） | 想回答「能力到底如何、有没有公开对比、下一步做什么」 |
+| [docs/EXTERNAL-MEASUREMENT.md](./EXTERNAL-MEASUREMENT.md) | **走出去测量（v2.27.0）**：三通道实测接通、公开任务 + 公开评分器双向反证、同模型同预算对照 bro2 2/3 vs minimal 1/3（Δ=+1）、诚实边界与一行复现命令 | 想把「外部未测量」变成一次真实测量 |
 | [docs/INDEX.md](./INDEX.md) | 本文件 | 找文档 |
 
 运行产物（非文档，但常被引用，均在 `data/`）：
@@ -41,6 +42,7 @@
 | `data/evolve/meta-state.json` / `meta-ledger.jsonl` | 已落地的元状态 / 元层只增账本 |
 | `data/benchmark-report.json` | ablation + 证据阶梯 + 领先度声明 |
 | `data/reference-landscape.json` | **外部公开参照系台账**（2026-11-10）：14 条公开榜单/锁定 harness 协议/同模型增益/harness-RSI 赛道，逐条带来源·日期·证据等级；`bro2Measured=false`·`notL4Evidence=true`，不是 bro2 成绩 |
+| `data/bench/external/` | **外部公开任务测量**（2026-11-11）：`UPSTREAM.json` 固定 commit + `SHA256SUMS` + `tasks.jsonl` + `external-measure-report.json`（对照 Δ 与诚实声明）+ `bro2-eval-report.json`；`upstream/` 不入库，外部成绩不记入 bro2 名下 |
 | `data/rsi/velocity.jsonl` / `experience.jsonl` | 复利速度 / 经验的只增账本（跨会话累积，不回写历史） |
 | `data/rsi/watermark.html` / `watermark.json` | 迭代水位可视化看板与结构化数据（自动生成） |
 | `data/rsi/compound-tasks.jsonl` | 复利回路专属工作负载（与主能力评测任务集隔离） |
@@ -55,6 +57,7 @@
 | 先跑起来 | README §快速开始 | `npm run cli` / `npm run web` |
 | 看懂架构再改代码 | DESIGN → docs/API | `npm test` |
 | 判断能力到底如何 / 有无公开对比 | **docs/CAPABILITY-POSITION.md** → BENCHMARK → EVAL | `npm run position:check` → `npm run benchmark` → `npm run benchmark:check` |
+| 在公开任务上量一次 harness Δ | **docs/EXTERNAL-MEASUREMENT.md** | `npm run external:fetch` → 构建 verifier 镜像 → `AGENTOS_LIVE_PROVIDER=kilo npm run external:measure` |
 | 接真实模型 / Ollama | EVAL §真实模型 → docs/API §5 | `npm run doctor` → `npm run preflight` → `npm run eval:live` |
 | 理解自我改进 | RSI → ITERATIONS | `npm run evolve` → `npm run rsi:check` |
 | 理解 meta 改进 | META-RSI | `npm run meta` → `npm run meta:check` |
