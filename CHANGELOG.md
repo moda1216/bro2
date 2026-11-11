@@ -10,6 +10,26 @@
 
 ---
 
+## [2.28.0] — 2026-11-11 · 走出去测量硬化：k=3 通过率 + 跨模型复刻尝试（MINOR）
+
+> **性质**：把 v2.27.0 的 k=1 单发快照**硬化为 k=3 通过率**，并尝试第二个模型族（ovhcloud / gpt-oss-120b）做跨模型复刻。
+> 零 `src` 改动、零新增运行时依赖、零新增发布门禁、未上调任何阈值；全部产出在 `data/` `docs/` `examples/` `tests/` 豁免区。
+
+**结论先行**：bro2 在 **k=3（每题 3 次、9 次/arm）** 下得到**可辩护的通过率**：
+`kilo` 上 **bro2 6/9（0.67）· minimal 2/9（0.22）· Δ=+4**（约 +0.44 通过率差）；
+`ovhcloud` 段被 `provider_error` 拖垮（agent 几乎没产出文件），**无效对照**，Δ=+1 无意义。
+这**不是**榜单分数、不是模型能力分数、不写 `external-results.json`、不改 L4 / `leadership.verdict`。
+
+**为什么这是 P0-04 的核心（k 扩展消解单发运气）**：v2.27.0 的「2/3 vs 1/3、Δ=+1」每题权重 33pp，无统计意义；k=3 后单发运气被平均掉，信号反而更稳更强——`bank-trans-filter` 在 k=3 下 bro2 **3/3 vs minimal 0/3**，成为 harness 增益最干净的证据（模糊匹配公司名/账号 + 按日期排序，minimal 几乎从不出正确 JSON）。
+
+**跨模型 holdout（ovhcloud / gpt-oss-120b）**：preflight PASS、原生 `tool_calls`，但与 `kilo` 不同模型族；完整 harness 下被 `provider_error` 反复打断（verifier 报 `FileNotFoundError`，agent 未产出文件），9 次全失败 → **跨模型有效复刻未完成**。两个端点的 Δ 都 ≥ 0，**未触发** §4.2 降级（降级条件是 Δ≤0 或 holdout 模型上 Δ 消失；这里是 holdout 端点本身驱动失败，非 Δ 消失）。需换一个能在完整 harness 下稳定驱动工具调用的第二端点。
+
+**诚实边界**：bro2 自跑 / 非第三方复核 / k=3 / 3 个 easy 任务 / 免费端点（kilo 稳定、ovhcloud 报错）/ 非榜单分数 / 不写 `external-results.json` / 不改 L4·verdict；minimal 是自实现 scaffold，不等于 `mini-swe-agent`/`Terminus-2`；任务集仍 3 个 easy，扩集与长程子集是下一步。
+
+**产物**：`data/bench/external/external-measure-report.json`（version 2，按 provider 拆分的通过率 + 跨模型稳定性）、`bro2-eval-report.json`、`docs/EXTERNAL-MEASUREMENT.md`（§4 改为 k=3 双端点结果）、`examples/external-measure.ts`（支持 `EXT_K` / `EXT_PROVIDERS`、逐 provider 测量 + 增量落盘 + 跨模型分析）、`tests/external-measure.test.ts`（8 项，契约随 schema v2 同步）。
+
+---
+
 ## [2.27.0] — 2026-11-11 · 走出去测量：第一组外部公开任务对照（MINOR）
 
 > **性质**：把 v2.26.0 的「走上去量一次」变成**已执行的联网实验**，不是第 7 版治理门禁。

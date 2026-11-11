@@ -205,7 +205,9 @@
 
 ---
 
-## 8. 后续执行记录（v2.27.0，2026-11-11）
+## 8. 后续执行记录
+
+### 8.1 v2.27.0（2026-11-11）
 
 **「走上去量一次」已执行**，见 [`EXTERNAL-MEASUREMENT.md`](./EXTERNAL-MEASUREMENT.md)。三条通道实测接通（公开任务按固定 commit 取用、`kilo` 免 Key 端点原生 `tool_calls`、Docker 执行上游公开 pytest），在 3 个公开任务上产出第一组同模型对照：**bro2 2/3 · minimal scaffold 1/3 · Δ=+1**（k=1，评分器三反证全过）。
 
@@ -213,3 +215,13 @@
 - **定位不变**：仍是自跑内部对照、非第三方复核、k=1、免费匿名端点、3 个 easy 任务；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条。
 - Δ=+1 在 3 题 k=1 下单题权重 33pp，**不构成统计结论**；按 §4.2 必须换 holdout 模型并增大 k 复测，Δ 消失则降级定位为「可验证 RSI 研究台」。
 - `P0-01`（Harbor 装载 bro2 为自定义 agent）、与 `mini-swe-agent` / `Terminus-2` 的第三方可复核对照、长程任务子集**仍未完成**，不作已完成登记。
+
+### 8.2 v2.28.0（2026-11-11）· P0-04 硬化：k=3 通过率 + 跨模型复刻尝试
+
+把 §8.1 的 k=1 单发快照**硬化为 k=3 通过率**（每题 3 次、9 次/arm），并接第二个模型族 `ovhcloud` / `gpt-oss-120b` 作跨模型 holdout。详见 [`EXTERNAL-MEASUREMENT.md §4`](./EXTERNAL-MEASUREMENT.md)。
+
+- **kilo（主端点，k=3）**：bro2 **6/9（0.67）** · minimal **2/9（0.22）** · **Δ=+4**（约 +0.44 通过率差）。单发运气被消解后信号更稳更强；`bank-trans-filter` 在 k=3 下 **bro2 3/3 vs minimal 0/3**，成为 harness 增益最干净的证据。
+- **ovhcloud（holdout，k=3）**：被 `provider_error` 反复打断（agent 几乎没产出文件，verifier 报 `FileNotFoundError`），9 次全失败 → **无效对照**，Δ=+1 无意义。**跨模型有效复刻未完成**。
+- **未触发 §4.2 降级**：降级条件是 Δ≤0 或 holdout 模型上 Δ 消失；这里两个端点 Δ 都 ≥ 0，且 ovhcloud 是端点本身驱动失败（非 Δ 消失），所以定位**维持**——但跨模型确认**仍缺失**，需换一个能在完整 harness 下稳定驱动工具调用的第二端点。
+- **定位不变（仍诚实）**：自跑内部对照、非第三方复核、k=3、免费端点（kilo 稳定 / ovhcloud 报错）、3 个 easy 任务、非榜单分数；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条、不写 `external-results.json`。
+- `P0-01`（Harbor 装载）、与 `mini-swe-agent` / `Terminus-2` 的第三方可复核对照、**跨 holdout 模型有效复测**、扩任务集（仍 3 个 easy）、长程任务子集**仍未完成**，不作已完成登记。

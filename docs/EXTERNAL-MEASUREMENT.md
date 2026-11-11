@@ -1,4 +1,4 @@
-# bro2 · 走出去测量：第一组外部公开任务对照（2026-11-11）
+# bro2 · 走出去测量：k=3 硬化 + 跨模型复刻尝试（v2.28.0 / P0-04）
 
 > **性质**：联网实验 + 自跑内部对照。**不产生榜单分数、不提升 L4、不改 `leadership.verdict`、不写 `data/benchmark/external-results.json`**。
 > 配套产物：[`data/bench/external/`](../data/bench/external/) 下的 `UPSTREAM.json` / `tasks.jsonl` / `SHA256SUMS` / `external-measure-report.json` / `bro2-eval-report.json`。
@@ -9,7 +9,7 @@
 
 ## 0. 一句话
 
-bro2 从「**外部未测量**」走到「**在公开任务 + 公开评分器 + 真实模型端点上被判分一次**」。
+bro2 从「**外部未测量**」走到「**在公开任务 + 公开评分器 + 真实模型端点上被判分**」，并在 v2.28.0 把 v2.27.0 的 **k=1 单发快照硬化为 k=3 通过率**，同时尝试第二个模型族（ovhcloud / gpt-oss-120b）做跨模型复刻。
 条件一直都在，缺的是把它们接起来——不是「没 GPU / 没 Key / 没外部基准」，而是这三条通道从未被启用。
 
 ---
@@ -74,31 +74,43 @@ bro2 从「**外部未测量**」走到「**在公开任务 + 公开评分器 + 
 
 ---
 
-## 4. 结果（2026-11-11 实测，k=1）
+## 4. 结果（2026-11-11 实测，k=3，双端点）
 
-评分器三项 `sound=true` 后，真实模型跑完两个 arm，主指标取公开 verifier 判定：
+评分器三项 `sound=true` 后，真实模型在每个端点各跑两个 arm、每题重复 **3 次**（共 9 次/arm）。主指标取公开 verifier 判定，按**通过率**而非单发通过报告：
 
-| 任务 | bro2 | minimal | Δ |
+**端点 kilo（kilo-auto/free，主端点，k=3）**
+
+| 任务 | bro2 (通过/9) | minimal (通过/9) | Δ |
 | --- | --- | --- | --- |
-| `analyze-access-logs` | ✅ 通过（10 步 / 9 工具） | ✅ 通过（5 次模型调用） | 0 |
-| `bank-trans-filter` | ✅ 通过（6 步 / 5 工具） | ❌ 未通过（6 次模型调用） | **+1** |
-| `assign-seats` | ❌ 未通过 | ❌ 未通过（8 次模型调用） | 0 |
-| **合计** | **2/3** | **1/3** | **+1** |
+| `analyze-access-logs` | 3/3 | 2/3 | +1 |
+| `bank-trans-filter` | 3/3 | 0/3 | **+3** |
+| `assign-seats` | 0/3 | 0/3 | 0 |
+| **合计** | **6/9（0.67）** | **2/9（0.22）** | **+4** |
+
+**端点 ovhcloud（gpt-oss-120b，跨模型 holdout 尝试，k=3）**
+
+| 任务 | bro2 (通过/9) | minimal (通过/9) | Δ |
+| --- | --- | --- | --- |
+| `analyze-access-logs` | 0/3 | 0/3 | 0 |
+| `bank-trans-filter` | 1/3 | 0/3 | +1 |
+| `assign-seats` | 0/3 | 0/3 | 0 |
+| **合计** | **1/9（0.11）** | **0/9（0.00）** | **+1** |
 
 关键读数：
 
-- 这是 `kilo-auto/free` 真实模型 + 上游公开 pytest 的端到端判分，**不是 mock 脚本回放**；bro2 侧 `strict=true` 禁止降级到 Mock。
-- 两个 arm 用同一端点、同一 3 题、同一 12 次模型调用上限、同一评分器，差异只可能来自 harness 层。
-- `assign-seats` 两边都失败，bro2 还多写了 `bob, frankie` / `ethan, frankie` 两个错误 pair —— 说明公开的「解码二进制偏好 + CSP」任务对当前模型+harness 组合仍有难度，也说明结果**不是「bro2 全胜」**。
-- **Δ=+1 在 3 题 k=1 下单题权重 33pp，不构成统计结论**。按 [`CAPABILITY-POSITION.md §4.2`](./CAPABILITY-POSITION.md)，必须换 holdout 模型并增大 k 复测；若 Δ 消失则判过拟合，定位降级为「可验证 RSI 研究台」。
-- 报告同时记录 bro2 的 `evalOk`（含框架层「终答非空 / 协议违规」断言）与纯 `verifierPassed`，两者在本题中一致，未用自建断言替代公开评分。
+- 这是 `kilo-auto/free` 与 `ovhcloud/gpt-oss-120b` 真实模型 + 上游公开 pytest 的端到端判分，**不是 mock 脚本回放**；bro2 侧 `strict=true` 禁止降级到 Mock。
+- **k=3 把 v2.27.0 的「2/3 vs 1/3、Δ=+1」单发快照，升级为可辩护的通过率**：bro2 0.67 vs minimal 0.22，Δ=+4（约 +0.44 通过率差）。单发「通过」常含运气（v2.27.0 里 `bank-trans-filter` 单发算 pass，k=3 下它多次命中 12 步上限 `guard ≠ completed`），重复后信号反而更稳、更强。
+- **`bank-trans-filter` 是 harness 增益最干净的证据**：bro2 3/3 vs minimal 0/3。该任务需模糊匹配公司名/账号（含 typo）并按日期排序——minimal 的「单 shell 工具 + 线性历史」几乎从不出正确 JSON，bro2 的完整 harness（上下文/工具调度/治理）稳定产出。
+- **`assign-seats` 双方 0/3 是真实能力缺口**，不是 harness 问题：公开「解码 pickle/base64 偏好 + CSP」对当前模型+harness 组合仍过难，bro2 反复多写错误邻居对。结果**不是「bro2 全胜」**。
+- **ovhcloud 段整体被 `provider_error` 拖垮**（agent 几乎没产出文件，verifier 报 `FileNotFoundError`），是**无效对照**而非「Δ 消失」——两个端点的 Δ 都 ≥ 0，但未触发 [`CAPABILITY-POSITION.md §4.2`](./CAPABILITY-POSITION.md) 的降级（降级条件是 Δ≤0 或 holdout 模型上 Δ 消失；这里 holdout 端点本身驱动失败，复刻**未完成**）。
+- 报告同时记录 bro2 的 `evalOk`（含框架层「终答非空 / 协议违规」断言）与纯 `verifierPassed`，未用自建断言替代公开评分。
 
 ---
 
 ## 5. 诚实边界（与报告 `honest` 字段逐条对应）
 
 - **bro2 自跑、非第三方复核、仅内部对照**，不构成公开榜单成绩；
-- `k=1`、3 个 easy 任务、免费匿名端点 `kilo-auto/free`（能力与限流不稳定，单次样本）；
+- `k=3`、3 个 easy 任务、免费匿名端点 `kilo-auto/free`（能力与限流不稳定）；第二个端点 `ovhcloud/gpt-oss-120b` 作为跨模型 holdout 尝试，但被 `provider_error` 拖垮、未构成有效对照；
 - 任务取自 `original-tasks`，**非官方 core 子集、非榜单口径**，不能与 Terminal-Bench 榜单数字并列；
 - 结果是 **Model + Harness 端到端产物**：既不证明模型能力，也不证明 harness 的通用增益；
 - **未写 `data/benchmark/external-results.json`**（报告记录该文件前后指纹），**不改 L4 / `leadership.verdict`**（仍 `not-achieved` / `not-proven`）；
@@ -111,12 +123,13 @@ bro2 从「**外部未测量**」走到「**在公开任务 + 公开评分器 + 
 
 | 之前 | 之后 |
 | --- | --- |
-| L4 `not-achieved`、外部证据 0 条、`not-measured` | L4 **仍** `not-achieved`、外部证据 **仍** 0 条，但**有了第一组在公开任务 + 公开评分器 + 真实模型下的自跑测量**（弱证据） |
+| L4 `not-achieved`、外部证据 0 条、`not-measured` | L4 **仍** `not-achieved`、外部证据 **仍** 0 条，但**有了第一组在公开任务 + 公开评分器 + 真实模型下的自跑测量**（k=1 → k=3 硬化） |
 | 「同模型对照」被依赖链压在末尾、执行度零 | 有了一条可立即复跑的命令，和一把**能判通过也能判失败**的公开尺子 |
-| 任何 harness 改动的 Δ 都不可测 | 建立了「同模型 / 同任务 / 同预算 / 同评分器」的对照框架，后续 Context 紧窗口压缩（P1）等改动可在同一框架下量 Δ |
+| 单发 2/3 vs 1/3、Δ=+1（33pp/题，无统计意义） | **k=3 通过率 0.67 vs 0.22、Δ=+4**，单发运气被消解，`bank-trans-filter` 暴露为 harness 增益最干净的证据 |
+| 任何 harness 改动的 Δ 都不可测 | 建立了「同模型 / 同任务 / 同预算 / 同评分器 / k≥3」的对照框架，后续 Context 紧窗口压缩（P1）等改动可在同一框架下量 Δ |
 | 改进方向靠外部文献推断 | 有了内部可证伪增益的测量端点，`ROI ≈ 外部可证伪增益 Δ ÷ 实现成本` 的分母分子都落到了可执行实验上 |
 
-**仍未完成的**：`P0-01` Harbor 装载 bro2 为自定义 agent、与 `mini-swe-agent`/`Terminus-2` 的第三方可复核对照、跨 holdout 模型复测、扩任务集与 k、长程任务子集。这些是下一步，不是本轮成果。
+**仍未完成的**：`P0-01` Harbor 装载 bro2 为自定义 agent、与 `mini-swe-agent`/`Terminus-2` 的第三方可复核对照、**跨 holdout 模型的有效复测**（ovhcloud 被 `provider_error` 拖垮，需换一个能在完整 harness 下稳定驱动工具调用的第二端点）、扩任务集（仍为 3 个 easy）、长程任务子集。这些是下一步，不是本轮成果。
 
 ---
 

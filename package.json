@@ -1,6 +1,6 @@
 {
   "name": "bro2",
-  "version": "2.27.0",
+  "version": "2.28.0",
   "type": "module",
   "description": "bro2 · 通用 Agent 运行时（含 RSI 有界可验证自我改进）— 零第三方依赖",
   "license": "MIT",

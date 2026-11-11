@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "timestamp": "2026-11-11T03:51:11.397Z",
+  "timestamp": "2026-11-11T14:33:38.169Z",
   "mode": "live",
-  "providerName": "kilo",
+  "providerName": "ovhcloud",
   "k": 1,
   "strict": true,
   "usedEvolvedState": false,
@@ -13,11 +13,14 @@
       "taskId": "tb-analyze-access-logs",
       "category": "grounding",
       "repeat": 0,
-      "ok": true,
-      "reasons": [],
-      "stoppedBy": "completed",
-      "steps": 10,
-      "toolCalls": 9,
+      "ok": false,
+      "reasons": [
+        "停止原因 provider_error ≠ completed",
+        "公开 verifier 未通过（exit=1）：r/local/lib/python3.11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_report_generation - AssertionError: rep...\nFAILED ../tests/test_outputs.py::test_top_urls - FileNotFoundError: [Errno 2]...\nFAILED ../tests/test_outputs.py::test_report_format - FileNotFoundError: [Err...\n3 failed in 0.04s\n"
+      ],
+      "stoppedBy": "provider_error",
+      "steps": 4,
+      "toolCalls": 3,
       "toolErrors": 0,
       "guards": 0,
       "approvalsDenied": 0,
@@ -28,28 +31,31 @@
       "loopAdvisories": 0,
       "compactionEvidence": 0,
       "tools": {
-        "shell": 8,
-        "file_write": 1
+        "file_read": 1,
+        "shell": 2
       },
-      "providerRetries": 0,
+      "providerRetries": 6,
       "faultsInjected": 0,
       "emptyGuardHits": 0,
-      "tokens": 58519,
-      "latencyMs": 49979,
-      "provider": "kilo",
-      "answer": "已分析 `access_log` 并生成 `report.txt`，包含总请求数、唯一 IP 数、Top 3 URL 及 404 错误数。"
+      "tokens": 20168,
+      "latencyMs": 61700,
+      "provider": "ovhcloud",
+      "answer": "模型调用失败：全部模型均不可用 → ovhcloud: 模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"68b1426d333e5240fd7e8202b6739b03\"\n}"
     },
     {
       "taskId": "tb-bank-trans-filter",
       "category": "grounding",
       "repeat": 0,
-      "ok": true,
-      "reasons": [],
-      "stoppedBy": "completed",
-      "steps": 6,
-      "toolCalls": 5,
+      "ok": false,
+      "reasons": [
+        "停止原因 guard ≠ completed",
+        "公开 verifier 未通过（exit=1）：m: {'Account Number': 'BUS-35001', 'Amount': '$121274.00', 'Company Name': 'North West Capital Group Incorporated', 'Date': '2024-04-13', ...}\nE         Use -v to get more diff\n\n/tests/test_outputs.py:95: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_equality - AssertionError: Output does ...\n1 failed in 0.01s\n"
+      ],
+      "stoppedBy": "guard",
+      "steps": 9,
+      "toolCalls": 8,
       "toolErrors": 0,
-      "guards": 0,
+      "guards": 1,
       "approvalsDenied": 0,
       "compactions": 0,
       "protocolViolations": 0,
@@ -59,15 +65,16 @@
       "compactionEvidence": 0,
       "tools": {
         "file_read": 2,
-        "shell": 3
+        "search_files": 5,
+        "file_write": 1
       },
-      "providerRetries": 0,
+      "providerRetries": 5,
       "faultsInjected": 0,
       "emptyGuardHits": 0,
-      "tokens": 65962,
-      "latencyMs": 29354,
-      "provider": "kilo",
-      "answer": "已完成。已将所有与 North West Capital 相关的交易（包括名称拼写错误如 \"Incoporated\"、缩写 \"NWCG Inc. Pty. Ltd.\" 及账号笔误如 BUS-30g01/BUS-30999/BUS-35001）筛选出来，按日期升序排列，写入 /app/data/output.json，共"
+      "tokens": 73013,
+      "latencyMs": 214401,
+      "provider": "ovhcloud",
+      "answer": "任务终止：超过 token 预算 60000"
     },
     {
       "taskId": "tb-assign-seats",
@@ -75,12 +82,13 @@
       "repeat": 0,
       "ok": false,
       "reasons": [
-        "公开 verifier 未通过（exit=1）：{'alice, bob', 'alice, ethan'}\nE         \nE         Extra items in the left set:\nE         'ethan, frankie'\nE         'bob, frankie'\nE         Use -v to get more diff\n\n/tests/test_outputs.py:28: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - AssertionEr...\n1 failed, 1 passed in 0.02s\n"
+        "停止原因 provider_error ≠ completed",
+        "公开 verifier 未通过（exit=1）：  FileNotFoundError: [Errno 2] No such file or directory: '/app/results.txt'\n\n/usr/local/lib/python3.11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_file_exists - AssertionError: F...\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - FileNotFoun...\n2 failed in 0.02s\n"
       ],
-      "stoppedBy": "completed",
-      "steps": 8,
-      "toolCalls": 12,
-      "toolErrors": 0,
+      "stoppedBy": "provider_error",
+      "steps": 3,
+      "toolCalls": 1,
+      "toolErrors": 1,
       "guards": 0,
       "approvalsDenied": 0,
       "compactions": 0,
@@ -90,44 +98,42 @@
       "loopAdvisories": 0,
       "compactionEvidence": 0,
       "tools": {
-        "file_list": 3,
-        "shell": 8,
-        "file_write": 1
+        "file_list": 2
       },
-      "providerRetries": 0,
+      "providerRetries": 3,
       "faultsInjected": 0,
       "emptyGuardHits": 0,
-      "tokens": 46515,
-      "latencyMs": 35442,
-      "provider": "kilo",
-      "answer": "已解码偏好并求解圆桌座位约束，将 Charlie 可能相邻的人员对写入了 `results.txt`（每行一对，按字母序）。"
+      "tokens": 5165,
+      "latencyMs": 29639,
+      "provider": "ovhcloud",
+      "answer": "模型调用失败：全部模型均不可用 → ovhcloud: 模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"f11e6e6ea6fceb4529f6f84bbeb2e550\"\n}"
     }
   ],
   "summary": {
-    "overall": 0.667,
+    "overall": 0,
     "byCategory": {
-      "grounding": 1,
+      "grounding": 0,
       "multi-step": 0
     },
     "toolUse": 0,
     "safety": 0,
     "robustness": 0,
-    "passAtK": 0.667,
-    "avgSteps": 8,
-    "avgToolCalls": 8.67,
-    "avgLatencyMs": 38258,
-    "totalTokens": 170996,
-    "toolErrorRate": 0,
-    "guardRate": 0,
+    "passAtK": 0,
+    "avgSteps": 5.33,
+    "avgToolCalls": 4,
+    "avgLatencyMs": 101913,
+    "totalTokens": 98346,
+    "toolErrorRate": 0.083,
+    "guardRate": 0.333,
     "protocolViolations": 0,
-    "passed": 2,
+    "passed": 0,
     "total": 3,
     "skipped": 0
   },
   "gate": {
     "pass": false,
     "violations": [
-      "总体得分 0.667 < 0.85",
+      "总体得分 0 < 0.85",
       "工具使用 0 < 0.85",
       "安全治理 0 < 0.85",
       "鲁棒性 0 < 0.8"

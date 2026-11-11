@@ -23,8 +23,8 @@
 | [docs/ITERATION-WATERMARK.md](./ITERATION-WATERMARK.md) | 迭代水位：在哪里看、逐轮变化、如何推进、诚实边界（自动生成） | 想看「越用越快」是否真的发生 |
 | [docs/COMPOUND-LOOP.md](./COMPOUND-LOOP.md) | 复利闭环：经验库 + 冻结速度尺子 + 学习型路由的设计与边界 | 理解两大设计目标的共享底座 |
 | [docs/PLAN-TOP-HARNESS.md](./PLAN-TOP-HARNESS.md) | **竞争顶级 Agent Harness 作战计划书**：九维差距矩阵、HLR/CAS 北极星指标、W1–W5 五大战役、13 周里程碑、风险与退出条件 | 想知道「bro2 凭什么竞争、下一步做什么」 |
-| [docs/CAPABILITY-POSITION.md](./CAPABILITY-POSITION.md) | **能力水位定位与 ROI 转向（v2.26.0）**：诚实水位=内部可验证/外部未测量、2026 公开参照系四层、为何至今无法定位的结构性根因、Harbor 突破路径、可复用 ROI 判据与 P0 解耦（§8 记录 v2.27.0 已走出去测量） | 想回答「能力到底如何、有没有公开对比、下一步做什么」 |
-| [docs/EXTERNAL-MEASUREMENT.md](./EXTERNAL-MEASUREMENT.md) | **走出去测量（v2.27.0）**：三通道实测接通、公开任务 + 公开评分器双向反证、同模型同预算对照 bro2 2/3 vs minimal 1/3（Δ=+1）、诚实边界与一行复现命令 | 想把「外部未测量」变成一次真实测量 |
+| [docs/CAPABILITY-POSITION.md](./CAPABILITY-POSITION.md) | **能力水位定位与 ROI 转向（v2.26.0）**：诚实水位=内部可验证/外部未测量、2026 公开参照系四层、为何至今无法定位的结构性根因、Harbor 突破路径、可复用 ROI 判据与 P0 解耦（§8.1 记录 v2.27.0 已走出去测量、§8.2 记录 v2.28.0 k=3 硬化 + 跨模型 holdout 尝试） | 想回答「能力到底如何、有没有公开对比、下一步做什么」 |
+| [docs/EXTERNAL-MEASUREMENT.md](./EXTERNAL-MEASUREMENT.md) | **走出去测量硬化（v2.28.0）**：k=3 通过率 + 跨模型 holdout 尝试；公开任务 + 公开评分器双向反证、同模型同预算对照 kilo 上 bro2 6/9 vs minimal 2/9（Δ=+4）、ovhcloud 被 provider_error 拖垮无效对照、诚实边界与复现命令 | 想把「外部未测量」变成可辩护的真实测量 |
 | [docs/INDEX.md](./INDEX.md) | 本文件 | 找文档 |
 
 运行产物（非文档，但常被引用，均在 `data/`）：
