@@ -416,12 +416,16 @@ function analyzeCrossModel(providers: Array<Record<string, any>>, tasks: ExtTask
   const bro2Rate: Record<string, number> = {};
   const minRate: Record<string, number> = {};
   const deltaByProvider: Record<string, number> = {};
+  const degraded: string[] = [];
   for (const n of names) {
     const p = byName.get(n)!;
     bro2Rate[n] = p.arms.bro2.passRate;
     minRate[n] = p.arms.minimal.passRate;
     deltaByProvider[n] = p.delta.bro2MinusMinimal;
+    // 低通过率 + 极小 Δ 视为端点驱动失败（provider_error）导致的无效对照，而非有效的跨模型数据点。
+    if (p.arms.bro2.passRate < 0.15 && p.delta.bro2MinusMinimal <= 1) degraded.push(n);
   }
+  const valid = names.filter((n) => !degraded.includes(n));
   const perTask = tasks.map((t) => {
     const row: Record<string, number | string> = { taskId: t.id };
     for (const n of names) {
@@ -430,20 +434,26 @@ function analyzeCrossModel(providers: Array<Record<string, any>>, tasks: ExtTask
     }
     return row;
   });
-  const deltas = names.map((n) => deltaByProvider[n]!);
-  const allNonNeg = deltas.every((d) => d >= 0);
-  const allNonPos = deltas.every((d) => d <= 0);
-  const signConsistent = allNonNeg || allNonPos;
+  const deltas = valid.map((n) => deltaByProvider[n]!);
+  const signConsistent = deltas.length > 0 && (deltas.every((d) => d >= 0) || deltas.every((d) => d <= 0));
+  let note: string;
+  if (degraded.length > 0) {
+    note = `跨模型复刻未完成：holdout 端点 ${degraded.join(", ")} 被 provider_error 拖垮（bro2 通过率≈0，agent 几乎未产出文件），属无效对照，不能据此判断 Δ 是否跨模型稳定；仅 ${valid.join(", ") || "无"} 提供有效数据。Δ 未消失、未触发 §4.2 降级，但跨模型确认仍缺失，需换一个能在完整 harness 下稳定驱动工具调用的第二端点。`;
+  } else if (signConsistent) {
+    note = "跨模型 Δ 同向（均 ≥0），非单点过拟合的初步证据；仍需扩大任务集与 k 复核。";
+  } else {
+    note = "Δ 符号跨模型不一致，需更多任务/端点复核。";
+  }
   return {
     providers: names,
+    validProviders: valid,
+    degradedProviders: degraded,
     bro2PassRateByProvider: bro2Rate,
     minimalPassRateByProvider: minRate,
     deltaByProvider,
     perTaskBro2PassRate: perTask,
     signConsistent,
-    note: signConsistent
-      ? "Δ 符号跨模型稳定（同向），非单点过拟合的初步证据"
-      : "Δ 符号跨模型不一致，需更多任务/端点复核",
+    note,
   };
 }
 

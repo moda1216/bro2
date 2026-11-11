@@ -1038,7 +1038,13 @@
         "bro2_ovhcloud": 0
       }
     ],
-    "signConsistent": true,
-    "note": "Δ 符号跨模型稳定（同向），非单点过拟合的初步证据"
+    "signConsistent": false,
+    "note": "跨模型复刻未完成：holdout 端点 ovhcloud 被 provider_error 拖垮（bro2 通过率≈0，agent 几乎未产出文件），属无效对照，不能据此判断 Δ 是否跨模型稳定；仅 kilo 提供有效数据。Δ 未消失、未触发 §4.2 降级，但跨模型确认仍缺失，需换一个能在完整 harness 下稳定驱动工具调用的第二端点。",
+    "validProviders": [
+      "kilo"
+    ],
+    "degradedProviders": [
+      "ovhcloud"
+    ]
   }
 }
