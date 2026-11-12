@@ -10,6 +10,25 @@
 
 ---
 
+## [2.30.0] — 2026-11-12 · 走出去测量硬化（二）：公开榜单任务集直跑 + 轨迹层面能力画像（MINOR）
+
+> **性质（用户新方向）**：上一轮把 P0-02 留成「等第三方来填对照槽」的空槽，本质是「非真正走出去测量」。
+> 本轮按用户方向纠正——**不等人填，直接把「第三方已有公开成绩的任务集」给 bro2 跑、对公开数字**；并补一条**策略 B**：抓取其他 agent 的公开轨迹数据，靠轨迹差异判断 bro2 的能力。
+> 零 `src` 改动、零新增运行时依赖、零新增发布门禁；全部产出在 `data/` `docs/` `examples/` 豁免区。诚实边界不变（自跑 / 非第三方复核 / 小样本 / 非逐位同任务集 / 不写 `external-results.json` / 不改 L4 / `verdict`）。
+
+**A2 · bro2 直跑有公开成绩的任务集（Terminal-Bench）**：`examples/tb-leaderboard-compare.ts` 用 bro2 完整 harness 在 Terminal-Bench `original-tasks @ d28711d0` 的公开任务样本上自跑，把样本 pass@1 与 [`tb-leaderboard-snapshot.json`](./data/bench/external/tb-leaderboard-snapshot.json)（llmleaderboard.com 公开榜快照，2026-11-09，带出处固化）对照：
+
+- **样本 = 4 个 SOUND 任务**（3 个原 easy 任务 + `constraints-scheduling`）：公开 verifier 在统一离线镜像（`python:3.11-slim + pytest`，仅 stdlib）内双向反证全过（空工作区必 fail / 官方解必 pass）。
+- **剔除 4 个候选扩展任务并如实记录**：`dna-assembly` / `dna-insert` / `gcode-to-text` 的官方解需 `apt-get`/`pip` 装 emboss·primer3·opencv·tesseract 等（联网），`circuit-fibsqrt` 的公开评分器需 `gcc` 编译 `sim.c`——统一离线 verifier 无法复现。**诚实发现：Terminal-Bench 任务绝大多数是「构建时环境重」（Dockerfile/apt/pip 重放），只有声明静态输入 + 纯 stdlib 评分器的子集可在统一镜像里跑**；这对任何想「直接复跑公开榜」的尝试都是硬约束。
+- **kilo 主端点（kilo-auto/free，匿名，不在榜单）**：bro2 **2/4（passRate 0.5）**，对照性质为 **positioning-only**（只做「模型+harness 综合位次」定位，无法隔离 harness 贡献）。
+- **ovhcloud 同模型隔离锚点（gpt-oss-120b，公开榜 2.1 = 26.217%）尝试但无效**：端点限流导致 `provider_error`（首调即失败 / 长 backoff），4 题里 1 题 `guard≠completed`、2 题直接 `provider_error`、1 题未完即中止。**按 §4.2 诚实回退**——这是端点稳定性问题、非 harness 增益归零，故不构成有效「同模型 harness-Δ」样本，报告只保留 kilo positioning-only，并对锚点尝试留痕（`tb-leaderboard-compare-ovhcloud.out` + 报告 `sameModelAnchorAttempt` 字段），**不做基于失败运行的误导 Δ 计算**。
+
+**B1 · 轨迹层面能力画像（策略 B）**：[`docs/TRAJECTORY-ANALYSIS.md`](./docs/TRAJECTORY-ANALYSIS.md) 把 bro2 在真实公开任务上的**步数 / 工具调用 / 停止行为 / 成功率**与公开 agent 轨迹统计（SWE-bench 各榜把 `Avg. $ Trajs` 作一级指标；2025 研究给出每题 5–20 轨迹）对照。本沙箱 HuggingFace 不可达，无法下载 Toolathlon-Trajectories 等逐条轨迹数据集，故只用公开榜单聚合统计作参照轴（跨基准家族只比「轨迹效率/停止行为」行为轴，不混绝对数）。读出一条**可证伪的 harness 行为结论**：bro2 对解不出的任务不会优雅停手——失败题工具调用数（14、11）反而高于通过题（9、5），缺失「验证—停手」闭环；这是行为层信号、非纯模型信号，可直接变成后续 harness 迭代的可证伪实验（加 verifier 信号回灌 + 早停后复测）。
+
+**交付物**：`tb-leaderboard-snapshot.json`（A1 公开榜快照）· `tb-leaderboard-compare-report.json`（A2 对照，含每题 `traj` 指标）· `tb-leaderboard-compare-kilo.json`（kilo 单独留存）· `tb-leaderboard-compare-ovhcloud.out`（锚点尝试证据）· `examples/tb-leaderboard-compare.ts` · `examples/sanity-check.ts` / `sanity-diag.ts`（公开评分器双向反证）· `docs/TRAJECTORY-ANALYSIS.md`（B1）。
+
+**定位不变（仍诚实）**：自跑内部对照、非第三方复核、样本 4 题/K=1/免费端点、非榜单口径；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条、不写 `external-results.json`。同模型隔离锚点因端点限流未取得，是本轮唯一明确的「未竟」——下一步需一个能在完整 harness 下稳定驱动工具调用的第二端点。
+
 ## [2.29.0] — 2026-11-12 · P0 定位收口：Harbor 装载 + 第三方对照框架 + 跨模型复测启动（MINOR）
 
 > **性质**：完成「走上去量一次」的三条剩余 P0 接入口——P0-01 Harbor 装载（零 Key 接线验证）、

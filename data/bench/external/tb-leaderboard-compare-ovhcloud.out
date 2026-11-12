@@ -1,0 +1,37 @@
+====================================================================================
+  bro2 · Terminal-Bench 公开 leaderboard 对照（第三方已有公开成绩的任务集）· v2.30.0
+====================================================================================
+  上游 laude-institute/terminal-bench @ d28711d0da26 · 4 任务 · k=1 · 端点 ovhcloud
+
+  【0】公开评分器健全性（空工作区应 fail / 官方解应 pass，模型无关）
+    ✓ tb-analyze-access-logs         empty=fail oracle=pass
+    ✓ tb-bank-trans-filter           empty=fail oracle=pass
+    ✓ tb-assign-seats                empty=fail oracle=pass
+    ✓ tb-constraints-scheduling      empty=fail oracle=pass
+
+  【测量】端点 ovhcloud · bro2 完整 harness · 1 次
+  ✗ tb-analyze-access-logs [grounding  ] 7步/6工具/62242ms → 停止原因 guard ≠ completed; 公开 verifier 未通过（exit=1）：r/local/lib/python3.11/pathlib.py:1044: FileNotFoundError
+=========================== short test summary info ============================
+FAILED ../tests/test_outputs.py::test_report_generation - AssertionError: rep...
+FAILED ../tests/test_outputs.py::test_top_urls - FileNotFoundError: [Errno 2]...
+FAILED ../tests/test_outputs.py::test_report_format - FileNotFoundError: [Err...
+3 failed in 0.04s
+
+  ✗ tb-bank-trans-filter [grounding  ] 1步/0工具/38755ms → 停止原因 provider_error ≠ completed; 公开 verifier 未通过（exit=1）：nError: File /app/data/output.json does not exist
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/app/data/output.json').exists
+
+/tests/test_outputs.py:90: AssertionError
+=========================== short test summary info ============================
+FAILED ../tests/test_outputs.py::test_equality - AssertionError: File /app/da...
+1 failed in 0.01s
+
+  ✗ tb-assign-seats [multi-step ] 6步/5工具/97510ms → 停止原因 provider_error ≠ completed; 公开 verifier 未通过（exit=1）：  FileNotFoundError: [Errno 2] No such file or directory: '/app/results.txt'
+
+/usr/local/lib/python3.11/pathlib.py:1044: FileNotFoundError
+=========================== short test summary info ============================
+FAILED ../tests/test_outputs.py::test_results_file_exists - AssertionError: F...
+FAILED ../tests/test_outputs.py::test_results_has_correct_pairs - FileNotFoun...
+2 failed in 0.02s
+

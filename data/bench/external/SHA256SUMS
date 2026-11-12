@@ -3,6 +3,10 @@
 a5a3b3845a52d86b33a24413586da4c91e18a1672815bad65f2701db0464dcce  ./analyze-access-logs/solution.sh
 bf6b6c9196482097491fb4736985780cdddc0e075257cc1e5e6d62449c02a8cd  ./analyze-access-logs/task.yaml
 c5e70afb14d94aa944e378b21ce13275de3d2119d6c4c68326db2cc8791d1777  ./analyze-access-logs/tests/test_outputs.py
+bbd95ce563a4f053817a61ca6f2b7f9623bdfa093b9fa39463f947f95efb2f9f  ./bank-trans-filter/data/bank_transactions.csv
+de14767c099fe5790e60e3ebb45b7f9ee1ce965dedff49dd497189f593e386fb  ./bank-trans-filter/solution.sh
+c5a29c7a01e891024da3fa7bac6f03678c23a1869ef956bf598875689f3b02ce  ./bank-trans-filter/task.yaml
+c66afe78c0cae8edc745f18e0f7969b2b09eccc4a342ae3da51426cb6f791a1c  ./bank-trans-filter/tests/test_outputs.py
 adf5b6620b5a123d7b874e9abd8cbaff153537836acaee80c1a617caed947d15  ./assign-seats/deps/ask_alice.pkl
 857cf08a864c0073f184c8b37071472650c4f5c74eb14ad65551480628d51b29  ./assign-seats/deps/ask_bob.pkl
 7381d51b715e019cdfdfc45f433586dda75eb45c51220b022c724ddab7dd1f4c  ./assign-seats/deps/ask_charlie.b64
@@ -12,7 +16,12 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./assign-seats
 e3494473b18efb76650aabf342365c809ad24d2a3255d34997d30d7037780416  ./assign-seats/solution.sh
 8a01b4b4b30e1799d3a5365386bb7f702a9566e1ceec57e63b27061e65b86ec4  ./assign-seats/task.yaml
 34dc3b7118dd4a27044279f4154a83e9a6197a746e6df2502913f7e1eb8dff02  ./assign-seats/tests/test_outputs.py
-bbd95ce563a4f053817a61ca6f2b7f9623bdfa093b9fa39463f947f95efb2f9f  ./bank-trans-filter/data/bank_transactions.csv
-de14767c099fe5790e60e3ebb45b7f9ee1ce965dedff49dd497189f593e386fb  ./bank-trans-filter/solution.sh
-c5a29c7a01e891024da3fa7bac6f03678c23a1869ef956bf598875689f3b02ce  ./bank-trans-filter/task.yaml
-c66afe78c0cae8edc745f18e0f7969b2b09eccc4a342ae3da51426cb6f791a1c  ./bank-trans-filter/tests/test_outputs.py
+3b3b5627e22229debb2fdf84f343a5f8117b0a96576dae8e158d482f8aa27e2b  ./constraints-scheduling/docker-compose.yaml
+e59df0c8cc870738f6eb299e0d0a2985f8f1419398fb25c996d11b79c538680f  ./constraints-scheduling/Dockerfile
+5a5d45804bffd339c2479d49e76fe817b38244d14d389afe1de583443808ecbc  ./constraints-scheduling/inputs/alice_calendar.ics
+c97e85dbcdd756758f8a80f4db5fd5c1dcacee79298e4d2262f46de5ff680b50  ./constraints-scheduling/inputs/bob_calendar.ics
+32a0f8687637df0a12b8e5c56d49c4192bc3e790856943632d70f237c7c1363b  ./constraints-scheduling/inputs/carol_calendar.ics
+09fe45f90d447937ca432278d80664cb5fbfda4733767b986c6650515d75832e  ./constraints-scheduling/run-tests.sh
+802d81ec064fad3050bbade95a2f847ac24e0b7f80fa69b0bcee0347dc92fe77  ./constraints-scheduling/solution.sh
+7a1fd98ce102f318a34b44a83d08458b0a416c95cfaba602182e860609c186bd  ./constraints-scheduling/task.yaml
+1422b345ba3aacdfc4184e962811b6379988435896c50d8cf62903e70990c5d1  ./constraints-scheduling/tests/test_outputs.py

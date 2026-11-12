@@ -234,3 +234,12 @@
 - **P0-02 跨 agent 第三方可复核对照框架**：`data/bench/external/agent-comparison.json` 给出同任务/同预算/同评分器三方对齐模板，填 bro2 自跑数（kilo k=3：bro2 6/9 vs minimal 2/9，Δ=+4），`mini-swe-agent` / `Terminus-2` 留 `thirdPartyToFill` 槽位（不可伪造）；`minimal scaffold` 明确标注 ≠ 公开基线。契约测试 4/4 通过。沙箱无法运行那两个 agent，其数值需第三方按同协议复跑填入。
 - **跨 holdout 模型有效复测（启动 + 有界复现，结论诚实更新）**：重新探测确认 `ovhcloud / gpt-oss-120b` 现已返回原生 `tool_calls`（与 kilo 的 nemotron 不同模型族），harness 实跑中确实驱动 gpt-oss-120b 完成 4–5 次工具调用后才中断；但 ovhcloud 免 Key **限流约 3 次/窗口**，持续多步走分仍被 429 拖垮——有界复测（`examples/cross-model-retest.ts`，k=1 + 每轮 40s 冷却）结果为 **bro2 0/3 · minimal 0/3 · Δ=0**，两端点均 `provider_error` / `FileNotFoundError`。这是**端点稳定性问题、非 Δ 消失**（两 arm 同因限流失败，不是 harness 增益归零），故该 holdout 结果**无效、不可作 Δ 判据**，不触发 §4.2 降级。**跨 holdout 模型有效复测仍被「缺稳定第二端点」阻断**；kilo 上的 bro2 6/9 vs minimal 2/9（Δ=+4）仍是唯一有效内部 Δ，单端点、非统计结论。
 - **定位不变（仍诚实）**：自跑内部对照、非第三方复核、免费端点、3 个 easy 任务、非榜单分数；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条、不写 `external-results.json`。`P0-01` / `P0-02` 在 backlog 标记为 resolved（协议/框架已交付）；跨模型复测的 live 结论随复测结果更新，扩任务集与长程子集仍为下一步。
+
+### 8.4 v2.30.0（2026-11-12）· 走出去测量硬化（二）：公开榜单任务集直跑 + 轨迹层面能力画像
+
+按用户方向纠正上一轮「P0-02 留成等第三方来填的空槽」这一非真正走出去测量的做法——**不等人填，直接把第三方已有公开成绩的任务集给 bro2 跑、对公开数字**；并补策略 B：靠轨迹差异判断能力。
+
+- **A2 公开榜单任务集直跑**：`examples/tb-leaderboard-compare.ts` 在 Terminal-Bench `original-tasks @ d28711d0` 的 **4 个 SOUND 任务**上用 bro2 完整 harness 自跑，把样本 pass@1 与公开榜快照（`tb-leaderboard-snapshot.json`，llmleaderboard.com 2026-11-09，带出处）对照。**kilo 主端点（匿名，不在榜）bro2 2/4（0.5）→ positioning-only 位次定位**；ovhcloud 同模型锚点（gpt-oss-120b，公开榜 26.217%）因端点限流 `provider_error` 无法取得有效数据，**按 §4.2 回退为 positioning-only、不做误导 Δ**。
+- **诚实发现（扩展样本受阻的根因）**：试图扩到 8 任务，但 `dna-assembly`/`dna-insert`/`gcode-to-text` 官方解需 `apt-get`/`pip` 装依赖、`circuit-fibsqrt` 评分器需 `gcc`——统一离线 verifier（仅 stdlib+pytest）无法复现。**Terminal-Bench 任务绝大多数是「构建时环境重」，只有静态输入 + 纯 stdlib 评分器的子集可直跑**；这对任何「复跑公开榜」尝试都是硬约束，已据实剔除并留痕。
+- **B1 轨迹层面画像（策略 B）**：`docs/TRAJECTORY-ANALYSIS.md` 把 bro2 的步数/工具调用/停止行为与公开轨迹统计（SWE-bench `Avg. $ Trajs`、2025 研究每题 5–20 轨迹）对照（HF 不可达，不用逐条轨迹数据集，只取公开聚合作参照轴）。读出一条**可证伪的 harness 行为结论**：失败题工具调用数（14、11）高于通过题（9、5），即 bro2 对解不出的任务不会优雅停手、缺失「验证—停手」闭环——这是行为层信号、可直接变成后续 harness 迭代的可证伪实验。
+- **定位不变（仍诚实）**：自跑内部对照、非第三方复核、4 题/K=1/免费端点、非榜单口径；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条、不写 `external-results.json`。**唯一明确的未竟 = 同模型隔离锚点因端点限流未取得**，下一步需一个能在完整 harness 下稳定驱动工具调用的第二端点。

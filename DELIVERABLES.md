@@ -11,7 +11,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.29.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.30.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
@@ -215,6 +215,10 @@
 | 元 RSI 报告 | `data/meta-report.json` `evolve/meta-state.json` `meta-ledger.jsonl` | 冻结 fitness 曲线 | ✅ 已发布 |
 | 基准报告 | `data/benchmark-report.json` | ablation + 阶梯 + 领先度声明 | ✅ 已发布 |
 | **外部基准** | `data/benchmark/external-results.json` | L4 证据（BFCL/τ-bench/...） | 🔲 待建（见 ROADMAP P5） |
+| 公开榜快照（v2.30.0） | `data/bench/external/tb-leaderboard-snapshot.json` | Terminal-Bench 公开榜带出处固化（非搬运、非 L4 证据） | ✅ 已发布 |
+| 公开任务集直跑对照（v2.30.0） | `data/bench/external/tb-leaderboard-compare-report.json` | bro2 完整 harness 跑公开 verifier，kilo 2/4 positioning-only（同模型锚点因端点限流无效） | ✅ 已发布 |
+| 任务清单 + 指纹（v2.30.0） | `data/bench/external/tasks.jsonl` `SHA256SUMS` | 4 个 SOUND 任务（含剔除 4 个构建时依赖任务的留痕） | ✅ 已发布 |
+| 轨迹层面能力画像（v2.30.0） | `docs/TRAJECTORY-ANALYSIS.md` | 策略 B：bro2 轨迹指标 vs 公开轨迹统计（HF 不可达，只用聚合参照轴） | ✅ 已发布 |
 
 > 运行时产物（`data/sessions/`、`data/system.jsonl`、`data/workspace/`、`data/memory/long-term.json`）由 `.gitignore` 隔离，不进版本库。
 

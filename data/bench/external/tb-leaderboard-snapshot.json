@@ -1,0 +1,51 @@
+{
+  "benchmark": "Terminal-Bench",
+  "metric": "pass@1 (reported aggregate, best-effort latest per model+version+harness)",
+  "source": "https://llmleaderboard.com/benchmarks/terminal-bench",
+  "sourceSecondary": "harbor Terminal-Bench leaderboard (terminal-bench@2.0/2.1 registry)",
+  "dataAsOf": "2026-11-09",
+  "fetchedAt": "2026-11-12",
+  "license": "scores are third-party public reports; this file is a cited snapshot, not a benchmark data file",
+  "notes": [
+    "所有分数来自第三方公开榜单（llmleaderboard.com，数据截至 2026-11-09），本仓库仅做带出处的固化引用，不搬运、不编造。",
+    "bro2 的任务来自 Terminal-Bench original-tasks @ commit d28711d0（2.x 时代快照），与榜单 2.1 registry 同源但非逐位一致；因此 bro2 样本 pass@1 是同一基准上的位次定位，而非严格头对头。",
+    "gpt-oss-120b 同时出现在公开榜单（2.1 = 26.217%）与 bro2 可驱动的 ovhcloud 端点，是「同模型、不同 harness」的隔离锚点：bro2(gpt-oss-120b) − 榜单(gpt-oss-120b) 即 harness Δ 的样本估计。",
+    "kilo 端点（kilo-auto/free）是匿名免费模型，不在任何公开榜单上，仅作 bro2 的「模型+harness 综合位次」定位，不可做 harness 隔离。"
+  ],
+  "sameModelAnchor": "gpt-oss-120b",
+  "entries": [
+    {"model": "SWE-2 Flash", "creator": "Cognition", "license": "proprietary", "version": "2.1", "harness": "Cognition SWE-2 Flash launch", "score": 89.2},
+    {"model": "Inkling 2 Small", "creator": "Thinking Machines", "license": "open-weights", "version": "2.1", "harness": "Pi harness", "score": 85.1},
+    {"model": "Kimi K3", "creator": "Moonshot AI", "license": "open-weights", "version": "2.1", "harness": "default", "score": 85.019},
+    {"model": "GLM-5.3-Flash", "creator": "Z.ai", "license": "open-weights", "version": "2.1", "harness": "default", "score": 84.3},
+    {"model": "GLM-5.3", "creator": "Z.ai", "license": "open-weights", "version": "2.1", "harness": "default", "score": 83.895},
+    {"model": "Inkling 2 Small", "creator": "Thinking Machines", "license": "open-weights", "version": "2.1", "harness": "Terminus", "score": 81.3},
+    {"model": "GLM-5.2", "creator": "Z.ai", "license": "open-weights", "version": "2.1", "harness": "default", "score": 81.0},
+    {"model": "Ripple-65B Preview", "creator": "Ricursive Intelligence", "license": "open-weights", "version": "2.1", "harness": "Ripple launch / Terminus 2", "score": 80.52},
+    {"model": "DeepSeek V4 Pro 0813", "creator": "DeepSeek", "license": "open-weights", "version": "2.1", "harness": "default", "score": 78.652},
+    {"model": "GLM-5.2", "creator": "Z.ai", "license": "open-weights", "version": "2.1", "harness": "default", "score": 77.903},
+    {"model": "DeepSeek V4 Pro 0424", "creator": "DeepSeek", "license": "open-weights", "version": "2.0", "harness": "default", "score": 67.9},
+    {"model": "Kimi K2.6", "creator": "Moonshot AI", "license": "open-weights", "version": "2.0", "harness": "default", "score": 66.7},
+    {"model": "MiniMax M3", "creator": "MiniMax", "license": "open-weights", "version": "2.1", "harness": "default", "score": 66.0},
+    {"model": "DeepSeek V4 Pro 0424", "creator": "DeepSeek", "license": "open-weights", "version": "2.1", "harness": "default", "score": 64.794},
+    {"model": "Inkling-Small", "creator": "Thinking Machines", "license": "open-weights", "version": "2.1", "harness": "default", "score": 64.7},
+    {"model": "DeepSeek V4 Flash 0420", "creator": "DeepSeek", "license": "open-weights", "version": "2.1", "harness": "default", "score": 61.798},
+    {"model": "Kimi K2.5", "creator": "Moonshot AI", "license": "open-weights", "version": "2.0", "harness": "default", "score": 50.8},
+    {"model": "Kimi K2.5", "creator": "Moonshot AI", "license": "open-weights", "version": "2.1", "harness": "default", "score": 45.693},
+    {"model": "GLM-5.3", "creator": "Z.ai", "license": "open-weights", "version": "4.0", "harness": "mini-swe-agent", "score": 41.919},
+    {"model": "GLM-5.3", "creator": "Z.ai", "license": "open-weights", "version": "4.0", "harness": "default", "score": 41.8},
+    {"model": "DeepSeek V4.1 Flash 1017", "creator": "DeepSeek", "license": "open-weights", "version": "4.0", "harness": "mini-swe-agent", "score": 33.838},
+    {"model": "DeepSeek V4.1 Flash", "creator": "DeepSeek", "license": "open-weights", "version": "4.0", "harness": "mini-swe-agent", "score": 26.768},
+    {"model": "gpt-oss-120b", "creator": "OpenAI", "license": "open-weights", "version": "2.1", "harness": "default/official", "score": 26.217, "isSameModelAnchor": true},
+    {"model": "MiniMax M3.1 Flash", "creator": "MiniMax", "license": "open-weights", "version": "4.0", "harness": "mini-swe-agent", "score": 25.758},
+    {"model": "DeepSeek R1 (Jan 2025)", "creator": "DeepSeek", "license": "open-weights", "version": "2.1", "harness": "default", "score": 19.101},
+    {"model": "DeepSeek V4 Pro 0424", "creator": "DeepSeek", "license": "open-weights", "version": "4.0", "harness": "mini-swe-agent", "score": 14.646},
+    {"model": "Muse Spark 1.3", "creator": "Meta", "license": "proprietary", "version": "4.0", "harness": "mini-swe-agent", "score": 14.5}
+  ],
+  "frontierAnchorsForContext": [
+    {"model": "Claude Opus 5.5", "creator": "Anthropic", "license": "proprietary", "version": "4.0", "harness": "default", "score": 64.8},
+    {"model": "Claude Fable 5.2", "creator": "Anthropic", "license": "proprietary", "version": "4.0", "harness": "default", "score": 67.6},
+    {"model": "GPT-6 Astra", "creator": "OpenAI", "license": "proprietary", "version": "4.0", "harness": "default", "score": 58.2},
+    {"model": "Gemini 4 Carbon", "creator": "Google", "license": "proprietary", "version": "4.0", "harness": "mini-swe-agent", "score": 65.152}
+  ]
+}
