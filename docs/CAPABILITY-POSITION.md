@@ -225,3 +225,12 @@
 - **未触发 §4.2 降级**：降级条件是 Δ≤0 或 holdout 模型上 Δ 消失；这里两个端点 Δ 都 ≥ 0，且 ovhcloud 是端点本身驱动失败（非 Δ 消失），所以定位**维持**——但跨模型确认**仍缺失**，需换一个能在完整 harness 下稳定驱动工具调用的第二端点。
 - **定位不变（仍诚实）**：自跑内部对照、非第三方复核、k=3、免费端点（kilo 稳定 / ovhcloud 报错）、3 个 easy 任务、非榜单分数；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条、不写 `external-results.json`。
 - `P0-01`（Harbor 装载）、与 `mini-swe-agent` / `Terminus-2` 的第三方可复核对照、**跨 holdout 模型有效复测**、扩任务集（仍 3 个 easy）、长程任务子集**仍未完成**，不作已完成登记。
+
+### 8.3 v2.29.0（2026-11-12）· P0 接入口收口：Harbor 装载 + 跨 agent 对照框架 + 跨模型复测启动
+
+把 §8.2 之后遗留的三条 P0 接入口补齐为**可复核的协议与框架**（均零 Key、不产能力分数、不写 external-results、不改 L4/verdict）：
+
+- **P0-01 Harbor 装载（协议接入验证）**：`examples/harbor/bro2_agent.py` 实现 Harbor `BaseInstalledAgent` 契约，`examples/harbor-verify.ts` 零 Key 复用 `external-measure.ts` 真相源做三方对齐验证（空工作区 fail / 官方解 pass / SHA256 一致全过、预算 max_steps=12 对齐、护栏守住），契约测试 5/5 通过。live 对照需 Harbor 运行时 + 端点，沙箱默认不具——故为**协议接入验证而非能力对照**，这正是 §4.1/§6 划定的诚实边界。
+- **P0-02 跨 agent 第三方可复核对照框架**：`data/bench/external/agent-comparison.json` 给出同任务/同预算/同评分器三方对齐模板，填 bro2 自跑数（kilo k=3：bro2 6/9 vs minimal 2/9，Δ=+4），`mini-swe-agent` / `Terminus-2` 留 `thirdPartyToFill` 槽位（不可伪造）；`minimal scaffold` 明确标注 ≠ 公开基线。契约测试 4/4 通过。沙箱无法运行那两个 agent，其数值需第三方按同协议复跑填入。
+- **跨 holdout 模型有效复测（启动 + 有界复现，结论诚实更新）**：重新探测确认 `ovhcloud / gpt-oss-120b` 现已返回原生 `tool_calls`（与 kilo 的 nemotron 不同模型族），harness 实跑中确实驱动 gpt-oss-120b 完成 4–5 次工具调用后才中断；但 ovhcloud 免 Key **限流约 3 次/窗口**，持续多步走分仍被 429 拖垮——有界复测（`examples/cross-model-retest.ts`，k=1 + 每轮 40s 冷却）结果为 **bro2 0/3 · minimal 0/3 · Δ=0**，两端点均 `provider_error` / `FileNotFoundError`。这是**端点稳定性问题、非 Δ 消失**（两 arm 同因限流失败，不是 harness 增益归零），故该 holdout 结果**无效、不可作 Δ 判据**，不触发 §4.2 降级。**跨 holdout 模型有效复测仍被「缺稳定第二端点」阻断**；kilo 上的 bro2 6/9 vs minimal 2/9（Δ=+4）仍是唯一有效内部 Δ，单端点、非统计结论。
+- **定位不变（仍诚实）**：自跑内部对照、非第三方复核、免费端点、3 个 easy 任务、非榜单分数；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条、不写 `external-results.json`。`P0-01` / `P0-02` 在 backlog 标记为 resolved（协议/框架已交付）；跨模型复测的 live 结论随复测结果更新，扩任务集与长程子集仍为下一步。

@@ -1,0 +1,171 @@
+{
+  "kind": "cross-model-retest",
+  "version": 1,
+  "timestamp": "2026-11-12T07:11:15.081Z",
+  "holdoutProvider": "ovhcloud",
+  "model": "gpt-oss-120b",
+  "endpoint": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
+  "k": 1,
+  "maxModelCalls": 12,
+  "trialPauseMs": 40000,
+  "note": "k=1 受 ovhcloud 限流约束，仅作 harness 能否驱动第二模型族的可行性证据；非统计结论。若被 429 拖垮属端点稳定性问题，非 Δ 消失，不触发 §4.2 降级。",
+  "arms": {
+    "bro2": {
+      "passed": 0,
+      "total": 3,
+      "passRate": 0,
+      "perTask": [
+        {
+          "taskId": "tb-analyze-access-logs",
+          "passes": 0,
+          "trials": 1,
+          "passRate": 0,
+          "runs": [
+            {
+              "verifierPassed": false,
+              "verifierExitCode": 1,
+              "verifierOutput": "rs=None, newline=None):\n        \"\"\"\n        Open the file pointed by this path and return a file object, as\n        the built-in open() function does.\n        \"\"\"\n        if \"b\" not in mode:\n            encoding = io.text_encoding(encoding)\n>       return io.open(self, mode, buffering, encoding, errors, newline)\nE       FileNotFoundError: [Errno 2] No such file or directory: '/app/report.txt'\n\n/usr/local/lib/python3.11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_report_generation - AssertionError: rep...\nFAILED ../tests/test_outputs.py::test_top_urls - FileNotFoundError: [Errno 2]...\nFAILED ../tests/test_outputs.py::test_report_format - FileNotFoundError: [Err...\n3 failed in 0.04s\n",
+              "steps": 3,
+              "toolCalls": 2,
+              "latencyMs": 29190,
+              "reasons": [
+                "停止原因 provider_error ≠ completed",
+                "holdout verifier 未通过（exit=1）：r/local/lib/python3.11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_report_generation - AssertionError: rep...\nFAILED ../tests/test_outputs.py::test_top_urls - FileNotFoundError: [Errno 2]...\nFAILED ../tests/test_outputs.py::test_report_format - FileNotFoundError: [Err...\n3 failed in 0.04s\n"
+              ]
+            }
+          ]
+        },
+        {
+          "taskId": "tb-bank-trans-filter",
+          "passes": 0,
+          "trials": 1,
+          "passRate": 0,
+          "runs": [
+            {
+              "verifierPassed": false,
+              "verifierExitCode": 1,
+              "verifierOutput": "=== FAILURES ===================================\n________________________________ test_equality _________________________________\n\n    def test_equality():\n        \"\"\"Test to confirm that the filtered transactions match the expected output.\n        \"\"\"\n        output_path = Path(\"/app/data/output.json\")\n    \n>       assert output_path.exists(), f\"File {output_path} does not exist\"\nE       AssertionError: File /app/data/output.json does not exist\nE       assert False\nE        +  where False = exists()\nE        +    where exists = PosixPath('/app/data/output.json').exists\n\n/tests/test_outputs.py:90: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_equality - AssertionError: File /app/da...\n1 failed in 0.01s\n",
+              "steps": 5,
+              "toolCalls": 4,
+              "latencyMs": 63186,
+              "reasons": [
+                "停止原因 provider_error ≠ completed",
+                "holdout verifier 未通过（exit=1）：nError: File /app/data/output.json does not exist\nE       assert False\nE        +  where False = exists()\nE        +    where exists = PosixPath('/app/data/output.json').exists\n\n/tests/test_outputs.py:90: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_equality - AssertionError: File /app/da...\n1 failed in 0.01s\n"
+              ]
+            }
+          ]
+        },
+        {
+          "taskId": "tb-assign-seats",
+          "passes": 0,
+          "trials": 1,
+          "passRate": 0,
+          "runs": [
+            {
+              "verifierPassed": false,
+              "verifierExitCode": 1,
+              "verifierOutput": "one\n\n    def open(self, mode='r', buffering=-1, encoding=None,\n             errors=None, newline=None):\n        \"\"\"\n        Open the file pointed by this path and return a file object, as\n        the built-in open() function does.\n        \"\"\"\n        if \"b\" not in mode:\n            encoding = io.text_encoding(encoding)\n>       return io.open(self, mode, buffering, encoding, errors, newline)\nE       FileNotFoundError: [Errno 2] No such file or directory: '/app/results.txt'\n\n/usr/local/lib/python3.11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_file_exists - AssertionError: F...\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - FileNotFoun...\n2 failed in 0.03s\n",
+              "steps": 5,
+              "toolCalls": 4,
+              "latencyMs": 48420,
+              "reasons": [
+                "停止原因 provider_error ≠ completed",
+                "holdout verifier 未通过（exit=1）：  FileNotFoundError: [Errno 2] No such file or directory: '/app/results.txt'\n\n/usr/local/lib/python3.11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_file_exists - AssertionError: F...\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - FileNotFoun...\n2 failed in 0.03s\n"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "minimal": {
+      "passed": 0,
+      "total": 3,
+      "passRate": 0,
+      "perTask": [
+        {
+          "taskId": "tb-analyze-access-logs",
+          "passes": 0,
+          "trials": 1,
+          "passRate": 0,
+          "runs": [
+            {
+              "verifierPassed": false,
+              "verifierExitCode": 1,
+              "verifierOutput": "rs=None, newline=None):\n        \"\"\"\n        Open the file pointed by this path and return a file object, as\n        the built-in open() function does.\n        \"\"\"\n        if \"b\" not in mode:\n            encoding = io.text_encoding(encoding)\n>       return io.open(self, mode, buffering, encoding, errors, newline)\nE       FileNotFoundError: [Errno 2] No such file or directory: '/app/report.txt'\n\n/usr/local/lib/python3.11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_report_generation - AssertionError: rep...\nFAILED ../tests/test_outputs.py::test_top_urls - FileNotFoundError: [Errno 2]...\nFAILED ../tests/test_outputs.py::test_report_format - FileNotFoundError: [Err...\n3 failed in 0.04s\n",
+              "steps": 4,
+              "toolCalls": 4,
+              "latencyMs": 0,
+              "reasons": [
+                "模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"de98990e0cfd3c134f11193577ed1007\"\n}"
+              ],
+              "finalAnswer": "",
+              "error": "模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"de98990e0cfd3c134f11193577ed1007\"\n}",
+              "modelCalls": 4
+            }
+          ]
+        },
+        {
+          "taskId": "tb-bank-trans-filter",
+          "passes": 0,
+          "trials": 1,
+          "passRate": 0,
+          "runs": [
+            {
+              "verifierPassed": false,
+              "verifierExitCode": 1,
+              "verifierOutput": "=== FAILURES ===================================\n________________________________ test_equality _________________________________\n\n    def test_equality():\n        \"\"\"Test to confirm that the filtered transactions match the expected output.\n        \"\"\"\n        output_path = Path(\"/app/data/output.json\")\n    \n>       assert output_path.exists(), f\"File {output_path} does not exist\"\nE       AssertionError: File /app/data/output.json does not exist\nE       assert False\nE        +  where False = exists()\nE        +    where exists = PosixPath('/app/data/output.json').exists\n\n/tests/test_outputs.py:90: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_equality - AssertionError: File /app/da...\n1 failed in 0.01s\n",
+              "steps": 0,
+              "toolCalls": 0,
+              "latencyMs": 0,
+              "reasons": [
+                "模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"505871508d3771638657cf132b049853\"\n}"
+              ],
+              "finalAnswer": "",
+              "error": "模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"505871508d3771638657cf132b049853\"\n}",
+              "modelCalls": 0
+            }
+          ]
+        },
+        {
+          "taskId": "tb-assign-seats",
+          "passes": 0,
+          "trials": 1,
+          "passRate": 0,
+          "runs": [
+            {
+              "verifierPassed": false,
+              "verifierExitCode": 1,
+              "verifierOutput": "one\n\n    def open(self, mode='r', buffering=-1, encoding=None,\n             errors=None, newline=None):\n        \"\"\"\n        Open the file pointed by this path and return a file object, as\n        the built-in open() function does.\n        \"\"\"\n        if \"b\" not in mode:\n            encoding = io.text_encoding(encoding)\n>       return io.open(self, mode, buffering, encoding, errors, newline)\nE       FileNotFoundError: [Errno 2] No such file or directory: '/app/results.txt'\n\n/usr/local/lib/python3.11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_file_exists - AssertionError: F...\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - FileNotFoun...\n2 failed in 0.03s\n",
+              "steps": 2,
+              "toolCalls": 2,
+              "latencyMs": 0,
+              "reasons": [
+                "模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"f521c264ff5e337accb76f5e2a66347b\"\n}"
+              ],
+              "finalAnswer": "",
+              "error": "模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"f521c264ff5e337accb76f5e2a66347b\"\n}",
+              "modelCalls": 2
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "delta": {
+    "bro2MinusMinimal": 0
+  },
+  "honest": {
+    "isLeaderboardScore": false,
+    "thirdPartyVerified": false,
+    "isModelCapabilityScore": false,
+    "writtenToExternalResults": false,
+    "leadershipVerdictChanged": false,
+    "l4Changed": false,
+    "limitations": [
+      "k=1 受 ovhcloud 限流约束，非统计结论",
+      "ovhcloud 免 Key 但限流约 3 次/窗口，多步跑分易撞限流；冷却后仍可能 429",
+      "若被 429 拖垮属端点稳定性问题，非 Δ 消失，不触发 §4.2 降级",
+      "不写 external-results.json，不改 L4 / verdict"
+    ]
+  }
+}

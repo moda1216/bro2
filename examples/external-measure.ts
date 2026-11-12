@@ -40,7 +40,7 @@ const OUT = join(EXT, "external-measure-report.json");
 const BRO2_REPORT = join(EXT, "bro2-eval-report.json");
 const EXTERNAL_RESULTS = join(ROOT, "data", "benchmark", "external-results.json");
 const IMAGE = "bro2/tb-verifier:1";
-const MAX_MODEL_CALLS = 12;
+export const MAX_MODEL_CALLS = 12;
 const STEP_TIMEOUT_MS = 45_000;
 const VERIFY_TIMEOUT_MS = 120_000;
 
@@ -84,7 +84,7 @@ export const fingerprint = (p: string): string => (existsSync(p) ? sha256(p) : "
 const tail = (s: string, n: number): string => s.slice(-n);
 const dirOf = (t: ExtTask): string => join(UPSTREAM, t.dir);
 
-const loadTasks = (): ExtTask[] => readFileSync(join(EXT, "tasks.jsonl"), "utf8")
+export const loadTasks = (): ExtTask[] => readFileSync(join(EXT, "tasks.jsonl"), "utf8")
   .split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("//"))
   .map((l) => JSON.parse(l) as ExtTask);
 
@@ -103,10 +103,10 @@ export function parseInstruction(raw: string): string {
   return body.join("\n").trim();
 }
 
-const instructionOf = (t: ExtTask): string =>
+export const instructionOf = (t: ExtTask): string =>
   parseInstruction(readFileSync(join(dirOf(t), t.instruction), "utf8")) + ENV_NOTE;
 
-function checkInputs(tasks: ExtTask[]): void {
+export function checkInputs(tasks: ExtTask[]): void {
   for (const t of tasks) {
     const v = join(dirOf(t), t.verifier);
     if (!existsSync(v)) throw new Error(`缺少上游文件，请先运行 external:fetch：${v}`);
@@ -118,7 +118,7 @@ function checkInputs(tasks: ExtTask[]): void {
   }
 }
 
-function prepare(t: ExtTask, workspace: string): void {
+export function prepare(t: ExtTask, workspace: string): void {
   for (const f of t.inputs) {
     const dst = join(workspace, f.to);
     mkdirSync(dirname(dst), { recursive: true });
@@ -127,7 +127,7 @@ function prepare(t: ExtTask, workspace: string): void {
 }
 
 /** 上游公开评分器：把 agent 工作区挂成 /app，tests/ 只读挂载，在固定镜像里跑 pytest。 */
-function runVerifier(t: ExtTask, workspace: string): VerifyResult {
+export function runVerifier(t: ExtTask, workspace: string): VerifyResult {
   const ctx = mkdtempSync(join(tmpdir(), "bro2-tb-verify-"));
   try {
     const ws = join(ctx, "ws");
@@ -160,7 +160,7 @@ function applyOracle(t: ExtTask, workspace: string): { ok: boolean; output: stri
 }
 
 /** 防「空转仪表盘」：评分器必须能判失败（空工作区）也能判通过（上游官方解）。模型无关，只算一次。 */
-function sanity(t: ExtTask): Record<string, unknown> {
+export function sanity(t: ExtTask): Record<string, unknown> {
   const tmp = mkdtempSync(join(tmpdir(), "bro2-tb-sanity-"));
   try {
     const empty = join(tmp, "empty");
@@ -185,7 +185,7 @@ function sanity(t: ExtTask): Record<string, unknown> {
   }
 }
 
-function loadProvider(name: string): { provider: OpenAICompatProvider; model: string; endpoint: string } {
+export function loadProvider(name: string): { provider: OpenAICompatProvider; model: string; endpoint: string } {
   const cfg = JSON.parse(readFileSync(join(ROOT, "agentos.config.json"), "utf8")) as {
     model: { providers: Record<string, { baseUrl: string; model: string; apiKeyOptional?: boolean; timeoutMs?: number; maxRetries?: number }> };
   };
@@ -201,7 +201,7 @@ function loadProvider(name: string): { provider: OpenAICompatProvider; model: st
 }
 
 /** 最小 scaffold 基线：单 shell 工具、线性历史、无 bro2 治理/上下文/RSI 层。 */
-async function runMinimal(t: ExtTask, provider: OpenAICompatProvider): Promise<ArmTrial> {
+export async function runMinimal(t: ExtTask, provider: OpenAICompatProvider): Promise<ArmTrial> {
   const tmp = mkdtempSync(join(tmpdir(), "bro2-tb-min-"));
   const ws = join(tmp, "ws");
   mkdirSync(ws);

@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "timestamp": "2026-11-12T07:09:40.001Z",
+  "mode": "live",
+  "providerName": "ovhcloud",
+  "k": 1,
+  "strict": true,
+  "usedEvolvedState": false,
+  "taskSetHash": "bec3d2267152",
+  "baselineSkipped": false,
+  "runs": [
+    {
+      "taskId": "tb-analyze-access-logs",
+      "category": "grounding",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "停止原因 provider_error ≠ completed",
+        "holdout verifier 未通过（exit=1）：r/local/lib/python3.11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_report_generation - AssertionError: rep...\nFAILED ../tests/test_outputs.py::test_top_urls - FileNotFoundError: [Errno 2]...\nFAILED ../tests/test_outputs.py::test_report_format - FileNotFoundError: [Err...\n3 failed in 0.04s\n"
+      ],
+      "stoppedBy": "provider_error",
+      "steps": 3,
+      "toolCalls": 2,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "shell": 2
+      },
+      "providerRetries": 3,
+      "faultsInjected": 0,
+      "emptyGuardHits": 0,
+      "tokens": 5191,
+      "latencyMs": 29190,
+      "provider": "ovhcloud",
+      "answer": "模型调用失败：全部模型均不可用 → ovhcloud: 模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"833fe12ca7481928e57fb0404f2d5670\"\n}"
+    },
+    {
+      "taskId": "tb-bank-trans-filter",
+      "category": "grounding",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "停止原因 provider_error ≠ completed",
+        "holdout verifier 未通过（exit=1）：nError: File /app/data/output.json does not exist\nE       assert False\nE        +  where False = exists()\nE        +    where exists = PosixPath('/app/data/output.json').exists\n\n/tests/test_outputs.py:90: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_equality - AssertionError: File /app/da...\n1 failed in 0.01s\n"
+      ],
+      "stoppedBy": "provider_error",
+      "steps": 5,
+      "toolCalls": 4,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "shell": 3,
+        "search_files": 1
+      },
+      "providerRetries": 3,
+      "faultsInjected": 0,
+      "emptyGuardHits": 0,
+      "tokens": 13952,
+      "latencyMs": 63186,
+      "provider": "ovhcloud",
+      "answer": "模型调用失败：全部模型均不可用 → ovhcloud: 模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"4337f019655ce21d89fb58362aca737d\"\n}"
+    },
+    {
+      "taskId": "tb-assign-seats",
+      "category": "multi-step",
+      "repeat": 0,
+      "ok": false,
+      "reasons": [
+        "停止原因 provider_error ≠ completed",
+        "holdout verifier 未通过（exit=1）：  FileNotFoundError: [Errno 2] No such file or directory: '/app/results.txt'\n\n/usr/local/lib/python3.11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_file_exists - AssertionError: F...\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - FileNotFoun...\n2 failed in 0.03s\n"
+      ],
+      "stoppedBy": "provider_error",
+      "steps": 5,
+      "toolCalls": 4,
+      "toolErrors": 0,
+      "guards": 0,
+      "approvalsDenied": 0,
+      "compactions": 0,
+      "protocolViolations": 0,
+      "repairs": 0,
+      "groundingRejects": 0,
+      "loopAdvisories": 0,
+      "compactionEvidence": 0,
+      "tools": {
+        "file_list": 3,
+        "file_read": 1
+      },
+      "providerRetries": 4,
+      "faultsInjected": 0,
+      "emptyGuardHits": 0,
+      "tokens": 10510,
+      "latencyMs": 48420,
+      "provider": "ovhcloud",
+      "answer": "模型调用失败：全部模型均不可用 → ovhcloud: 模型 ovhcloud 请求失败（已重试 2 次）: HTTP 429: {\n  \"message\":\"API rate limit exceeded\",\n  \"request_id\":\"543e0f46be9d9f16bbbc8651a34bce43\"\n}"
+    }
+  ],
+  "summary": {
+    "overall": 0,
+    "byCategory": {
+      "grounding": 0,
+      "multi-step": 0
+    },
+    "toolUse": 0,
+    "safety": 0,
+    "robustness": 0,
+    "passAtK": 0,
+    "avgSteps": 4.33,
+    "avgToolCalls": 3.33,
+    "avgLatencyMs": 46932,
+    "totalTokens": 29653,
+    "toolErrorRate": 0,
+    "guardRate": 0,
+    "protocolViolations": 0,
+    "passed": 0,
+    "total": 3,
+    "skipped": 0
+  },
+  "gate": {
+    "pass": false,
+    "violations": [
+      "总体得分 0 < 0.85",
+      "工具使用 0 < 0.85",
+      "安全治理 0 < 0.85",
+      "鲁棒性 0 < 0.8"
+    ]
+  },
+  "baselineDiff": [],
+  "inference": {
+    "remoteCalls": 0,
+    "localCalls": 0,
+    "cacheHits": 0,
+    "remoteAvoided": 0,
+    "remoteCallRatio": 0
+  }
+}

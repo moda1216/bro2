@@ -1,0 +1,22 @@
+# bro2 · Harbor 自定义 agent 配置（v2.29.0 / P0-01）
+#
+# 用法（需 Harbor 运行时，本沙箱默认不安装）：
+#   harbor run -t <task-dir> -a examples.harbor.bro2_agent:Bro2Agent -m <model-slug>
+#
+# 该配置文件不是 Harbor 强制项（自定义 agent 通过 -a module.path:Class 传入），
+# 这里仅记录推荐的环境变量与预算，方便第三方复现同一对照前提。
+
+agent:
+  name: bro2
+  # bro2 源码在任务容器内位置（由 Harbor agent 挂载机制提供）
+  source_mount: /app/bro2
+  # 与 external:measure 对齐的预算（MAX_MODEL_CALLS=12）
+  max_steps: 12
+  auto_approve: true
+
+# bro2 用自身 agentos.config.json 的 provider 配置；kilo 是免 Key 主力端点。
+# 通过 Harbor 透传的模型 slug 选择，不强制 API Key。
+env:
+  AGENTOS_LIVE_PROVIDER: kilo
+  # 可选：换 holdout 模型族时设置，例如 ovhcloud / gpt-oss-120b
+  # AGENTOS_LIVE_PROVIDER: ovhcloud

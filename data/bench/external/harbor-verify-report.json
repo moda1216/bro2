@@ -1,0 +1,85 @@
+{
+  "kind": "harbor-load-verify",
+  "version": 1,
+  "timestamp": "2026-11-12T06:54:03.340Z",
+  "note": "零 Key 接线验证：只证 bro2 可被 Harbor 装载且任务/预算/评分器三方对齐，不产能力分数。",
+  "agent": {
+    "contract": "harbor.agents.installed.base.BaseInstalledAgent",
+    "entry": "examples.harbor.bro2_agent:Bro2Agent"
+  },
+  "taskSubset": [
+    "tb-analyze-access-logs",
+    "tb-bank-trans-filter",
+    "tb-assign-seats"
+  ],
+  "budget": {
+    "maxModelCalls": 12,
+    "harborConfigMaxSteps": 12,
+    "aligned": true
+  },
+  "verifierSanity": [
+    {
+      "taskId": "tb-analyze-access-logs",
+      "verifierSha256": "c5e70afb14d94aa944e378b21ce13275de3d2119d6c4c68326db2cc8791d1777",
+      "emptyWorkspace": "fail",
+      "oracleSolution": "pass",
+      "oracleExitOk": true,
+      "oracleOutput": "",
+      "sound": true
+    },
+    {
+      "taskId": "tb-bank-trans-filter",
+      "verifierSha256": "c66afe78c0cae8edc745f18e0f7969b2b09eccc4a342ae3da51426cb6f791a1c",
+      "emptyWorkspace": "fail",
+      "oracleSolution": "pass",
+      "oracleExitOk": true,
+      "oracleOutput": "",
+      "sound": true
+    },
+    {
+      "taskId": "tb-assign-seats",
+      "verifierSha256": "34dc3b7118dd4a27044279f4154a83e9a6197a746e6df2502913f7e1eb8dff02",
+      "emptyWorkspace": "fail",
+      "oracleSolution": "pass",
+      "oracleExitOk": true,
+      "oracleOutput": "u should know that Frankie and I work at rival companies.\")\nBob: print(\"I'm Bob! My preference is that I sit two seats to the left of Alice. Also, I don't like Ethan, so I refuse to sit next to him.\")\nCharlie: print(\"So... who are the two people I'm sitting between?\")\nFrankie: \nClue: \nRandom fact: \n",
+      "sound": true
+    }
+  ],
+  "flow": [
+    {
+      "taskId": "tb-analyze-access-logs",
+      "workspacePrepared": true,
+      "verifierInvoked": true,
+      "verifierPassedNoModel": false
+    },
+    {
+      "taskId": "tb-bank-trans-filter",
+      "workspacePrepared": true,
+      "verifierInvoked": true,
+      "verifierPassedNoModel": false
+    },
+    {
+      "taskId": "tb-assign-seats",
+      "workspacePrepared": true,
+      "verifierInvoked": true,
+      "verifierPassedNoModel": false
+    }
+  ],
+  "honest": {
+    "isLeaderboardScore": false,
+    "thirdPartyVerified": false,
+    "isModelCapabilityScore": false,
+    "writtenToExternalResults": false,
+    "leadershipVerdictChanged": false,
+    "l4Changed": false,
+    "limitations": [
+      "零 Key 接线验证，不产生能力分数，不反映 harness 价值",
+      "真实能力对照需 Harbor 运行时 + 可工具调用模型端点（本沙箱默认不具）",
+      "确定性 mock 验证量的是接线正确性，模型智能不参与评分",
+      "与 mini-swe-agent/Terminus-2 的第三方可复核对照见 data/bench/external/agent-comparison.json"
+    ]
+  },
+  "passed": true,
+  "durationMs": 8521
+}

@@ -10,6 +10,47 @@
 
 ---
 
+## [2.29.0] — 2026-11-12 · P0 定位收口：Harbor 装载 + 第三方对照框架 + 跨模型复测启动（MINOR）
+
+> **性质**：完成「走上去量一次」的三条剩余 P0 接入口——P0-01 Harbor 装载（零 Key 接线验证）、
+> P0-02 与 mini-swe-agent/Terminus-2 的第三方可复核对照框架、跨 holdout 模型有效复测的**启动与有界复现**。
+> 零 `src` 改动、零新增运行时依赖、零新增发布门禁、未上调任何阈值；全部产出在 `data/` `docs/` `examples/` `tests/` 豁免区。
+
+**P0-01 Harbor 装载（零 Key 可做，不产能力分数）**：`examples/harbor/bro2_agent.py` 实现 Harbor 的
+`BaseInstalledAgent` 契约（name/install/run + 模型 slug 透传），配套的 `config.yaml` 与 `README.md` 给出
+`harbor run -a examples.harbor.bro2_agent:Bro2Agent` 可复现命令。`examples/harbor-verify.ts` 复用
+`external-measure.ts` 的真相源函数做零 Key 接线验证——同一 3 任务子集 / 同一预算（max_steps=12）/ 同一
+公开 pytest 评分器三方对齐（空工作区必 fail、官方解必 pass、SHA256 一致）全过，并断言**不写
+`external-results.json`、不改 L4 / `verdict`**。契约测试 `tests/harbor-verify.test.ts` 5/5 通过。
+
+**P0-02 跨 agent 第三方可复核对照框架**：`data/bench/external/agent-comparison.json` 给出同一任务子集 /
+同一预算 / 同一评分器三方对齐的对照模板——填 bro2 自跑数（kilo k=3：bro2 6/9 vs minimal 2/9，Δ=+4），
+`mini-swe-agent` / `Terminus-2` 留 `thirdPartyToFill` 槽位（`passed=null` + `harbor run` 复现命令，**不可伪造**）；
+`minimal scaffold` 明确标注不等于公开基线。契约测试 `tests/agent-comparison.test.ts` 4/4 通过。诚实：沙箱无法运行
+那两个 agent，其数值需第三方按同协议复跑填入；bro2 自跑、非第三方复核、仅内部对照。
+
+**跨 holdout 模型有效复测（启动 + 有界复现，结论诚实更新）**：v2.28.0 的 ovhcloud 段被 `provider_error` 拖垮。
+v2.29.0 重新探测确认 `ovhcloud / gpt-oss-120b` **现已返回原生 tool_calls**（HTTP 200，与 kilo 的 nemotron 不同模型族），
+harness 实跑中确实驱动 gpt-oss-120b 完成 4–5 次工具调用后才中断；但 ovhcloud 免 Key **限流约 3 次/窗口**，
+持续多步走分仍被 429 拖垮：有界复测 `examples/cross-model-retest.ts`（k=1 + 每轮 40s 冷却）结果为
+**bro2 0/3 · minimal 0/3 · Δ=0**，两端点均以 `provider_error` / `FileNotFoundError` 终止。**这是端点稳定性问题，
+不是 Δ 消失**——bro2 与 minimal 同因限流失败、并非 harness 增益归零，故该 holdout 结果**无效、不可作为 Δ 判据**，
+不触发 §4.2 降级（§4.2 降级条件是 Δ≤0 或 holdout 上 Δ 消失；此处无有效 holdout Δ）。实时结果见
+`data/bench/external/cross-model-report.json`。**结论：跨 holdout 模型有效复测仍被「缺一个稳定驱动工具调用的第二端点」
+阻断**，kilo 上的 bro2 6/9 vs minimal 2/9（Δ=+4）仍是唯一有效内部 Δ，单端点、非统计结论。
+
+**诚实边界（全程一致）**：bro2 自跑 / 非第三方复核 / 不写 `external-results.json` / 不改 L4·verdict；
+Harbor 装载是协议接入验证（确定性 mock 量的是接线、不反映 harness 价值）；跨 agent 对照的公开 agent 数值为第三方填空槽位；
+跨模型复测受 holdout 端点限流约束，k=1 仅作可行性证据、非统计结论。
+
+**产物**：`examples/harbor/{bro2_agent.py,config.yaml,README.md}` · `examples/harbor-verify.ts` ·
+`tests/harbor-verify.test.ts` · `data/bench/external/harbor-verify-report.json` ·
+`data/bench/external/agent-comparison.json` · `tests/agent-comparison.test.ts` ·
+`examples/cross-model-retest.ts` · `data/bench/external/cross-model-report.json` · `package.json` 新增
+`harbor:verify` / `cross:model` 脚本。
+
+---
+
 ## [2.28.0] — 2026-11-11 · 走出去测量硬化：k=3 通过率 + 跨模型复刻尝试（MINOR）
 
 > **性质**：把 v2.27.0 的 k=1 单发快照**硬化为 k=3 通过率**，并尝试第二个模型族（ovhcloud / gpt-oss-120b）做跨模型复刻。

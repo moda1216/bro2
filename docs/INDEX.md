@@ -23,8 +23,8 @@
 | [docs/ITERATION-WATERMARK.md](./ITERATION-WATERMARK.md) | 迭代水位：在哪里看、逐轮变化、如何推进、诚实边界（自动生成） | 想看「越用越快」是否真的发生 |
 | [docs/COMPOUND-LOOP.md](./COMPOUND-LOOP.md) | 复利闭环：经验库 + 冻结速度尺子 + 学习型路由的设计与边界 | 理解两大设计目标的共享底座 |
 | [docs/PLAN-TOP-HARNESS.md](./PLAN-TOP-HARNESS.md) | **竞争顶级 Agent Harness 作战计划书**：九维差距矩阵、HLR/CAS 北极星指标、W1–W5 五大战役、13 周里程碑、风险与退出条件 | 想知道「bro2 凭什么竞争、下一步做什么」 |
-| [docs/CAPABILITY-POSITION.md](./CAPABILITY-POSITION.md) | **能力水位定位与 ROI 转向（v2.26.0）**：诚实水位=内部可验证/外部未测量、2026 公开参照系四层、为何至今无法定位的结构性根因、Harbor 突破路径、可复用 ROI 判据与 P0 解耦（§8.1 记录 v2.27.0 已走出去测量、§8.2 记录 v2.28.0 k=3 硬化 + 跨模型 holdout 尝试） | 想回答「能力到底如何、有没有公开对比、下一步做什么」 |
-| [docs/EXTERNAL-MEASUREMENT.md](./EXTERNAL-MEASUREMENT.md) | **走出去测量硬化（v2.28.0）**：k=3 通过率 + 跨模型 holdout 尝试；公开任务 + 公开评分器双向反证、同模型同预算对照 kilo 上 bro2 6/9 vs minimal 2/9（Δ=+4）、ovhcloud 被 provider_error 拖垮无效对照、诚实边界与复现命令 | 想把「外部未测量」变成可辩护的真实测量 |
+| [docs/CAPABILITY-POSITION.md](./CAPABILITY-POSITION.md) | **能力水位定位与 ROI 转向（v2.26.0）**：诚实水位=内部可验证/外部未测量、2026 公开参照系四层、为何至今无法定位的结构性根因、Harbor 突破路径、可复用 ROI 判据与 P0 解耦（§8.1 记录 v2.27.0 已走出去测量、§8.2 记录 v2.28.0 k=3 硬化 + 跨模型 holdout 尝试、§8.3 记录 v2.29.0 P0 接入口收口：Harbor 装载 + 跨 agent 对照框架 + 跨模型复测启动） | 想回答「能力到底如何、有没有公开对比、下一步做什么」 |
+| [docs/EXTERNAL-MEASUREMENT.md](./EXTERNAL-MEASUREMENT.md) | **走出去测量硬化（v2.28.0）+ P0 接入口收口（v2.29.0）**：k=3 通过率 + 跨模型 holdout 尝试；公开任务 + 公开评分器双向反证、同模型同预算对照 kilo 上 bro2 6/9 vs minimal 2/9（Δ=+4）、ovhcloud 限流致 0/3 无效对照、Harbor 装载与跨 agent 可复核对照框架、诚实边界与复现命令 | 想把「外部未测量」变成可辩护的真实测量 |
 | [docs/INDEX.md](./INDEX.md) | 本文件 | 找文档 |
 
 运行产物（非文档，但常被引用，均在 `data/`）：
@@ -42,7 +42,9 @@
 | `data/evolve/meta-state.json` / `meta-ledger.jsonl` | 已落地的元状态 / 元层只增账本 |
 | `data/benchmark-report.json` | ablation + 证据阶梯 + 领先度声明 |
 | `data/reference-landscape.json` | **外部公开参照系台账**（2026-11-10）：14 条公开榜单/锁定 harness 协议/同模型增益/harness-RSI 赛道，逐条带来源·日期·证据等级；`bro2Measured=false`·`notL4Evidence=true`，不是 bro2 成绩 |
-| `data/bench/external/` | **外部公开任务测量**（2026-11-11）：`UPSTREAM.json` 固定 commit + `SHA256SUMS` + `tasks.jsonl` + `external-measure-report.json`（对照 Δ 与诚实声明）+ `bro2-eval-report.json`；`upstream/` 不入库，外部成绩不记入 bro2 名下 |
+| `data/bench/external/` | **外部公开任务测量**（2026-11-11 起）：`UPSTREAM.json` 固定 commit + `SHA256SUMS` + `tasks.jsonl` + `external-measure-report.json`（对照 Δ 与诚实声明）+ `bro2-eval-report.json` + `harbor-verify-report.json`（P0-01 零 Key 接线验证）+ `agent-comparison.json`（P0-02 跨 agent 对照模板，bro2 自跑数已填、mini-swe-agent/Terminus-2 为第三方填空槽位）+ `cross-model-report.json`（P0-04 ovhcloud 有界复测）；`upstream/` 不入库，外部成绩不记入 bro2 名下 |
+| `examples/harbor/` | **P0-01 Harbor 装载接入口**：`bro2_agent.py`（Harbor `BaseInstalledAgent` 契约）+ `config.yaml` + `README.md`；`examples/harbor-verify.ts` 零 Key 三方对齐验证；`npm run harbor:verify` |
+| `examples/cross-model-retest.ts` | **P0-04 跨 holdout 模型复测**：在 ovhcloud/gpt-oss-120b（与 kilo 不同模型族）上重跑 bro2 vs minimal；`npm run cross:model` |
 | `data/rsi/velocity.jsonl` / `experience.jsonl` | 复利速度 / 经验的只增账本（跨会话累积，不回写历史） |
 | `data/rsi/watermark.html` / `watermark.json` | 迭代水位可视化看板与结构化数据（自动生成） |
 | `data/rsi/compound-tasks.jsonl` | 复利回路专属工作负载（与主能力评测任务集隔离） |

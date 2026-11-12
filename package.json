@@ -1,6 +1,6 @@
 {
   "name": "bro2",
-  "version": "2.28.0",
+  "version": "2.29.0",
   "type": "module",
   "description": "bro2 · 通用 Agent 运行时（含 RSI 有界可验证自我改进）— 零第三方依赖",
   "license": "MIT",
@@ -73,7 +73,9 @@
     "p0.5c:check": "node --experimental-strip-types --no-warnings examples/p0.5c-check.ts",
     "endpoint:check": "node --experimental-strip-types --no-warnings examples/endpoint-experience-check.ts",
     "external:fetch": "sh examples/fetch-external-tasks.sh",
-    "external:measure": "node --experimental-strip-types --no-warnings examples/external-measure.ts"
+    "external:measure": "node --experimental-strip-types --no-warnings examples/external-measure.ts",
+    "harbor:verify": "node --experimental-strip-types --no-warnings examples/harbor-verify.ts",
+    "cross:model": "EXT_HOLDOUT=ovhcloud AGENTOS_LIVE_PROVIDER=ovhcloud node --experimental-strip-types --no-warnings examples/cross-model-retest.ts"
   },
   "keywords": [
     "bro2",
