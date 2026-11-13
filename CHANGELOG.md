@@ -10,6 +10,19 @@
 
 ---
 
+## [2.33.0] — 2026-11-13 · 自己找可用第二端点：端点扫描 + 同模型隔离锚点（MINOR）
+
+> 用户要求「自己找找可用的第二端点，不要被这个吓到」。本轮把悬置三轮的「下一步③ 同模型隔离锚点」从「端点限流无效」**证伪并解决**。全部结论收敛于唯一交付物 [`docs/CORE-REPORT.html`](./docs/CORE-REPORT.html)。
+
+- **主动扫描 15 个端点/模型组合**（`examples/endpoint-scan.ts` → `endpoint-scan-report.json`）：不再因一次 `provider_error` 收手，把「已注册却跳过的 provider」「config 里列着没试过的具体模型」「联网新发现的端点」全拉出来各发一次带 `tools` 的真实调用。硬门槛：匿名免 Key · OpenAI 兼容 · 原生 `tool_calls` · 模型身份匹配公开榜。**5 个 TOOLS_OK**（kilo-auto/free、ovhcloud gpt-oss-120b、ovhcloud gpt-oss-20b、llm7 gpt-oss:20b、pollinations），**唯一身份匹配公开榜的锚点 = `ovhcloud/gpt-oss-120b`**（响应 `model=gpt-oss-120b`）。
+- **根因证伪**：v2.30.0 判 ovhcloud「端点限流无效」判早了——端点单次带 tools 调用返回 **200 + `tool_calls`**；真实根因是**匿名层 2 req/min**（官方 catalog `rate_limit_api_anonymous`）与 harness 内置退避（1s/2s/4s、`maxRetries=2`，最多等 3s）不匹配。kilo 的 471 个模型里榜单模型（`glm-5.3-flash`/`inkling-2-small`/`deepseek-v4.1-flash-1017`…）具体 ID 全部 `401 You need to sign in`；opencode-zen `*-free` 429 额度耗尽、llm7 榜单模型 401、keylessai 超时。
+- **身份陷阱（诚实记录）**：联网新发现的 BlockRun（`blockrun.ai/api/v1`）确实免 Key、支持原生 tool_calls，但 `nvidia/gpt-oss-120b` 已退役、响应 `model` 实为 `nvidia/nemotron-3-super-120b`，且免费容量 4 次 3 次 429 —— **不能冒充 gpt-oss-120b 锚点**。模型身份一律以响应 `model` 字段为准，并写进实验前置门禁。
+- **测量侧节流适配**（`examples/same-model-anchor.ts`）：在评测脚本的 `fetch` 层对 ovhcloud 的 chat 请求加「相邻间隔 ≥31s + 429 按同节奏等待重试」。**不改 `src`、不改默认行为、不改 token/步数口径**（沿用 v2.32.0 校准值），仅显式放宽墙钟上限以免节流等待误触发 time guard。前置身份核实不吻合即拒绝出报告。1 任务验证：`PASS / stop=completed / provider_error=0 / 429重试=0`。
+- **同模型隔离锚点**：bro2 完整 harness 在 `gpt-oss-120b` 上跑冻结 4 任务 × K=2 = 8 次，结果 **4/8 = 0.5**、`provider_error=0`、`429重试=0`、停止分布 `completed:4 / guard:4`（4 次失败均为 12 步用完的真实能力表现，非端点故障），对照公开榜 Terminal-Bench 全量 `gpt-oss-120b = 26.217%`。**诚实界定**：任务集不同（4 个 curated 静态输入子集 vs 榜单全量）、难度不可比，`kind=non-strict-positioning-reference`、`isStrictHarnessDelta=false`，名义差 +0.2378 **不可归因于 harness**，仅作位次参照、不外推。要构成可归因 Δ 需官方 harness 在同子集成绩或 bro2 跑全量任务集。
+- **定位不变（仍诚实）**：本轮成果是「第二端点可用性」这一卡点被证伪并解决、产出首个同模型读数，**不是能力水位提升**。自跑、非第三方复核、小样本、免费匿名端点；不写 `external-results.json`、L4 仍 `not-achieved`、`verdict` 仍 `not-proven`。全门禁绿、`v2.33.0` 打 tag 推 GitHub。
+
+---
+
 ## [2.32.0] — 2026-11-13 · 执行下一步①②：测量预算口径读数修正 + 更大 K 机制复验（MINOR）
 
 > 用户要求「执行下一步 1 和 2，整理产出物，给一个核心报告即可」。本轮把散落证据收敛为**唯一交付物** [`docs/CORE-REPORT.html`](./docs/CORE-REPORT.html)（由 `examples/build-core-report.ts` 从可复核 JSON 生成，数字不手写）。

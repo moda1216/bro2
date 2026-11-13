@@ -1,0 +1,261 @@
+{
+  "generatedAt": "2026-11-13T10:52:40.153Z",
+  "kind": "same-model-anchor-probe",
+  "provider": "ovhcloud",
+  "model": "gpt-oss-120b",
+  "endpoint": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
+  "keyless": true,
+  "toolCalling": "native",
+  "question": "给 bro2 接一个能稳定驱动完整 harness 的第二端点，做同模型隔离锚点（v2.30 起悬置的下一步③）",
+  "endpointScan": {
+    "source": "data/bench/external/endpoint-scan-report.json",
+    "totalProbes": 15,
+    "toolsOk": [
+      "kilo-auto-free",
+      "ovh-gpt120-anchor",
+      "ovh-gpt20b",
+      "llm7-gpt20b",
+      "pollinations-openai"
+    ],
+    "usableSameModelAnchor": [
+      {
+        "tag": "ovh-gpt120-anchor",
+        "model": "gpt-oss-120b",
+        "respModel": "gpt-oss-120b"
+      }
+    ],
+    "verdict": "15 个候选中 5 个 TOOLS_OK；唯一身份匹配公开榜条目的是 ovhcloud/gpt-oss-120b。第二端点从来不缺，缺的是限流适配。"
+  },
+  "throttling": {
+    "basis": "OVHcloud 匿名层 2 req/min/model/IP（catalog rate_limit_api_anonymous，2026-10-08 复核）→ 相邻请求 ≥30s，取 31s 留余量",
+    "minGapMs": 31000,
+    "max429Retries": 4,
+    "stats": {
+      "waits": 72,
+      "waitMs": 1716854,
+      "rateLimit429": 0,
+      "chatCalls": 77,
+      "max429Retries": 4
+    },
+    "note": "纯测量侧 fetch 适配：不改 src、不改默认行为、不改预算口径（除墙钟显式校准）、不加模型能力。"
+  },
+  "identity": {
+    "http": 200,
+    "respModel": "gpt-oss-120b",
+    "requestedModel": "gpt-oss-120b",
+    "toolCalls": 1,
+    "matchesAnchor": true,
+    "error": null
+  },
+  "budget": {
+    "maxSteps": 12,
+    "maxTokens": 120000,
+    "maxSeconds": 3600,
+    "budgetAdvisoryRatio": 0,
+    "wiring": "coupled-explicit",
+    "source": "v2.32.0 校准口径 + 墙钟随节流同步校准",
+    "maxSecondsNote": "节流引入的等待不应消耗 agent 时间预算；显式放宽并由报告披露，避免把测量适配伪装成能力约束。"
+  },
+  "sample": {
+    "taskIds": [
+      "tb-analyze-access-logs",
+      "tb-bank-trans-filter",
+      "tb-assign-seats",
+      "tb-constraints-scheduling"
+    ],
+    "nTasks": 4,
+    "k": 2,
+    "trials": 8
+  },
+  "leaderboard": {
+    "benchmark": "Terminal-Bench",
+    "dataAsOf": "2026-11-09",
+    "anchorModel": "gpt-oss-120b",
+    "anchorHarness": "default/official",
+    "fullPassRate": 0.26217,
+    "source": "llmleaderboard.com/benchmarks/terminal-bench"
+  },
+  "trials": [
+    {
+      "taskId": "tb-analyze-access-logs",
+      "repeat": 1,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "toolErrors": 0,
+      "compactions": 0,
+      "steps": 6,
+      "toolCalls": 6,
+      "tokens": 56386,
+      "latencyMs": 219351,
+      "verifierTail": "...                                                                      [100%]\n3 passed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-analyze-access-logs",
+      "repeat": 2,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "toolErrors": 0,
+      "compactions": 0,
+      "steps": 6,
+      "toolCalls": 6,
+      "tokens": 56160,
+      "latencyMs": 217412,
+      "verifierTail": "...                                                                      [100%]\n3 passed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-bank-trans-filter",
+      "repeat": 1,
+      "verifierPassed": false,
+      "fileLanded": false,
+      "stoppedBy": "guard",
+      "reason": "超过最大步数 12",
+      "guardKinds": [
+        "steps"
+      ],
+      "toolErrors": 1,
+      "compactions": 0,
+      "steps": 12,
+      "toolCalls": 12,
+      "tokens": 75034,
+      "latencyMs": 382371,
+      "verifierTail": "sts()\nE        +    where exists = PosixPath('/app/data/output.json').exists\n\n/tests/test_outputs.py:90: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_equality - AssertionError: File /app/da...\n1 failed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-bank-trans-filter",
+      "repeat": 2,
+      "verifierPassed": false,
+      "fileLanded": true,
+      "stoppedBy": "guard",
+      "reason": "超过最大步数 12",
+      "guardKinds": [
+        "steps"
+      ],
+      "toolErrors": 1,
+      "compactions": 0,
+      "steps": 12,
+      "toolCalls": 12,
+      "tokens": 94326,
+      "latencyMs": 400759,
+      "verifierTail": " Incorporated', 'Date': '2024-04-13', ...}\nE         Use -v to get more diff\n\n/tests/test_outputs.py:95: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_equality - AssertionError: Output does ...\n1 failed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-assign-seats",
+      "repeat": 1,
+      "verifierPassed": false,
+      "fileLanded": false,
+      "stoppedBy": "guard",
+      "reason": "超过最大步数 12",
+      "guardKinds": [
+        "steps"
+      ],
+      "toolErrors": 2,
+      "compactions": 0,
+      "steps": 12,
+      "toolCalls": 12,
+      "tokens": 37536,
+      "latencyMs": 361636,
+      "verifierTail": ".11/pathlib.py:1044: FileNotFoundError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_file_exists - AssertionError: F...\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - FileNotFoun...\n2 failed in 0.03s\n"
+    },
+    {
+      "taskId": "tb-assign-seats",
+      "repeat": 2,
+      "verifierPassed": false,
+      "fileLanded": true,
+      "stoppedBy": "guard",
+      "reason": "超过最大步数 12",
+      "guardKinds": [
+        "steps"
+      ],
+      "toolErrors": 0,
+      "compactions": 0,
+      "steps": 12,
+      "toolCalls": 12,
+      "tokens": 38025,
+      "latencyMs": 358796,
+      "verifierTail": "nkie'\nE         'ethan, frankie'\nE         Use -v to get more diff\n\n/tests/test_outputs.py:28: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - AssertionEr...\n1 failed, 1 passed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-constraints-scheduling",
+      "repeat": 1,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "toolErrors": 0,
+      "compactions": 0,
+      "steps": 6,
+      "toolCalls": 6,
+      "tokens": 34837,
+      "latencyMs": 263179,
+      "verifierTail": "...                                                                      [100%]\n3 passed in 0.43s\n"
+    },
+    {
+      "taskId": "tb-constraints-scheduling",
+      "repeat": 2,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "toolErrors": 0,
+      "compactions": 0,
+      "steps": 6,
+      "toolCalls": 6,
+      "tokens": 34691,
+      "latencyMs": 243141,
+      "verifierTail": "...                                                                      [100%]\n3 passed in 0.41s\n"
+    }
+  ],
+  "summary": {
+    "passes": 4,
+    "total": 8,
+    "passRate": 0.5,
+    "stopDistribution": {
+      "completed": 4,
+      "guard": 4
+    },
+    "providerErrorCount": 0,
+    "tokenGuardCount": 0,
+    "fileMissing": 2,
+    "avgSteps": 9,
+    "avgToolCalls": 9,
+    "avgTokens": 53374,
+    "totalToolErrors": 4,
+    "totalLatencyMs": 2446645
+  },
+  "comparison": {
+    "bro2SamplePassRate": 0.5,
+    "leaderboardFullPassRate": 0.26217,
+    "nominalDelta": 0.2378,
+    "kind": "non-strict-positioning-reference",
+    "isStrictHarnessDelta": false,
+    "note": "两者不可直接相减归因于 harness：本样本是 4 个 curated（静态输入 / 纯 stdlib 评分器）Terminal-Bench 任务子集，公开榜 26.217% 是 Terminal-Bench 2.1 全量任务集上 gpt-oss-120b + default/official harness 的 pass@1。任务集非逐位一致、难度分布不可比，之差混合了任务集差异、harness 差异与端点噪声。仅作位次参照，不构成严格同模型 harness-Δ 隔离估计。",
+    "whatWouldBeNeeded": "官方 harness 在同一 4 任务子集上的 pass@1，或 bro2 在榜单全量任务集上的成绩，二者取其一才可构成可归因的 Δ。"
+  },
+  "verifierSanity": {
+    "status": "inherited-from-v2.30.0/v2.32.0",
+    "note": "4 任务公开 verifier 双向健全性（空工作区 fail / 官方解 pass）在 v2.30.0 与 v2.32.0 已验证且 SHA256SUMS 未变；本轮为节省容器时间未重跑，checkInputs 已校验输入文件存在与指纹一致。"
+  },
+  "honesty": [
+    "bro2 自跑、非第三方复核、仅内部对照，不构成公开榜单成绩",
+    "k=3、公开 easy 任务、免费匿名端点（kilo / ovhcloud gpt-oss-120b），端点能力与限流不稳定",
+    "任务取自 Terminal-Bench original-tasks，非官方 core 子集、非榜单口径",
+    "结果是 Model + Harness 端到端产物；既不证明模型能力，也不证明 harness 通用增益",
+    "评分器为上游公开 pytest，在统一 Docker 容器中按 /app 语义执行；已用官方 oracle 解与空工作区双向验证",
+    "未写 data/benchmark/external-results.json，不改 L4 / leadership.verdict",
+    "若 Δ≤0 或换 holdout 模型后消失，按 docs/CAPABILITY-POSITION.md §4.2 降级定位",
+    "minimal scaffold 是本仓库自实现基线，不等于公开 mini-swe-agent / Terminus-2；跨模型复测的严格性仍受限于可用免费端点",
+    "同模型锚点已取得有效读数（端点身份核实通过、非 provider_error），但对照为「非逐位同任务集」的位次参照，不是严格 harness-Δ。",
+    "节流是测量侧适配，不是 bro2 能力优化；不得把通过率变化归因于机制改进。",
+    "不写 external-results.json（前后指纹一致）、不改 L4 与 leadership.verdict、不改 src 默认行为。",
+    "自跑、非第三方复核、免费匿名端点、小样本；单端点结果不外推。"
+  ],
+  "externalResultsUntouched": true
+}

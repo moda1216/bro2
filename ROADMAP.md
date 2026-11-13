@@ -422,9 +422,10 @@ P2(复利中枢 v2.1.0)：ExperienceBank + VelocityLedger + compoundProbe + Lear
 
 ---
 
-### 下一步优先级（v2.31.0 追加 · v2.32.0 更新状态 · 源自 [`BUDGET-ADVISORY-EXPERIMENT.md`](./docs/BUDGET-ADVISORY-EXPERIMENT.md) §5.2）
+### 下一步优先级（v2.31.0 追加 · v2.32.0 / v2.33.0 更新状态 · 源自 [`BUDGET-ADVISORY-EXPERIMENT.md`](./docs/BUDGET-ADVISORY-EXPERIMENT.md) §5.2）
 
 1. ~~**先修测量预算配置失真（读数修正，不是能力提升）**~~ ✅ **v2.32.0 已完成**：`configOverride` 改为成套显式声明两维度、报告补 `effectiveBindingConstraint` 口径标签；36 次对照实测 R1/R2/R3 全成立，读数 **0.75→0.667（不升反降）**，归因锁死 `measurement-wiring-not-capability`，未把读数变化当作能力增益、未靠调大预算刷分。
 2. ~~**在稳定端点 / 更大 K 下复验预算软预警候选机制**~~ ✅ **v2.32.0 已完成（证据不足，维持关闭）**：校准口径 + K=3 / 36 次，`P1✓ P2✓ P3✓` 机械全绿，但只增的「诚实二次判读」判定 A−C 通过差（1 trial）可被 C 组 1 次 `provider_error` 完全解释、软预警 12 次仅触发 1 次 → **证据不足（噪声主导），不构成机制有效证据；机制仍默认关闭**。
-3. **同模型隔离锚点仍需第二端点**：能在完整 harness 下稳定驱动工具调用，才能把公开榜 `gpt-oss-120b = 26.217%` 做成有效 harness-Δ 样本（ovhcloud 因限流无效）。
-4. **（v2.32.0 新增）** 在公平口径下扩大 K / 扩任务集，把机制复验从「弱证据」推向可辩护；任何改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠分数叙事。详见 [`CORE-REPORT.html`](./docs/CORE-REPORT.html)。
+3. ~~**同模型隔离锚点仍需第二端点**~~ ✅ **v2.33.0 已完成（端点可用性卡点证伪并解决）**：主动扫描 15 个端点/模型组合，坐实「ovhcloud 限流无效」判早了——根因是匿名层 2 req/min 与 harness 退避不匹配，端点本身可用。测量侧 fetch 节流（相邻 ≥31s + 429 同节奏重试）让 `gpt-oss-120b` 稳定跑通 bro2 完整 harness（`provider_error=0`），产出首个同模型读数。**但对照公开榜全量的差是「非严格 Δ」**（任务集不同、不可归因于 harness），仅作位次参照。详见 [`CORE-REPORT.html`](./docs/CORE-REPORT.html) §2。
+4. **（v2.32.0 新增）** 在公平口径下扩大 K / 扩任务集，把机制复验从「弱证据」推向可辩护；任何改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠分数叙事。
+5. **（v2.33.0 新增，当前首要）** 让同模型对照成为**可归因 harness-Δ**：需补官方 harness 在同一 4 任务子集上的成绩，或把统一离线 verifier 扩展到榜单全量任务集（当前只支持静态输入子集）；否则名义差继续只作位次参照。

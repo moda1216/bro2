@@ -261,4 +261,15 @@
 - **① 读数修正已落地且被证成**：失真根因是测量脚本 `configOverride` 只覆盖 `maxSteps=12`、`maxTokens=60000` 靠默认静默生效，报告的 `budget` 字段未披露真正的 binding constraint。已改为成套显式声明（`LEGACY_MAX_TOKENS` + `effectiveBindingConstraint` 标签，语义零变化、历史可复现）。36 次对照（K=3）实测 L 组 2 次 `guard(tokens)`（steps<12）、C 组 0 次；**读数 0.75→0.667（Δ=−0.083，不升反降）**——校准让 12 步预算真正生效，且明确排除「加资源刷分」。归因锁死 `measurement-wiring-not-capability`，**不写入任何能力/位次字段**。
 - **② 更大 K 机制复验：机械全绿但判定证据不足**：公平口径 + K=3 下 `C vs A` 的 P1/P2/P3 全成立，但只增的「诚实二次判读」层指出：A−C 通过差仅 1 个 trial、可被 C 组独有的 1 次 `provider_error` 完全解释；软预警在 A 组 12 次仅触发 1 次（校准后 token 不再是瓶颈，机制几乎未被检验）。**维持默认关闭、不据此开启**——预注册判据结果原样保留，不事后改判据，呼应 `src/rsi/contrast.ts` 防 reward-hacking。
 - **定位不变（仍诚实）**：读数口径从失真修到自洽，但**能力水位未变**；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条、不写 `external-results.json`（R3 校验通过）。反证锚点 `assign-seats` 三组 0/9 全 fail，确认无答案泄漏。
-- **下一步优先级**：① 同模型隔离锚点仍需一个能稳定驱动工具调用的第二端点（ovhcloud 限流无效）；② 在公平口径下扩大 K / 扩任务集，把机制复验从「弱证据」推向可辩护；③ 任何改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠分数叙事。
+- **下一步优先级（v2.32.0 当时）**：① 同模型隔离锚点仍需一个能稳定驱动工具调用的第二端点（ovhcloud 限流无效）；② 在公平口径下扩大 K / 扩任务集，把机制复验从「弱证据」推向可辩护；③ 任何改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠分数叙事。（①③ 已在 v2.33.0 处理，见 §8.7）
+
+### 8.7 v2.33.0（2026-11-13）· 自己找可用第二端点：端点扫描 + 同模型隔离锚点
+
+> 用户要求「自己找找可用的第二端点，不要被这个吓到」。全部结论收敛于唯一交付物 [`CORE-REPORT.html`](./CORE-REPORT.html)。
+
+- **§8.4/§8.6 的「ovhcloud 限流无效」被证伪**：主动扫描 15 个端点/模型组合（`endpoint-scan.ts`），5 个可原生 tool_calls，唯一身份匹配公开榜的锚点 `ovhcloud/gpt-oss-120b`（响应 `model=gpt-oss-120b`）。端点本身单次调用返回 200 + `tool_calls`；v2.30.0 的 `provider_error` 根因是**匿名层 2 req/min** 与 harness 退避（1s/2s/4s、maxRetries=2）不匹配，**不是端点故障**。第二端点从来不缺，缺的是限流适配。
+- **联网新端点也有，但有身份陷阱**：BlockRun 免 Key、支持原生 tool_calls，不过 `nvidia/gpt-oss-120b` 已退役重定向到 `nemotron-3-super-120b`，且免费容量 4 次 3 次 429，不能冒充锚点。kilo 471 个模型里的榜单模型具体 ID 全部 `401`（只有 `kilo-auto/free` 匿名）、opencode-zen `*-free` 429、llm7 榜单模型 401 —— 模型身份一律以响应 `model` 字段为准，写进前置门禁。
+- **测量侧节流适配**（`same-model-anchor.ts`）：`fetch` 层对 ovhcloud chat 请求加「相邻 ≥31s + 429 同节奏重试」，**不改 src / 不改默认行为 / 不改 token·步数口径**（沿用 §8.6 校准值），仅显式放宽墙钟。1 任务验证 `PASS / completed / provider_error=0 / 429重试=0`；全量 4 任务 × K=2 = 8 次稳定跑通，**4/8 = 0.5 / `provider_error=0` / `429重试=0` / 停止分布 `completed:4 guard:4`**（4 次失败均为 12 步用完的真实能力表现），产出 bro2 在 `gpt-oss-120b` 上的首个可复核读数。
+- **同模型对照仍诚实降级为「位次参照」**：对照公开榜 Terminal-Bench 全量 `gpt-oss-120b = 26.217%`，但两者**任务集不同（4 curated 静态输入子集 vs 全量）、难度不可比**，`kind=non-strict-positioning-reference`、`isStrictHarnessDelta=false`，名义差**不可归因于 harness**。要构成可归因 Δ，需官方 harness 在同子集成绩或 bro2 跑全量任务集（当前统一离线 verifier 只支持静态输入子集）。**本轮价值是把卡点从「端点不可用」推进到「端点可用 + 有读数 + Δ 边界清楚」，不是能力水位提升**。
+- **定位不变（仍诚实）**：自跑、非第三方复核、小样本、免费匿名端点；不写 `external-results.json`、L4 仍 `not-achieved`、`verdict` 仍 `not-proven`。
+- **下一步优先级**：① 让同模型对照成为**可归因 Δ**（补官方 harness 同子集成绩 / 扩任务集到全量）；② 在稳定端点 / 更大 K / 更多任务下把机制复验从「弱证据」推向可辩护；③ 任何改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠分数叙事。

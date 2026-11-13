@@ -1,0 +1,22 @@
+============================================================================================
+  bro2 · 同模型隔离锚点 · gpt-oss-120b via ovhcloud（节流适配）· v2.33.0
+============================================================================================
+  4 任务 × K=2 = 8 次 | 预算 maxSteps=12 maxTokens=120000 maxSeconds=3600
+  节流 31000ms（OVHcloud 匿名层 2 req/min/model/IP（catalog rate_limit_api_anonymous，2026-10-08 复核）→ 相邻请求 ≥30s，取 31s 留余量）| 429 最多重试 4 次
+  【0】模型身份核实
+    http=200 resp_model=gpt-oss-120b tools=1 matches=true
+  [ 1/8] tb-analyze-access-logs       r1 ✓PASS 6步 6工具 56386tok stop=completed guards=[] 219s
+  [ 2/8] tb-analyze-access-logs       r2 ✓PASS 6步 6工具 56160tok stop=completed guards=[] 217s
+  [ 3/8] tb-bank-trans-filter         r1 ✗FAIL 12步 12工具 75034tok stop=guard guards=[steps] 382s
+  [ 4/8] tb-bank-trans-filter         r2 ✗FAIL 12步 12工具 94326tok stop=guard guards=[steps] 401s
+  [ 5/8] tb-assign-seats              r1 ✗FAIL 12步 12工具 37536tok stop=guard guards=[steps] 362s
+  [ 6/8] tb-assign-seats              r2 ✗FAIL 12步 12工具 38025tok stop=guard guards=[steps] 359s
+  [ 7/8] tb-constraints-scheduling    r1 ✓PASS 6步 6工具 34837tok stop=completed guards=[] 263s
+  [ 8/8] tb-constraints-scheduling    r2 ✓PASS 6步 6工具 34691tok stop=completed guards=[] 243s
+
+============================================================================================
+  完成：bro2(gpt-oss-120b) 4/8 = 0.5 | 公开榜全量 = 0.26217
+  名义差 = 0.2378（non-strict-positioning-reference，不可归因 harness）
+  停止分布 {"completed":4,"guard":4} | provider_error=0 | 节流等待 72 次 / 1717s | 429重试=0
+  external-results.json 未改动: true
+  报告: /workspace/agent-os/data/bench/external/same-model-anchor-report.json

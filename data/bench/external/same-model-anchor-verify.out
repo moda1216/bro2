@@ -1,0 +1,15 @@
+============================================================================================
+  bro2 · 同模型隔离锚点 · gpt-oss-120b via ovhcloud（节流适配）· v2.33.0
+============================================================================================
+  1 任务 × K=1 = 1 次 | 预算 maxSteps=12 maxTokens=120000 maxSeconds=3600
+  节流 31000ms（OVHcloud 匿名层 2 req/min/model/IP（catalog rate_limit_api_anonymous，2026-10-08 复核）→ 相邻请求 ≥30s，取 31s 留余量）| 429 最多重试 4 次
+  【0】模型身份核实
+    http=200 resp_model=gpt-oss-120b tools=1 matches=true
+  [ 1/1] tb-analyze-access-logs       r1 ✓PASS 6步 6工具 56541tok stop=completed guards=[] 213s
+
+============================================================================================
+  完成：bro2(gpt-oss-120b) 1/1 = 1 | 公开榜全量 = 0.26217
+  名义差 = 0.7378（non-strict-positioning-reference，不可归因 harness）
+  停止分布 {"completed":1} | provider_error=0 | 节流等待 7 次 / 169s | 429重试=0
+  external-results.json 未改动: true
+  报告: /workspace/agent-os/data/bench/external/same-model-anchor-report.json

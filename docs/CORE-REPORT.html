@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>bro2 外部测量 · 核心报告 v2.32.0</title>
+<title>bro2 外部测量 · 核心报告 v2.33.0</title>
 <style>
 :root{--bg:#0d1117;--card:#161b22;--card2:#1c2330;--bd:#2a3441;--tx:#e6edf3;--dim:#8b98a5;
 --acc:#4f9cf9;--ok:#3fb950;--no:#f85149;--warn:#d29922;--hl:#1f6feb22}
@@ -41,17 +41,17 @@ ul{margin:8px 0;padding-left:22px}li{margin:5px 0}.foot{margin-top:44px;padding-
 </style></head><body><div class="wrap">
 
 <h1>bro2 外部测量 · 核心报告</h1>
-<div class="sub">v2.32.0 · 生成于 2026-11-13 07:31:55 · 数据源 <code>data/bench/external/readout-recalibration-report.json</code></div>
+<div class="sub">v2.33.0 · 生成于 2026-11-13 10:52:40 · 数据源 <code>data/bench/external/same-model-anchor-report.json</code> + <code>endpoint-scan-report.json</code></div>
 
 <div class="hero">
-<p class="lead">一句话结论：把「量尺」校准后读数口径自洽了（读数不升反降，证明不是加资源刷分）；预算软预警在更大 K 的公平复验下判据虽机械全绿，但效应可完全由端点噪声解释、机制几乎未被触发——<b>仍判定「证据不足」，维持默认关闭</b>。</p>
-<div class="sub">本轮执行上一版留下的两个「下一步」：<b>① 修测量预算配置失真（读数修正）</b> 与 <b>② 稳定端点 / 更大 K 复验候选机制</b>。两者耦合：上一轮的 A/B 跑在失真口径上，必须先把尺子校准，复验才有意义。</div>
+<p class="lead">一句话结论：主动扫描 15 个候选端点后坐实——<b>第二端点从来不缺，v2.30.0 的失败只是「2 请求/分钟限流」与 harness 退避不匹配</b>。在测量侧加一层节流后，<code>ovhcloud / gpt-oss-120b</code>（身份核实吻合）稳定跑通 bro2 完整 harness、<code>provider_error=0</code>，首次拿到 bro2 在「有公开榜成绩的同模型」上的可复核读数 <b>50%</b>（4/8）。但对照公开榜全量 26% 的差是<b>非严格 harness-Δ</b>（任务集不同、不可归因），如实标注、不外推。</p>
+<div class="sub">本轮 = 上一版悬置的<b>「下一步 ③：同模型隔离锚点」</b>。用户指令「自己找可用的第二端点，不要被这个吓到」→ 不再因一次限流收手，而是把已注册却跳过的 provider、config 里列着没试过的具体模型、联网新发现的端点全部拉出来做带 tools 的真实调用。</div>
 </div>
 
 <div class="kpis">
-<div class="kpi"><div class="n">4 × 3 × 3</div><div class="l">36 次真实运行 / 冻结任务集</div></div>
-<div class="kpi"><div class="n g">0.75 → 0.667</div><div class="l">失真口径 → 校准口径 通过率（Δ -0.083）</div></div>
-<div class="kpi"><div class="n w">0.667 / 0.75</div><div class="l">基线 / 软预警 通过率（差 1 trial，噪声可解释）</div></div>
+<div class="kpi"><div class="n g">5 / 15</div><div class="l">候选端点中原生 tool_calls 可用（TOOLS_OK）</div></div>
+<div class="kpi"><div class="n g">1</div><div class="l">身份匹配公开榜的可用作锚点端点 <code>gpt-oss-120b</code></div></div>
+<div class="kpi"><div class="n g">0</div><div class="l">全量实验 provider_error 次数（节流前必现）</div></div>
 <div class="kpi"><div class="n w">not-proven</div><div class="l">L4 仍 not-achieved · verdict 未动</div></div>
 </div>
 
@@ -59,10 +59,40 @@ ul{margin:8px 0;padding-left:22px}li{margin:5px 0}.foot{margin-top:44px;padding-
 <div class="tl">
 <div class="ev"><div class="v">v2.30.0</div>把「第三方已有公开成绩的任务集」直接给 bro2 跑（Terminal-Bench 公开 verifier 双向反证），kilo 端点得 <b>50%</b> positioning-only。同时留下一个隐患：测量脚本只声明了 <code>maxSteps=12</code>。</div>
 <div class="ev"><div class="v">v2.31.0</div>用逐轨迹诊断<b>证伪</b>了上一版的「空转不肯停」结论：真实机理是 <code>guard(kind=tokens)</code> 静默熔断早于产出落地，以及模型约束求解不全。做了预注册 A/B（K=2）检验预算软预警，<b>判据未全成立／无差异（如实记录，不宣称增益）</b>，机制默认关闭。<br><span class="sub">附带发现：16 次运行 steps 最高 9 就撞 token 熔断 —— <b>v2.30.0 的读数是「预算配置失真」下的读数，不是公平读数</b>。</span></div>
-<div class="ev now"><div class="v">v2.32.0（本轮）</div>执行两个「下一步」：先修失真（把暗藏 <code>maxTokens=60000</code> 的半套接线改成成套显式声明 + 双口径并列实测），再在<b>校准后的公平口径</b>下用 <b>K=3</b>（&gt; 上轮 2）复验软预警。</div>
+<div class="ev"><div class="v">v2.32.0</div>执行两个「下一步」：先修失真（把暗藏 <code>maxTokens=60000</code> 的半套接线改成成套显式声明 + 双口径并列实测），再在<b>校准后的公平口径</b>下用 <b>K=3</b>（&gt; 上轮 2）复验软预警。校准口径 <code>maxSteps=12 / maxTokens=120000</code> 成为后续测量的统一尺子。</div>
+<div class="ev now"><div class="v">v2.33.0（本轮）</div>啃下悬了三轮的「下一步③ 同模型隔离锚点」：主动扫描 15 个端点/模型组合，定位限流失配根因，用<b>测量侧节流适配</b>让 <code>gpt-oss-120b</code> 稳定跑通完整 harness，产出 bro2 在有公开榜成绩同模型上的首个可复核读数，并诚实界定其 Δ 的不可归因性。</div>
 </div>
 
-<h2>1 · 下一步①：读数修正（measurement-wiring，不是能力优化）</h2>
+<h2>1 · 本轮：第二端点主动扫描（下一步③ 上半）</h2>
+<p>硬门槛四条：匿名免 API Key · OpenAI Chat Completions 兼容 · <b>原生返回 <code>tool_calls</code></b>（多步 agent 的前提）· 模型身份与公开榜条目一致。对 15 个候选各发一次带 <code>tools</code> 的真实调用，逐个记录 http / 错误 / 响应 <code>model</code> 字段。</p>
+<table><tr><th>端点 · 模型</th><th>结果</th><th>http</th><th>响应 model / 错误</th></tr>
+<tr><td class="k mono">kilo-auto-free</td><td><span class="b ok">TOOLS_OK</span></td><td>200</td><td class="dim">nvidia/nemotron-3-ultra-550b-a55b:free</td></tr><tr><td class="k mono">kilo-glm53flash</td><td><span class="b no">FAIL</span></td><td>401</td><td class="dim">You need to sign in to use this model.</td></tr><tr><td class="k mono">kilo-inkling2</td><td><span class="b no">FAIL</span></td><td>401</td><td class="dim">You need to sign in to use this model.</td></tr><tr><td class="k mono">kilo-dsv41f1017</td><td><span class="b no">FAIL</span></td><td>401</td><td class="dim">You need to sign in to use this model.</td></tr><tr><td class="k mono">kilo-dsv4pro0813</td><td><span class="b no">FAIL</span></td><td>401</td><td class="dim">You need to sign in to use this model.</td></tr><tr><td class="k mono">ovh-gpt120-anchor</td><td><span class="b ok">TOOLS_OK</span></td><td>200</td><td class="dim">gpt-oss-120b</td></tr><tr><td class="k mono">ovh-gpt20b</td><td><span class="b ok">TOOLS_OK</span></td><td>200</td><td class="dim">gpt-oss-20b</td></tr><tr><td class="k mono">zen-glm53flash-free</td><td><span class="b no">FAIL</span></td><td>429</td><td class="dim">Free usage limit reached. Free models work in OpenCode (http</td></tr><tr><td class="k mono">zen-dsv41f-free</td><td><span class="b no">FAIL</span></td><td>429</td><td class="dim">Free usage limit reached. Free models work in OpenCode (http</td></tr><tr><td class="k mono">llm7-gpt20b</td><td><span class="b ok">TOOLS_OK</span></td><td>200</td><td class="dim">gpt-oss:20b</td></tr><tr><td class="k mono">llm7-glm53</td><td><span class="b no">FAIL</span></td><td>401</td><td class="dim">Missing API key.</td></tr><tr><td class="k mono">pollinations-openai</td><td><span class="b ok">TOOLS_OK</span></td><td>200</td><td class="dim">gpt-oss-20b</td></tr><tr><td class="k mono">keylessai-gpt20b</td><td><span class="b no">EXC</span></td><td>—</td><td class="dim">TypeError:fetch failed</td></tr><tr><td class="k mono">blockrun-gpt120</td><td><span class="b no">FAIL</span></td><td>429</td><td class="dim">Free model capacity exhausted — retry shortly, or use a paid</td></tr><tr><td class="k mono">blockrun-nemotron120</td><td><span class="b no">FAIL</span></td><td>429</td><td class="dim">Free model capacity exhausted — retry shortly, or use a paid</td></tr>
+</table>
+<div class="callout ok"><b>5 个端点可原生工具调用，但唯一能做同模型锚点的是 <code>ovhcloud / gpt-oss-120b</code>（响应 <code>model=gpt-oss-120b</code>，身份吻合）。</b><br>
+<span class="sub">ovhcloud/gpt-oss-120b 单次带 tools 调用返回 200 + tool_calls，端点本身可用；v2.30 的 provider_error 根因是匿名层 2 req/min 限流与 harness 内置退避（1s/2s/4s、maxRetries=2）不匹配，而非端点故障。<br>kilo 网关虽列 471 个模型（含多个榜单模型），但具体模型 ID 返回 401 'You need to sign in to use this model'；只有 kilo-auto/free 匿名，且该模型不在公开榜，无法做同模型锚点。<br>opencode-zen *-free 系列返回 429 Free usage limit reached；llm7 榜单模型返回 401 Missing API key（仅 gpt-oss:20b 匿名）；pollinations/keylessai 受 402/连接超时限制。<br>联网新发现 BlockRun（blockrun.ai/api/v1）确实免 Key、支持原生 tool_calls，但 'nvidia/gpt-oss-120b' 已被退役并重定向到 nemotron-3-super-120b（响应 model 字段已核实），且免费容量 4 次里 3 次 429 —— 存在模型身份陷阱，不能冒充 gpt-oss-120b 锚点。<br>结论：唯一可做同模型锚点的仍是 ovhcloud/gpt-oss-120b；正确解法不是换端点，而是在测量侧为该端点的 2 req/min 限流做节流适配（见 same-model-anchor.ts）。</span></div>
+<div class="callout warn"><b>关键反转 + 身份陷阱：</b>v2.30.0 判 ovhcloud「端点限流无效」其实判早了——端点本身单次带 tools 调用返回 200 + <code>tool_calls</code>；根因是<b>匿名层 2 req/min</b> 与 harness 内置退避（1s/2s/4s、maxRetries=2）不匹配。另：联网新发现的 BlockRun 虽免 Key 且支持 tool_calls，但 <code>nvidia/gpt-oss-120b</code> 已退役、响应 <code>model</code> 实为 <code>nemotron-3-super-120b</code>——<b>不能冒充 gpt-oss-120b 锚点</b>（故身份核实写进实验前置门禁）。</div>
+
+<h2>2 · 本轮：同模型隔离锚点（下一步③ 下半）</h2>
+<div class="grid2">
+<div><h3>测量侧节流适配（任务无关、不加能力）</h3>
+<p class="sub">在评测脚本的 <code>fetch</code> 层对 ovhcloud 的 chat 请求加：相邻请求间隔 ≥ <code>31000ms</code>（依据 2 req/min 官方限流）+ 429 按同节奏等待重试。<b>不改 <code>src</code>、不改默认行为、不改 token/步数口径</b>（沿用 v2.32.0 校准值），仅把墙钟上限显式放宽以免节流等待误触发 time guard。</p>
+<p class="sub">身份核实前置门禁：<code>http=200 resp_model=gpt-oss-120b matches=true</code>，不吻合即拒绝出报告。</p></div>
+<div><h3>端点与预算口径</h3>
+<p class="sub mono">provider=ovhcloud · model=gpt-oss-120b<br>benchmark=Terminal-Bench（榜单数据 2026-11-09）<br>maxSteps=12 / maxTokens=120000 / maxSeconds=3600<br>advisory=0（软预警仍默认关闭）</p>
+<p class="sub">节流统计：等待 72 次 · 429 重试 0 次 · 全量 <code>provider_error=0</code>。</p></div>
+</div>
+
+<h3>全量结果（冻结 4 任务 × K=2）</h3>
+<table><tr><th>任务</th><th>repeat</th><th>verifier</th><th>步数/工具</th><th>token</th><th>停止原因</th></tr><tr><td class="k mono">tb-analyze-access-logs</td><td>r1</td><td><span class="b ok">PASS</span></td><td>6步 / 6工具</td><td>56386</td><td class="dim">completed</td></tr><tr><td class="k mono">tb-analyze-access-logs</td><td>r2</td><td><span class="b ok">PASS</span></td><td>6步 / 6工具</td><td>56160</td><td class="dim">completed</td></tr><tr><td class="k mono">tb-bank-trans-filter</td><td>r1</td><td><span class="b no">FAIL</span></td><td>12步 / 12工具</td><td>75034</td><td class="dim">guard</td></tr><tr><td class="k mono">tb-bank-trans-filter</td><td>r2</td><td><span class="b no">FAIL</span></td><td>12步 / 12工具</td><td>94326</td><td class="dim">guard</td></tr><tr><td class="k mono">tb-assign-seats</td><td>r1</td><td><span class="b no">FAIL</span></td><td>12步 / 12工具</td><td>37536</td><td class="dim">guard</td></tr><tr><td class="k mono">tb-assign-seats</td><td>r2</td><td><span class="b no">FAIL</span></td><td>12步 / 12工具</td><td>38025</td><td class="dim">guard</td></tr><tr><td class="k mono">tb-constraints-scheduling</td><td>r1</td><td><span class="b ok">PASS</span></td><td>6步 / 6工具</td><td>34837</td><td class="dim">completed</td></tr><tr><td class="k mono">tb-constraints-scheduling</td><td>r2</td><td><span class="b ok">PASS</span></td><td>6步 / 6工具</td><td>34691</td><td class="dim">completed</td></tr></table>
+<p class="sub mono">通过 4/8 = 50% | 停止分布 {&quot;completed&quot;:4,&quot;guard&quot;:4}</p>
+
+<h3>与公开榜对照：位是参照，差不可归因</h3>
+<div class="callout warn"><b>bro2 样本 50% vs 公开榜全量 26% → 名义差 +0.2378（kind=<code>non-strict-positioning-reference</code>，isStrictHarnessDelta=false）</b><br>
+<span class="sub">两者不可直接相减归因于 harness：本样本是 4 个 curated（静态输入 / 纯 stdlib 评分器）Terminal-Bench 任务子集，公开榜 26.217% 是 Terminal-Bench 2.1 全量任务集上 gpt-oss-120b + default/official harness 的 pass@1。任务集非逐位一致、难度分布不可比，之差混合了任务集差异、harness 差异与端点噪声。仅作位次参照，不构成严格同模型 harness-Δ 隔离估计。</span><br>
+<span class="sub"><b>要构成可归因 Δ 还缺：</b>官方 harness 在同一 4 任务子集上的 pass@1，或 bro2 在榜单全量任务集上的成绩，二者取其一才可构成可归因的 Δ。</span></div>
+<div class="callout"><b>本轮真正的成果不是那个数字，而是把「第二端点不可用」这个卡了三轮的结论<b>证伪并解决</b>：</b>端点可用、身份核实通过、完整 harness 稳定跑通、<code>provider_error</code> 归零、且不写 <code>external-results.json</code>（true）、不改 L4/verdict。Δ 的诚实边界比 Δ 本身更重要。</div>
+
+<h2>3 · 前序（v2.32.0）：下一步① 读数修正（measurement-wiring，不是能力优化）</h2>
 
 <h3>失真机理</h3>
 <p>历史测量脚本的 <code>configOverride</code> 只覆盖 <code>maxSteps=12</code>，<code>maxTokens</code> 靠 <code>agentos.config.json</code> 默认值 <b>60000 累计静默熔断</b>生效。而每步上下文重建会把历史 token 重复计费——v2.31.0 实测 16 次 token 中位数 56540、最大 75138，<b>5/16 在 4~6 步就撞 <code>guard(tokens)</code></b>，12 步预算形同虚设。报告的 <code>budget</code> 字段却只写了 <code>maxModelCalls</code>，完全没披露真正的 binding constraint。</p>
@@ -101,7 +131,7 @@ ul{margin:8px 0;padding-left:22px}li{margin:5px 0}.foot{margin-top:44px;padding-
 <div class="callout ok"><b>读数失真实证成立：旧口径读数受累计 token 静默熔断污染；成套校准后步数预算真正生效。读数差归因测量接线，不计能力。</b><br>
 <span class="sub">读数差 Δ=-0.083 的归因字段已写死为 <code>measurement-wiring-not-capability</code>，<code>comparableAsCapabilityDelta = false</code> —— <b>无论升或降，都不计为 bro2 能力变化</b>。</span></div>
 
-<h2>2 · 下一步②：公平口径 + 更大 K 复验软预警</h2>
+<h2>4 · 前序（v2.32.0）：下一步② 公平口径 + 更大 K 复验软预警</h2>
 <p>v2.31.0 的 A/B（K=2）判据 <code>P1=true P2=false P3=true</code> 未全成立，且跑在失真口径上。本轮在<b>校准后的公平口径</b>、<b>K=3</b> 下复验，沿用冻结的 P1/P2/P3 + holdout + 反证锚点。</p>
 <table><tr><th>判据</th><th>内容</th><th>C 基线</th><th>A 预警</th><th>判定</th></tr>
 <tr><td class="k">P1 机制生效</td><td class="dim">A 出现预警事件、C 为 0</td><td>0</td><td>1</td><td><span class="b ok">成立</span></td></tr>
@@ -124,32 +154,40 @@ ul{margin:8px 0;padding-left:22px}li{margin:5px 0}.foot{margin-top:44px;padding-
 <span class="sub">判据 P1∧P2∧P3 机械全绿，但 A−C 通过差仅 1 个 trial、可被 C 组独有的 1 次 provider_error 端点噪声完全解释；且软预警在 A 组 12 次运行里仅触发 1 次，机制几乎未被检验。据此判定「证据不足（噪声主导）」，不构成机制有效的可靠证据：维持默认关闭、不据此开启、不改 L4/verdict。</span><br>
 <span class="sub">软预警仍<b>默认关闭</b>，不因本轮改变行为。预注册判据结果原样保留（不事后改判据），本段为只增的二次判读层；反证锚点 assign-seats 三组全 fail，确认无答案泄漏。</span></div>
 
-<h2>3 · 诚实边界（红线，全程未破）</h2>
+<h2>5 · 诚实边界（红线，全程未破）</h2>
 <ul>
 <li>小样本（4 任务、每组 K=3、共 36 次）、免费匿名端点（kilo 路由模型不固定）、单次随机性大</li><li>读数修正前后通过率差归因于『测量预算接线成套化』，不是 bro2 能力变化；不写 external-results.json、不改 L4/verdict</li><li>校准口径提高了 maxTokens 上限（60000→120000），这是修尺子不是加资源刷分；差异不得包装成能力优化</li><li>机制复验为同集前后对照，属弱证据；软预警仍默认关闭，不因本轮改变默认行为</li><li>bro2 自跑、非第三方复核；公开 verifier 为上游 pytest，healthy 已双向验证</li>
 <li>verifier 健全性：4/4 SOUND（沿用 v2.30.0 双向验证：空工作区 fail / 官方 oracle 解 pass）（空工作区必 fail / 官方 oracle 解必 pass，模型无关）。</li>
-<li>全程自跑、非第三方复核；本轮是<b>读数校准与机制复验</b>，不是「能力水位提升」——<code>leadership.verdict = not-proven</code>、<code>L4 = not-achieved</code> 均未改。</li>
+<li><b>本轮新增</b>：端点身份以响应 <code>model</code> 字段为准（BlockRun 重定向为反例）；节流是<b>测量侧适配</b>不是能力优化；同模型对照为<b>非逐位同任务集</b>的位次参照、<code>isStrictHarnessDelta=false</code>、名义差不可归因于 harness。</li>
+<li>全程自跑、非第三方复核；<code>external-results.json</code> 未被触碰（true）、<code>leadership.verdict = not-proven</code>、<code>L4 = not-achieved</code> 均未改。</li>
 </ul>
 
-<h2>4 · 复现与证据索引</h2>
+<h2>6 · 复现与证据索引</h2>
 <pre># 只增账本 / 全部工程产物由 git 远程管理
 sh examples/fetch-external-tasks.sh
 docker build -t bro2/tb-verifier:1 - &lt; examples/tb-verifier.Dockerfile
+# v2.33.0 本轮：端点扫描 + 同模型锚点（ovhcloud 节流）
+node --experimental-strip-types --no-warnings examples/endpoint-scan.ts
+ANCHOR_K=2 node --experimental-strip-types --no-warnings examples/same-model-anchor.ts
+# v2.32.0 前序：读数修正 + 更大 K 复验
 TRAJ_PROVIDER=kilo AGENTOS_LIVE_PROVIDER=kilo EXT_K=3 \
   node --experimental-strip-types --no-warnings examples/readout-recalibration.ts
 node --experimental-strip-types --no-warnings examples/build-core-report.ts   # 生成本报告</pre>
 <p>
-<span class="pill">36 次逐 trial 明细 → readout-recalibration-report.json</span>
+<span class="pill">端点扫描 15 候选 → endpoint-scan-report.json</span>
+<span class="pill">同模型锚点 8 次逐 trial → same-model-anchor-report.json</span>
+<span class="pill">1 任务节流验证 → same-model-anchor-verify.out</span>
+<span class="pill">v2.32.0 36 次明细 → readout-recalibration-report.json</span>
 <span class="pill">v2.31.0 负结果 → budget-advisory-report.json</span>
 <span class="pill">v2.30.0 直跑对照 → tb-leaderboard-compare-report.json</span>
 <span class="pill">公开榜快照 → tb-leaderboard-snapshot.json</span>
 <span class="pill">冻结任务集 → tasks.jsonl + SHA256SUMS</span>
 </p>
 
-<h2>5 · 当前水位与下一步</h2>
-<div class="callout"><b>能力水位未变</b>：外部测量仍为自跑、非第三方复核；本轮把「读数口径」从失真修到自洽，并再次确认候选机制未被证明有效。<br>
-<b>下一步优先级</b>：① 同模型隔离锚点仍需一个能稳定驱动工具调用的第二端点（ovhcloud 限流无效）；② 在公平口径下扩大 K / 扩任务集，把机制复验从「弱证据」推向可辩护；③ 任何改进仍走预注册判据 + 行为对比 + holdout，不靠分数叙事。</div>
+<h2>7 · 当前水位与下一步</h2>
+<div class="callout"><b>能力水位未变，但卡点推进了</b>：v2.30.0 起「同模型隔离锚点仍需第二端点」这一悬置项，本轮从「端点限流无效」证伪为「端点可用 + 缺的是限流适配」，并已稳定跑通、产出首个同模型读数（非严格 Δ）。<br>
+<b>下一步优先级</b>：① 让同模型对照成为<b>可归因 Δ</b>——要么拿到官方 harness 在同一 4 任务子集的成绩，要么让 bro2 跑到榜单全量任务集（当前统一离线 verifier 只支持静态输入子集，需扩展）；② 在稳定端点 / 更大 K / 更多任务下把机制复验从「弱证据」推向可辩护；③ 任何改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠分数叙事。</div>
 
 <div class="foot">bro2 · Model + Harness = Agent · 冻结模型权重，只演进 harness · 只增账本 / 惰性真实探测 / 对比式改进<br>
-本报告由 <code>examples/build-core-report.ts</code> 从可复核 JSON 生成，数字不手写 · v2.32.0</div>
+本报告由 <code>examples/build-core-report.ts</code> 从可复核 JSON 生成，数字不手写 · v2.33.0</div>
 </div></body></html>
