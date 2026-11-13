@@ -252,4 +252,13 @@
 - **改进实验（预注册 A/B，负结果）**：预算软预警（默认关闭、不加预算、6 项契约单测）在 4 任务 × 2 臂 × K=2 = 16 次运行上，`P1 机制✓ / P3 不退化✓ / P2 行为（文件未落地 B=2 > A=1）✗` → **判据未全成立，不宣称增益，机制保持默认关闭**。含行为对比（呼应 `src/rsi/contrast.ts` 的 reward-hacking 拦截）、holdout 回归与反证锚点（`assign-seats` 两臂 0/2 全 fail，无答案泄漏）。结构性归因：单步 token 增量可一次跨过 0.8 预警区间，步首预警在固定预算下来不及生效；修它只能延后熔断（刷分）或看着结果调阈值（过拟合），均不做。
 - **附带发现（影响对 §8.4 读数的解释）**：16 次运行 `steps` 最高 9 而 `maxSteps=12`，A 臂 3 次、B 臂 2 次撞 `guard(kind=tokens)`——**v2.30.0 的 `2/4` 是预算配置失真下的读数，不是 bro2 能力的公平读数**（`configOverride` 只覆盖 `maxSteps` 未同步 `maxTokens`）。**未通过调大 `maxTokens` 抬高该数字**。
 - **定位不变（仍诚实）**：自跑、非第三方复核、4 题/K=2/免费端点、同集前后对照属弱证据；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条、不写 `external-results.json`。本轮是 harness 层可证伪实验，**不是能力位次变化**。
-- **下一步优先级**：① 修测量预算配置失真（明确标注为读数修正、非能力提升）；② 稳定端点 / 更大 K 下复验候选机制；③ 同模型隔离锚点仍需第二端点。详见 [`BUDGET-ADVISORY-EXPERIMENT.md`](./BUDGET-ADVISORY-EXPERIMENT.md)。
+- **下一步优先级**：① 修测量预算配置失真（明确标注为读数修正、非能力提升）；② 稳定端点 / 更大 K 下复验候选机制；③ 同模型隔离锚点仍需第二端点。详见 [`BUDGET-ADVISORY-EXPERIMENT.md`](./BUDGET-ADVISORY-EXPERIMENT.md)。（①② 已在 v2.32.0 执行，见 §8.6）
+
+### 8.6 v2.32.0（2026-11-13）· 执行下一步①②：读数修正 + 更大 K 机制复验
+
+> 用户要求「执行下一步 1 和 2，整理产出物，给一个核心报告即可」。全部结论收敛于唯一交付物 [`CORE-REPORT.html`](./CORE-REPORT.html)（从可复核 JSON 生成）。
+
+- **① 读数修正已落地且被证成**：失真根因是测量脚本 `configOverride` 只覆盖 `maxSteps=12`、`maxTokens=60000` 靠默认静默生效，报告的 `budget` 字段未披露真正的 binding constraint。已改为成套显式声明（`LEGACY_MAX_TOKENS` + `effectiveBindingConstraint` 标签，语义零变化、历史可复现）。36 次对照（K=3）实测 L 组 2 次 `guard(tokens)`（steps<12）、C 组 0 次；**读数 0.75→0.667（Δ=−0.083，不升反降）**——校准让 12 步预算真正生效，且明确排除「加资源刷分」。归因锁死 `measurement-wiring-not-capability`，**不写入任何能力/位次字段**。
+- **② 更大 K 机制复验：机械全绿但判定证据不足**：公平口径 + K=3 下 `C vs A` 的 P1/P2/P3 全成立，但只增的「诚实二次判读」层指出：A−C 通过差仅 1 个 trial、可被 C 组独有的 1 次 `provider_error` 完全解释；软预警在 A 组 12 次仅触发 1 次（校准后 token 不再是瓶颈，机制几乎未被检验）。**维持默认关闭、不据此开启**——预注册判据结果原样保留，不事后改判据，呼应 `src/rsi/contrast.ts` 防 reward-hacking。
+- **定位不变（仍诚实）**：读数口径从失真修到自洽，但**能力水位未变**；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条、不写 `external-results.json`（R3 校验通过）。反证锚点 `assign-seats` 三组 0/9 全 fail，确认无答案泄漏。
+- **下一步优先级**：① 同模型隔离锚点仍需一个能稳定驱动工具调用的第二端点（ovhcloud 限流无效）；② 在公平口径下扩大 K / 扩任务集，把机制复验从「弱证据」推向可辩护；③ 任何改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠分数叙事。

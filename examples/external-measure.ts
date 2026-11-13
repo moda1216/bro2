@@ -41,6 +41,14 @@ const BRO2_REPORT = join(EXT, "bro2-eval-report.json");
 const EXTERNAL_RESULTS = join(ROOT, "data", "benchmark", "external-results.json");
 const IMAGE = "bro2/tb-verifier:1";
 export const MAX_MODEL_CALLS = 12;
+/**
+ * v2.32.0 读数修正：外部测量的「名义步数预算」必须与「累计 token 熔断」成套显式声明。
+ * 历史失真根源：configOverride 只写 maxSteps=12，maxTokens 靠 agentos.config.json 默认值
+ * 60000 静默生效，实际 binding constraint 是累计 token 而非步数，读数口径失真。
+ * 显式写出该默认值（语义不变、历史可复现），并在报告带 effectiveBindingConstraint 标签。
+ * 成套口径与修正后读数见 examples/readout-recalibration.ts + docs/CORE-REPORT.html。
+ */
+export const LEGACY_MAX_TOKENS = 60000;
 const STEP_TIMEOUT_MS = 45_000;
 const VERIFY_TIMEOUT_MS = 120_000;
 

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>bro2 外部测量 · 核心报告 v2.32.0</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--card2:#1c2330;--bd:#2a3441;--tx:#e6edf3;--dim:#8b98a5;
+--acc:#4f9cf9;--ok:#3fb950;--no:#f85149;--warn:#d29922;--hl:#1f6feb22}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);
+font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7;font-size:15px}
+.wrap{max-width:960px;margin:0 auto;padding:40px 24px 80px}
+h1{font-size:29px;margin:0 0 6px;letter-spacing:.5px}h2{font-size:20px;margin:44px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--bd)}
+h3{font-size:16px;margin:24px 0 10px;color:var(--acc)}p{margin:10px 0}
+.sub{color:var(--dim);font-size:14px}.mono{font-family:"SF Mono",Consolas,monospace;font-size:12.5px}
+.hero{background:linear-gradient(135deg,#15233a,#161b22);border:1px solid var(--bd);border-radius:14px;padding:26px 28px;margin:22px 0}
+.hero .lead{font-size:17px;font-weight:600;margin:0 0 10px;color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0}
+.kpi{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px}
+.kpi .n{font-size:26px;font-weight:700;color:var(--acc)}.kpi .n.g{color:var(--ok)}.kpi .n.w{color:var(--warn)}
+.kpi .l{font-size:12.5px;color:var(--dim);margin-top:4px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;background:var(--card);border-radius:10px;overflow:hidden}
+th,td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--bd)}th{background:var(--card2);color:var(--dim);font-weight:600;font-size:13px}
+td.k{text-align:left}td.hl{background:var(--hl);font-weight:600}tr:last-child td{border-bottom:none}td.dim{color:var(--dim);font-size:12.5px;text-align:left}
+.b{display:inline-block;padding:1px 9px;border-radius:20px;font-size:12px;font-weight:600}
+.b.ok{background:#3fb95022;color:var(--ok);border:1px solid #3fb95055}.b.no{background:#f8514922;color:var(--no);border:1px solid #f8514955}
+.callout{border-left:3px solid var(--acc);background:var(--card);padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0}
+.callout.warn{border-left-color:var(--warn)}.callout.no{border-left-color:var(--no)}.callout.ok{border-left-color:var(--ok)}
+.bar-row{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px}
+.bar-l{width:170px;color:var(--dim);text-align:right;flex-shrink:0}
+.bar-track{flex:1;background:#21262d;border-radius:5px;height:16px;overflow:hidden}
+.bar-fill{display:block;height:100%;background:var(--acc);border-radius:5px}.bar-fill.g{background:var(--ok)}.bar-fill.w{background:var(--warn)}
+.bar-v{width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.tl{border-left:2px solid var(--bd);margin:16px 0 16px 8px;padding-left:20px}
+.tl .ev{position:relative;margin:0 0 18px}.tl .ev::before{content:"";position:absolute;left:-27px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--acc);border:2px solid var(--bg)}
+.tl .ev .v{font-size:12px;color:var(--acc);font-weight:700}.tl .ev.now::before{background:var(--ok)}
+code{background:#21262d;padding:1px 6px;border-radius:4px;font-size:12.5px;color:#c9d1d9}
+pre{background:#0b0f14;border:1px solid var(--bd);border-radius:8px;padding:14px 16px;overflow:auto;font-size:12.5px;color:#c9d1d9}
+ul{margin:8px 0;padding-left:22px}li{margin:5px 0}.foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--bd);color:var(--dim);font-size:12.5px}
+.pill{display:inline-block;background:#21262d;border:1px solid var(--bd);border-radius:6px;padding:2px 8px;font-size:12px;color:var(--dim);margin:2px 4px 2px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.kpis,.grid2{grid-template-columns:1fr 1fr}.bar-l{width:110px}h1{font-size:23px}}
+</style></head><body><div class="wrap">
+
+<h1>bro2 外部测量 · 核心报告</h1>
+<div class="sub">v2.32.0 · 生成于 2026-11-13 07:31:55 · 数据源 <code>data/bench/external/readout-recalibration-report.json</code></div>
+
+<div class="hero">
+<p class="lead">一句话结论：把「量尺」校准后读数口径自洽了（读数不升反降，证明不是加资源刷分）；预算软预警在更大 K 的公平复验下判据虽机械全绿，但效应可完全由端点噪声解释、机制几乎未被触发——<b>仍判定「证据不足」，维持默认关闭</b>。</p>
+<div class="sub">本轮执行上一版留下的两个「下一步」：<b>① 修测量预算配置失真（读数修正）</b> 与 <b>② 稳定端点 / 更大 K 复验候选机制</b>。两者耦合：上一轮的 A/B 跑在失真口径上，必须先把尺子校准，复验才有意义。</div>
+</div>
+
+<div class="kpis">
+<div class="kpi"><div class="n">4 × 3 × 3</div><div class="l">36 次真实运行 / 冻结任务集</div></div>
+<div class="kpi"><div class="n g">0.75 → 0.667</div><div class="l">失真口径 → 校准口径 通过率（Δ -0.083）</div></div>
+<div class="kpi"><div class="n w">0.667 / 0.75</div><div class="l">基线 / 软预警 通过率（差 1 trial，噪声可解释）</div></div>
+<div class="kpi"><div class="n w">not-proven</div><div class="l">L4 仍 not-achieved · verdict 未动</div></div>
+</div>
+
+<h2>0 · 脉络：为什么会走到这一轮</h2>
+<div class="tl">
+<div class="ev"><div class="v">v2.30.0</div>把「第三方已有公开成绩的任务集」直接给 bro2 跑（Terminal-Bench 公开 verifier 双向反证），kilo 端点得 <b>50%</b> positioning-only。同时留下一个隐患：测量脚本只声明了 <code>maxSteps=12</code>。</div>
+<div class="ev"><div class="v">v2.31.0</div>用逐轨迹诊断<b>证伪</b>了上一版的「空转不肯停」结论：真实机理是 <code>guard(kind=tokens)</code> 静默熔断早于产出落地，以及模型约束求解不全。做了预注册 A/B（K=2）检验预算软预警，<b>判据未全成立／无差异（如实记录，不宣称增益）</b>，机制默认关闭。<br><span class="sub">附带发现：16 次运行 steps 最高 9 就撞 token 熔断 —— <b>v2.30.0 的读数是「预算配置失真」下的读数，不是公平读数</b>。</span></div>
+<div class="ev now"><div class="v">v2.32.0（本轮）</div>执行两个「下一步」：先修失真（把暗藏 <code>maxTokens=60000</code> 的半套接线改成成套显式声明 + 双口径并列实测），再在<b>校准后的公平口径</b>下用 <b>K=3</b>（&gt; 上轮 2）复验软预警。</div>
+</div>
+
+<h2>1 · 下一步①：读数修正（measurement-wiring，不是能力优化）</h2>
+
+<h3>失真机理</h3>
+<p>历史测量脚本的 <code>configOverride</code> 只覆盖 <code>maxSteps=12</code>，<code>maxTokens</code> 靠 <code>agentos.config.json</code> 默认值 <b>60000 累计静默熔断</b>生效。而每步上下文重建会把历史 token 重复计费——v2.31.0 实测 16 次 token 中位数 56540、最大 75138，<b>5/16 在 4~6 步就撞 <code>guard(tokens)</code></b>，12 步预算形同虚设。报告的 <code>budget</code> 字段却只写了 <code>maxModelCalls</code>，完全没披露真正的 binding constraint。</p>
+
+<div class="callout warn"><b>修正 ≠ 刷分。</b> 上一版明确拒绝「调大 maxTokens 抬高数字」。本轮把 <code>maxTokens</code> 提到成套值 <code>120000</code>（= 12 步 × 10000 token/步，依据 v2.31.0 实测约 10280 token/步），是让「名义 12 步预算」真正可用——<b>这是修尺子，不是加资源换成绩</b>。因此报告把两种口径<b>并列</b>呈现，并锁死归因。</div>
+
+<h3>实验设计（预注册判据，跑之前固化）</h3>
+<table><tr><th>组</th><th>maxSteps</th><th>maxTokens</th><th>advisory</th><th>角色</th></tr>
+<tr><td class="k mono">L_legacy</td><td>12</td><td>60000</td><td>0</td><td class="dim">旧读数口径复现（token 静默熔断）</td></tr><tr><td class="k mono">C_calibrated</td><td>12</td><td>120000</td><td>0</td><td class="dim">校准读数 + 机制对照组</td></tr><tr><td class="k mono">A_advisory</td><td>12</td><td>120000</td><td>0.8</td><td class="dim">公平口径下软预警复验</td></tr>
+</table>
+<p class="sub"><b>L vs C</b> 唯一变量 = 成套预算口径（读数修正）；<b>C vs A</b> 唯一变量 = <code>budgetAdvisoryRatio</code>（机制复验）。同端点、同输入、同公开 verifier、同 preset/policy、holdout 冻结、含反证锚点。</p>
+
+<h3>读数修正结果（L → C）</h3>
+<table><tr><th>指标</th><th>L 失真口径</th><th>C 校准口径</th><th>A 校准+预警</th></tr>
+<tr><td class="k">verifier 通过率</td><td>75%</td><td class="hl">67%</td><td>75%</td></tr>
+<tr><td class="k">通过数 / 试验数</td><td>9/12</td><td class="hl">8/12</td><td>9/12</td></tr>
+<tr><td class="k">guard(tokens) 次数</td><td>2</td><td class="hl">0</td><td>0</td></tr>
+<tr><td class="k">平均步数</td><td>5.167</td><td class="hl">5.583</td><td>6.5</td></tr>
+<tr><td class="k">平均累计 token</td><td>46494.25</td><td class="hl">55761.75</td><td>67154.25</td></tr>
+<tr><td class="k">产出文件未落地</td><td>0</td><td class="hl">1</td><td>0</td></tr>
+</table>
+<div class="grid2">
+<div><h3>token 熔断次数（越低越说明步数预算真正生效）</h3>
+<div class="bar-row"><span class="bar-l">L 失真口径</span><span class="bar-track"><span class="bar-fill w" style="width:100.0%"></span></span><span class="bar-v">2</span></div>
+<div class="bar-row"><span class="bar-l">C 校准口径</span><span class="bar-track"><span class="bar-fill g" style="width:0.0%"></span></span><span class="bar-v">0</span></div>
+<div class="bar-row"><span class="bar-l">A 校准+预警</span><span class="bar-track"><span class="bar-fill g" style="width:0.0%"></span></span><span class="bar-v">0</span></div></div>
+<div><h3>停止原因分布 L / C</h3>
+<p class="sub mono">L: {&quot;completed&quot;:9,&quot;provider_error&quot;:1,&quot;guard&quot;:2}<br>C: {&quot;completed&quot;:11,&quot;provider_error&quot;:1}</p>
+<p class="sub">校准口径下 binding constraint 从「隐藏的累计 token 熔断」转为「声明的 12 步 / 自然完成」——读数口径自洽、可复核。</p></div>
+</div>
+
+<h3>预注册判据判定</h3>
+<p><span class="b ok">成立</span> <b>R1 失真实证</b>：L 组出现「steps &lt; 12 却 token 提前熔断」<span class="pill">L: 2 次</span><br>
+<span class="b ok">成立</span> <b>R2 校准生效</b>：C 组 token 熔断 &lt; L 组 <span class="pill">L=2 → C=0</span><br>
+<span class="b ok">成立</span> <b>R3 归因锁</b>：<code>external-results.json</code> 未被触碰，L4 / verdict 未改</p>
+<div class="callout ok"><b>读数失真实证成立：旧口径读数受累计 token 静默熔断污染；成套校准后步数预算真正生效。读数差归因测量接线，不计能力。</b><br>
+<span class="sub">读数差 Δ=-0.083 的归因字段已写死为 <code>measurement-wiring-not-capability</code>，<code>comparableAsCapabilityDelta = false</code> —— <b>无论升或降，都不计为 bro2 能力变化</b>。</span></div>
+
+<h2>2 · 下一步②：公平口径 + 更大 K 复验软预警</h2>
+<p>v2.31.0 的 A/B（K=2）判据 <code>P1=true P2=false P3=true</code> 未全成立，且跑在失真口径上。本轮在<b>校准后的公平口径</b>、<b>K=3</b> 下复验，沿用冻结的 P1/P2/P3 + holdout + 反证锚点。</p>
+<table><tr><th>判据</th><th>内容</th><th>C 基线</th><th>A 预警</th><th>判定</th></tr>
+<tr><td class="k">P1 机制生效</td><td class="dim">A 出现预警事件、C 为 0</td><td>0</td><td>1</td><td><span class="b ok">成立</span></td></tr>
+<tr><td class="k">P2 行为对比</td><td class="dim">A 文件未落地 ≤ C</td><td>1</td><td>0</td><td><span class="b ok">成立</span></td></tr>
+<tr><td class="k">P3 结果不退化</td><td class="dim">A 通过率 ≥ C 且 holdout 不退化</td><td>67% / holdout 100%</td><td>75% / holdout 100%</td><td><span class="b ok">成立</span></td></tr>
+</table>
+<h3>逐任务通过数（冻结任务集，含 holdout 与反证锚点）</h3>
+<table><tr><th>任务</th><th>L 失真</th><th>C 校准</th><th>A 预警</th><th>停止原因(C)</th></tr><tr><td class="k mono">tb-analyze-access-logs</td><td>3/3</td><td class="hl">3/3</td><td>3/3</td><td class="dim">completed</td></tr><tr><td class="k mono">tb-bank-trans-filter</td><td>3/3</td><td class="hl">2/3</td><td>3/3</td><td class="dim">provider_error,completed</td></tr><tr><td class="k mono">tb-assign-seats</td><td>0/3</td><td class="hl">0/3</td><td>0/3</td><td class="dim">completed</td></tr><tr><td class="k mono">tb-constraints-scheduling</td><td>3/3</td><td class="hl">3/3</td><td>3/3</td><td class="dim">completed</td></tr></table>
+<p class="sub">反证锚点 <code>tb-assign-seats</code>（失败源于模型约束求解不全，机制不该修好）：C 通过 0 / A 通过 0（三组 0/9 全 fail，确认无答案泄漏）；holdout = <code>tb-analyze-access-logs</code> <code>tb-constraints-scheduling</code>。</p>
+
+<h3>诚实二次判读：判据机械全绿 ≠ 机制有效</h3>
+<div class="callout warn"><b>预注册判据结果原样保留（不事后改判据）</b>：P1∧P2∧P3 机械成立。但按项目防 reward-hacking 纪律（<code>src/rsi/contrast.ts</code>「自报分数提升但无行为/效应支撑 → 拒绝」），必须检查效应量能否被噪声解释：</div>
+<table><tr><th>检验项</th><th>数值</th><th>含义</th></tr>
+<tr><td class="k">A−C 通过率差</td><td>1 个 trial（8%）</td><td class="dim">效应量极小</td></tr>
+<tr><td class="k">C 组独有 provider_error</td><td>1 次（A 组 0 次）</td><td class="dim">差值可<b>完全</b>由这次端点错误解释</td></tr>
+<tr><td class="k">软预警实际触发</td><td>1 / 12 次</td><td class="dim">机制<b>几乎未被检验</b>（校准后 token 不再是瓶颈）</td></tr>
+<tr><td class="k">holdout / 反证锚点</td><td>不退化 / 全 fail</td><td class="dim">无泄漏、无退化，但也无独立正证据</td></tr>
+</table>
+<div class="callout no"><b>机制结论：证据不足（噪声主导）：判据机械全绿，但不构成机制有效证据</b><br>
+<span class="sub">判据 P1∧P2∧P3 机械全绿，但 A−C 通过差仅 1 个 trial、可被 C 组独有的 1 次 provider_error 端点噪声完全解释；且软预警在 A 组 12 次运行里仅触发 1 次，机制几乎未被检验。据此判定「证据不足（噪声主导）」，不构成机制有效的可靠证据：维持默认关闭、不据此开启、不改 L4/verdict。</span><br>
+<span class="sub">软预警仍<b>默认关闭</b>，不因本轮改变行为。预注册判据结果原样保留（不事后改判据），本段为只增的二次判读层；反证锚点 assign-seats 三组全 fail，确认无答案泄漏。</span></div>
+
+<h2>3 · 诚实边界（红线，全程未破）</h2>
+<ul>
+<li>小样本（4 任务、每组 K=3、共 36 次）、免费匿名端点（kilo 路由模型不固定）、单次随机性大</li><li>读数修正前后通过率差归因于『测量预算接线成套化』，不是 bro2 能力变化；不写 external-results.json、不改 L4/verdict</li><li>校准口径提高了 maxTokens 上限（60000→120000），这是修尺子不是加资源刷分；差异不得包装成能力优化</li><li>机制复验为同集前后对照，属弱证据；软预警仍默认关闭，不因本轮改变默认行为</li><li>bro2 自跑、非第三方复核；公开 verifier 为上游 pytest，healthy 已双向验证</li>
+<li>verifier 健全性：4/4 SOUND（沿用 v2.30.0 双向验证：空工作区 fail / 官方 oracle 解 pass）（空工作区必 fail / 官方 oracle 解必 pass，模型无关）。</li>
+<li>全程自跑、非第三方复核；本轮是<b>读数校准与机制复验</b>，不是「能力水位提升」——<code>leadership.verdict = not-proven</code>、<code>L4 = not-achieved</code> 均未改。</li>
+</ul>
+
+<h2>4 · 复现与证据索引</h2>
+<pre># 只增账本 / 全部工程产物由 git 远程管理
+sh examples/fetch-external-tasks.sh
+docker build -t bro2/tb-verifier:1 - &lt; examples/tb-verifier.Dockerfile
+TRAJ_PROVIDER=kilo AGENTOS_LIVE_PROVIDER=kilo EXT_K=3 \
+  node --experimental-strip-types --no-warnings examples/readout-recalibration.ts
+node --experimental-strip-types --no-warnings examples/build-core-report.ts   # 生成本报告</pre>
+<p>
+<span class="pill">36 次逐 trial 明细 → readout-recalibration-report.json</span>
+<span class="pill">v2.31.0 负结果 → budget-advisory-report.json</span>
+<span class="pill">v2.30.0 直跑对照 → tb-leaderboard-compare-report.json</span>
+<span class="pill">公开榜快照 → tb-leaderboard-snapshot.json</span>
+<span class="pill">冻结任务集 → tasks.jsonl + SHA256SUMS</span>
+</p>
+
+<h2>5 · 当前水位与下一步</h2>
+<div class="callout"><b>能力水位未变</b>：外部测量仍为自跑、非第三方复核；本轮把「读数口径」从失真修到自洽，并再次确认候选机制未被证明有效。<br>
+<b>下一步优先级</b>：① 同模型隔离锚点仍需一个能稳定驱动工具调用的第二端点（ovhcloud 限流无效）；② 在公平口径下扩大 K / 扩任务集，把机制复验从「弱证据」推向可辩护；③ 任何改进仍走预注册判据 + 行为对比 + holdout，不靠分数叙事。</div>
+
+<div class="foot">bro2 · Model + Harness = Agent · 冻结模型权重，只演进 harness · 只增账本 / 惰性真实探测 / 对比式改进<br>
+本报告由 <code>examples/build-core-report.ts</code> 从可复核 JSON 生成，数字不手写 · v2.32.0</div>
+</div></body></html>

@@ -10,6 +10,19 @@
 
 ---
 
+## [2.32.0] — 2026-11-13 · 执行下一步①②：测量预算口径读数修正 + 更大 K 机制复验（MINOR）
+
+> 用户要求「执行下一步 1 和 2，整理产出物，给一个核心报告即可」。本轮把散落证据收敛为**唯一交付物** [`docs/CORE-REPORT.html`](./docs/CORE-REPORT.html)（由 `examples/build-core-report.ts` 从可复核 JSON 生成，数字不手写）。
+
+- **下一步① 读数修正（measurement-wiring，非能力优化）**：修复测量脚本「只覆盖 `maxSteps=12`、暗藏 `maxTokens=60000` 累计静默熔断」的失真接线——`examples/external-measure.ts` 导出 `LEGACY_MAX_TOKENS` 并成套显式声明，`tb-leaderboard-compare.ts` 的 `configOverride` 同时声明两维度、报告 `budget` 字段补 `effectiveBindingConstraint` 口径标签。语义零变化、历史可复现。
+- **成套口径对照实验**（`examples/readout-recalibration.ts`，kilo / 冻结 4 任务 / K=3 / 3 组 = 36 次）：`L_legacy`(60000) vs `C_calibrated`(120000=12×10000，依据 v2.31.0 实测约 10280 token/步) vs `A_advisory`(校准口径+软预警 0.8)。哑弹验证（确定性、离线）确认唯一变量确实注入。
+  - **读数修正结果 R1✓ R2✓ R3✓**：L 组 2 次 `guard(tokens)` 且 steps<12（失真实证），C 组降为 0（步数预算真正生效）；读数 **0.75 → 0.667，Δ=−0.083 不升反降**，彻底排除「调大预算刷分」；归因字段写死 `measurement-wiring-not-capability`、`comparableAsCapabilityDelta=false`。
+- **下一步② 公平口径 + 更大 K 复验软预警**：`C vs A` 唯一变量 `budgetAdvisoryRatio`，沿用冻结的 P1/P2/P3 + holdout + 反证锚点。结果 `P1✓ P2✓ P3✓` **机械全绿，但新增「诚实二次判读」层判定证据不足**：A−C 通过差仅 1 个 trial、可被 C 组独有的 1 次 `provider_error` 端点噪声完全解释；软预警在 A 组 12 次里仅触发 1 次（机制几乎未被检验）；反证锚点 `assign-seats` 三组 0/9 全 fail（无泄漏）。**据此维持机制默认关闭、不据此开启**，呼应 `src/rsi/contrast.ts` 的 reward-hacking 拦截。预注册判据结果原样保留，不事后改判据。
+- **诚实边界未破**：全程自跑 / 非第三方复核 / 小样本 / 免费匿名端点；不写 `external-results.json`（R3 校验通过）、不改 L4（`not-achieved`）与 `leadership.verdict`（`not-proven`）；verifier 双向健全性 4/4 SOUND 沿用。
+- 全门禁 24/24；新增/改动均在 `examples/`（不计入代码预算）与 `docs/`、`data/`，零 `src/` 改动。
+
+---
+
 ## [2.31.0] — 2026-11-13 · 用已有外部真值证伪一次优化假设：预算软预警的预注册 A/B（MINOR）
 
 > **性质（用户新方向）**：「先不管第二端点，用已有的信息可以优化 bro2 了吗」。本轮没有直接拿 v2.30.0 的 `2/4` 去调参，而是**先用逐轨迹诊断验证「失败到底为什么」，再决定改什么**——结果证伪了上一轮的结论，并在严格预注册 A/B 下得到**负结果**，如实发布、不硬凑「优化成功」。

@@ -32,7 +32,7 @@ import type { RuntimeConfig } from "../src/kernel/runtime.ts";
 import { OpenAICompatProvider } from "../src/models/openai-compat.ts";
 import {
   loadTasks, checkInputs, sanity, instructionOf, prepare, runVerifier, MAX_MODEL_CALLS,
-  loadProvider, fingerprint, HONEST_LIMITATIONS,
+  LEGACY_MAX_TOKENS, loadProvider, fingerprint, HONEST_LIMITATIONS,
 } from "./external-measure.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -77,7 +77,9 @@ async function runBro2(provider: string, tasks: ExtTask[], byId: Map<string, Ext
     let verifyLog: VerifyResult[] = [];
     const report = await runEval({
       tasks: evalTasks, mode: "live", providerName: provider, k: 1, root: ROOT,
-      configOverride: { budget: { maxSteps: MAX_MODEL_CALLS } } as Partial<RuntimeConfig>,
+      // v2.32.0 读数修正：成套声明两个预算维度，杜绝「只写 maxSteps、暗藏 maxTokens 默认 60000」的失真接线。
+      // maxTokens 显式写出旧口径值（语义不变、历史可复现）；校准口径见 examples/readout-recalibration.ts。
+      configOverride: { budget: { maxSteps: MAX_MODEL_CALLS, maxTokens: LEGACY_MAX_TOKENS } } as Partial<RuntimeConfig>,
       prepareWorkspace: (task, ws) => prepare(byId.get(task.id)!, ws),
       verifyWorkspace: (task, ws) => {
         const v = runVerifier(byId.get(task.id)!, ws);
@@ -104,7 +106,12 @@ async function runBro2(provider: string, tasks: ExtTask[], byId: Map<string, Ext
   const trials = tasks.length * K;
   return {
     provider, model, endpoint, keyless: true, toolCalling: "native",
-    budget: { maxModelCalls: MAX_MODEL_CALLS, k: K, sameInputs: true, sameVerifier: true, samePathSemantics: "/app" },
+    budget: {
+      maxModelCalls: MAX_MODEL_CALLS, maxTokens: LEGACY_MAX_TOKENS, k: K,
+      budgetWiring: "coupled-explicit",
+      effectiveBindingConstraint: "cumulative-tokens(60000) — 名义 12 步通常先被累计 token 熔断截断",
+      sameInputs: true, sameVerifier: true, samePathSemantics: "/app",
+    },
     sample: { taskIds: tasks.map((t) => t.id), nTasks: tasks.length, trials },
     passed, total: trials, passRate: +(passed / trials).toFixed(4),
     perTask,

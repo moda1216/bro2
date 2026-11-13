@@ -11,7 +11,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.31.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.32.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
@@ -222,6 +222,9 @@
 | 预算软预警 A/B 报告（v2.31.0） | `data/bench/external/budget-advisory-report.json` | 4 任务 × 2 臂 × K=2 的预注册对照，含逐 trial 明细；**判据未全成立、负结果、不宣称增益** | ✅ 已发布 |
 | 改进实验全记录（v2.31.0） | `docs/BUDGET-ADVISORY-EXPERIMENT.md` | 诊断证据、对 v2.30.0 结论的证伪、机制设计、预注册判据、实测与「2/4 是预算配置失真读数」的附带发现 | ✅ 已发布 |
 | 机制契约测试（v2.31.0） | `tests/budget-advisory.test.ts` | 6 项：缺省关闭 / 显式关闭 / 只触发一次 / 步数口径 / 不放宽预算 / 短任务不干扰 | ✅ 已发布 |
+| **核心报告（v2.32.0，唯一交付物）** | `docs/CORE-REPORT.html` | 由 `examples/build-core-report.ts` 从可复核 JSON 生成的自包含 HTML，收敛 v2.30→v2.32 外部测量脉络与本轮全部结论；数字不手写 | ✅ 已发布 |
+| 读数修正 + 大K复验报告（v2.32.0） | `data/bench/external/readout-recalibration-report.json` | 36 次逐 trial（3 组 × 4 任务 × K=3），含预注册判据、诚实二次判读、归因锁死字段 | ✅ 已发布 |
+| 读数修正 + 大K复验实验（v2.32.0） | `examples/readout-recalibration.ts` | 成套预算口径对照（L/C/A）+ 确定性哑弹验证 + 只增二次判读层；`examples/build-core-report.ts` 生成核心报告 | ✅ 已发布 |
 
 > 运行时产物（`data/sessions/`、`data/system.jsonl`、`data/workspace/`、`data/memory/long-term.json`）由 `.gitignore` 隔离，不进版本库。
 

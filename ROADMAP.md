@@ -422,8 +422,9 @@ P2(复利中枢 v2.1.0)：ExperienceBank + VelocityLedger + compoundProbe + Lear
 
 ---
 
-### 下一步优先级（v2.31.0 追加 · 源自 [`BUDGET-ADVISORY-EXPERIMENT.md`](./docs/BUDGET-ADVISORY-EXPERIMENT.md) §5.2）
+### 下一步优先级（v2.31.0 追加 · v2.32.0 更新状态 · 源自 [`BUDGET-ADVISORY-EXPERIMENT.md`](./docs/BUDGET-ADVISORY-EXPERIMENT.md) §5.2）
 
-1. **先修测量预算配置失真（读数修正，不是能力提升）**：`examples/tb-leaderboard-compare.ts` 的 `configOverride` 只覆盖 `maxSteps=12`、没同步 `maxTokens=60000`；16 次实测运行 `steps` 最高只有 9 就撞 `guard(kind=tokens)`。**因此 v2.30.0 的 `2/4` 不是 bro2 能力的公平读数**。修正时必须明确标注为读数修正，**不得把通过率上升当作能力增益**，也不得靠调大预算去「刷」出更好看的数字。
-2. **在稳定端点 / 更大 K 下复验预算软预警候选机制**：该机制默认关闭，v2.31.0 预注册 A/B（K=2 / 16 次）`P1✓ P2✗ P3✓` 判据未全成立，已如实发布负结果；未证明增益前不改默认行为。
+1. ~~**先修测量预算配置失真（读数修正，不是能力提升）**~~ ✅ **v2.32.0 已完成**：`configOverride` 改为成套显式声明两维度、报告补 `effectiveBindingConstraint` 口径标签；36 次对照实测 R1/R2/R3 全成立，读数 **0.75→0.667（不升反降）**，归因锁死 `measurement-wiring-not-capability`，未把读数变化当作能力增益、未靠调大预算刷分。
+2. ~~**在稳定端点 / 更大 K 下复验预算软预警候选机制**~~ ✅ **v2.32.0 已完成（证据不足，维持关闭）**：校准口径 + K=3 / 36 次，`P1✓ P2✓ P3✓` 机械全绿，但只增的「诚实二次判读」判定 A−C 通过差（1 trial）可被 C 组 1 次 `provider_error` 完全解释、软预警 12 次仅触发 1 次 → **证据不足（噪声主导），不构成机制有效证据；机制仍默认关闭**。
 3. **同模型隔离锚点仍需第二端点**：能在完整 harness 下稳定驱动工具调用，才能把公开榜 `gpt-oss-120b = 26.217%` 做成有效 harness-Δ 样本（ovhcloud 因限流无效）。
+4. **（v2.32.0 新增）** 在公平口径下扩大 K / 扩任务集，把机制复验从「弱证据」推向可辩护；任何改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠分数叙事。详见 [`CORE-REPORT.html`](./docs/CORE-REPORT.html)。
