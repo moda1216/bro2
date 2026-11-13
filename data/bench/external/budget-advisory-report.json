@@ -1,0 +1,475 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-13T05:14:03.530Z",
+  "kind": "budget-advisory-ablation",
+  "sourceFinding": "docs/TRAJECTORY-ANALYSIS.md §4 修正：失败主因是累计 token 静默熔断早于产出落地，而非空转不停",
+  "control": {
+    "provider": "kilo",
+    "keyless": true,
+    "k": 2,
+    "taskIds": [
+      "tb-analyze-access-logs",
+      "tb-bank-trans-filter",
+      "tb-assign-seats",
+      "tb-constraints-scheduling"
+    ],
+    "maxSteps": 12,
+    "maxTokensUnchanged": 60000,
+    "sameInputs": true,
+    "sameVerifier": true,
+    "samePreset": "standard",
+    "samePolicy": "DEFAULT_POLICY",
+    "onlyVariable": "budget.budgetAdvisoryRatio (A=0 / B=0.8)"
+  },
+  "preregistered": {
+    "P1_mechanism": "B 臂出现预算预警事件且 A 臂为 0（机制确实生效）",
+    "P2_behavior": "B 臂「产出文件未落地」次数 ≤ A 臂（行为对比，不只看分数）",
+    "P3_result": "B 臂 verifier 通过率 ≥ A 臂，且两个 holdout 通过题不退化",
+    "acceptance": "仅当 P1∧P2∧P3 全部成立，才称『有初步正向证据』；否则如实判定不成立/无差异",
+    "counterAnchor": "tb-assign-seats 属模型推理错误，机制不应把它修好；若意外通过需标注为噪声而非增益"
+  },
+  "sets": {
+    "design": "tb-bank-trans-filter",
+    "holdout": [
+      "tb-analyze-access-logs",
+      "tb-constraints-scheduling"
+    ],
+    "counterAnchor": "tb-assign-seats"
+  },
+  "arms": [
+    {
+      "arm": "A_baseline",
+      "passRate": 0.5,
+      "passes": 4,
+      "trials": 8,
+      "fileLandingRate": 0.875,
+      "fileMissing": 1,
+      "budgetAdvisoryFired": 0,
+      "tokenGuardCount": 3,
+      "guardStops": 3,
+      "avgSteps": 5.625,
+      "avgToolCalls": 8.75,
+      "avgTokens": 57122.25,
+      "holdoutPassRate": 0.5,
+      "perTask": [
+        {
+          "taskId": "tb-analyze-access-logs",
+          "passes": 1,
+          "trials": 2,
+          "fileLanded": 1,
+          "advisory": 0,
+          "stops": [
+            "guard"
+          ]
+        },
+        {
+          "taskId": "tb-bank-trans-filter",
+          "passes": 2,
+          "trials": 2,
+          "fileLanded": 2,
+          "advisory": 0,
+          "stops": [
+            "guard",
+            "completed"
+          ]
+        },
+        {
+          "taskId": "tb-assign-seats",
+          "passes": 0,
+          "trials": 2,
+          "fileLanded": 2,
+          "advisory": 0,
+          "stops": [
+            "completed"
+          ]
+        },
+        {
+          "taskId": "tb-constraints-scheduling",
+          "passes": 1,
+          "trials": 2,
+          "fileLanded": 2,
+          "advisory": 0,
+          "stops": [
+            "completed"
+          ]
+        }
+      ]
+    },
+    {
+      "arm": "B_advisory",
+      "passRate": 0.5,
+      "passes": 4,
+      "trials": 8,
+      "fileLandingRate": 0.75,
+      "fileMissing": 2,
+      "budgetAdvisoryFired": 2,
+      "tokenGuardCount": 2,
+      "guardStops": 2,
+      "avgSteps": 5.5,
+      "avgToolCalls": 9,
+      "avgTokens": 50986.25,
+      "holdoutPassRate": 0.75,
+      "perTask": [
+        {
+          "taskId": "tb-analyze-access-logs",
+          "passes": 1,
+          "trials": 2,
+          "fileLanded": 1,
+          "advisory": 1,
+          "stops": [
+            "completed",
+            "guard"
+          ]
+        },
+        {
+          "taskId": "tb-bank-trans-filter",
+          "passes": 1,
+          "trials": 2,
+          "fileLanded": 1,
+          "advisory": 0,
+          "stops": [
+            "completed",
+            "guard"
+          ]
+        },
+        {
+          "taskId": "tb-assign-seats",
+          "passes": 0,
+          "trials": 2,
+          "fileLanded": 2,
+          "advisory": 1,
+          "stops": [
+            "completed"
+          ]
+        },
+        {
+          "taskId": "tb-constraints-scheduling",
+          "passes": 2,
+          "trials": 2,
+          "fileLanded": 2,
+          "advisory": 0,
+          "stops": [
+            "completed"
+          ]
+        }
+      ]
+    }
+  ],
+  "criteria": {
+    "P1_mechanism": true,
+    "P2_behavior": false,
+    "P3_result": true
+  },
+  "verdict": "判据未全成立／无差异（如实记录，不宣称增益）",
+  "trials": [
+    {
+      "taskId": "tb-analyze-access-logs",
+      "arm": "A_baseline",
+      "repeat": 0,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "guard",
+      "reason": "超过 token 预算 60000",
+      "guardKinds": [
+        "tokens"
+      ],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 5,
+      "toolCalls": 8,
+      "tokens": 64912,
+      "latencyMs": 26984,
+      "verifierTail": "...                                                                      [100%]\n3 passed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-bank-trans-filter",
+      "arm": "A_baseline",
+      "repeat": 0,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "guard",
+      "reason": "超过 token 预算 60000",
+      "guardKinds": [
+        "tokens"
+      ],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 6,
+      "toolCalls": 7,
+      "tokens": 75138,
+      "latencyMs": 56570,
+      "verifierTail": ".                                                                        [100%]\n1 passed in 0.00s\n"
+    },
+    {
+      "taskId": "tb-assign-seats",
+      "arm": "A_baseline",
+      "repeat": 0,
+      "verifierPassed": false,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 8,
+      "toolCalls": 11,
+      "tokens": 53365,
+      "latencyMs": 60835,
+      "verifierTail": "rankie'\nE         'bob, frankie'\nE         Use -v to get more diff\n\n/tests/test_outputs.py:28: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - AssertionEr...\n1 failed, 1 passed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-constraints-scheduling",
+      "arm": "A_baseline",
+      "repeat": 0,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 5,
+      "toolCalls": 7,
+      "tokens": 51728,
+      "latencyMs": 99655,
+      "verifierTail": "...                                                                      [100%]\n3 passed in 0.39s\n"
+    },
+    {
+      "taskId": "tb-analyze-access-logs",
+      "arm": "A_baseline",
+      "repeat": 1,
+      "verifierPassed": false,
+      "fileLanded": false,
+      "stoppedBy": "guard",
+      "reason": "超过 token 预算 60000",
+      "guardKinds": [
+        "tokens"
+      ],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 1,
+      "steps": 6,
+      "toolCalls": 9,
+      "tokens": 69624,
+      "latencyMs": 43122,
+      "verifierTail": "mary info ============================\nFAILED ../tests/test_outputs.py::test_report_generation - AssertionError: rep...\nFAILED ../tests/test_outputs.py::test_top_urls - FileNotFoundError: [Errno 2]...\nFAILED ../tests/test_outputs.py::test_report_format - FileNotFoundError: [Err...\n3 failed in 0.05s\n"
+    },
+    {
+      "taskId": "tb-bank-trans-filter",
+      "arm": "A_baseline",
+      "repeat": 1,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 5,
+      "toolCalls": 6,
+      "tokens": 71619,
+      "latencyMs": 56083,
+      "verifierTail": ".                                                                        [100%]\n1 passed in 0.00s\n"
+    },
+    {
+      "taskId": "tb-assign-seats",
+      "arm": "A_baseline",
+      "repeat": 1,
+      "verifierPassed": false,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 6,
+      "toolCalls": 13,
+      "tokens": 37327,
+      "latencyMs": 61157,
+      "verifierTail": "nkie'\nE         'ethan, frankie'\nE         Use -v to get more diff\n\n/tests/test_outputs.py:28: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - AssertionEr...\n1 failed, 1 passed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-constraints-scheduling",
+      "arm": "A_baseline",
+      "repeat": 1,
+      "verifierPassed": false,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 4,
+      "toolCalls": 9,
+      "tokens": 33265,
+      "latencyMs": 92037,
+      "verifierTail": "tetime(2024, 1, 15, 9, 0), datetime.datetime(2024, 1, 15, 10, 0))\n\n/tests/test_outputs.py:137: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_constraints_conflicts_business_hours - ...\n1 failed, 2 passed in 0.04s\n"
+    },
+    {
+      "taskId": "tb-analyze-access-logs",
+      "arm": "B_advisory",
+      "repeat": 0,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 4,
+      "toolCalls": 8,
+      "tokens": 21159,
+      "latencyMs": 24823,
+      "verifierTail": "...                                                                      [100%]\n3 passed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-bank-trans-filter",
+      "arm": "B_advisory",
+      "repeat": 0,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 4,
+      "toolCalls": 6,
+      "tokens": 35636,
+      "latencyMs": 19221,
+      "verifierTail": ".                                                                        [100%]\n1 passed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-assign-seats",
+      "arm": "B_advisory",
+      "repeat": 0,
+      "verifierPassed": false,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": true,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 9,
+      "toolCalls": 14,
+      "tokens": 62973,
+      "latencyMs": 144897,
+      "verifierTail": "nkie'\nE         'ethan, frankie'\nE         Use -v to get more diff\n\n/tests/test_outputs.py:28: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - AssertionEr...\n1 failed, 1 passed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-constraints-scheduling",
+      "arm": "B_advisory",
+      "repeat": 0,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 5,
+      "toolCalls": 7,
+      "tokens": 56540,
+      "latencyMs": 175856,
+      "verifierTail": "...                                                                      [100%]\n3 passed in 0.41s\n"
+    },
+    {
+      "taskId": "tb-analyze-access-logs",
+      "arm": "B_advisory",
+      "repeat": 1,
+      "verifierPassed": false,
+      "fileLanded": false,
+      "stoppedBy": "guard",
+      "reason": "超过 token 预算 60000",
+      "guardKinds": [
+        "tokens"
+      ],
+      "budgetAdvisoryFired": true,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 5,
+      "toolCalls": 10,
+      "tokens": 65709,
+      "latencyMs": 34752,
+      "verifierTail": "mary info ============================\nFAILED ../tests/test_outputs.py::test_report_generation - AssertionError: rep...\nFAILED ../tests/test_outputs.py::test_top_urls - FileNotFoundError: [Errno 2]...\nFAILED ../tests/test_outputs.py::test_report_format - FileNotFoundError: [Err...\n3 failed in 0.05s\n"
+    },
+    {
+      "taskId": "tb-bank-trans-filter",
+      "arm": "B_advisory",
+      "repeat": 1,
+      "verifierPassed": false,
+      "fileLanded": false,
+      "stoppedBy": "guard",
+      "reason": "超过 token 预算 60000",
+      "guardKinds": [
+        "tokens"
+      ],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 6,
+      "toolCalls": 8,
+      "tokens": 67122,
+      "latencyMs": 70770,
+      "verifierTail": "sts()\nE        +    where exists = PosixPath('/app/data/output.json').exists\n\n/tests/test_outputs.py:90: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_equality - AssertionError: File /app/da...\n1 failed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-assign-seats",
+      "arm": "B_advisory",
+      "repeat": 1,
+      "verifierPassed": false,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 7,
+      "toolCalls": 13,
+      "tokens": 50778,
+      "latencyMs": 91360,
+      "verifierTail": "rankie'\nE         'bob, frankie'\nE         Use -v to get more diff\n\n/tests/test_outputs.py:28: AssertionError\n=========================== short test summary info ============================\nFAILED ../tests/test_outputs.py::test_results_has_correct_pairs - AssertionEr...\n1 failed, 1 passed in 0.01s\n"
+    },
+    {
+      "taskId": "tb-constraints-scheduling",
+      "arm": "B_advisory",
+      "repeat": 1,
+      "verifierPassed": true,
+      "fileLanded": true,
+      "stoppedBy": "completed",
+      "reason": "模型给出最终回答",
+      "guardKinds": [],
+      "budgetAdvisoryFired": false,
+      "compactions": 0,
+      "toolErrors": 0,
+      "steps": 4,
+      "toolCalls": 6,
+      "tokens": 47973,
+      "latencyMs": 167532,
+      "verifierTail": "...                                                                      [100%]\n3 passed in 0.37s\n"
+    }
+  ],
+  "honest": {
+    "selfRun": true,
+    "thirdPartyVerified": false,
+    "limitations": [
+      "小样本（4 任务、K=2）、免费匿名端点、单次结果随机性大（诊断中同题两次跑机理不同）",
+      "同集前后对照属弱证据，可能过拟合；不宣称泛化能力提升",
+      "未写 data/benchmark/external-results.json，不改 L4 与 leadership.verdict",
+      "预算未放宽（maxTokens 保持 60000），增益不得归因于加资源",
+      "bro2 自跑、非第三方复核；公开 verifier 为上游 pytest，healthy 已双向验证"
+    ]
+  }
+}

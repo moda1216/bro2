@@ -1,14 +1,4 @@
-/**
- * budget:check · 代码预算门禁
- * ----------------------------------------------------------
- * 把「代码量要少、工程质量要高」变成阻断门禁，而不是口号。
- * 四项硬指标（阈值见 data/plan/budget.json）：
- *   1. 源代码总行数   2. 源文件数
- *   3. 单文件最大行数 4. 测试/源行数比
- * 外加运行时第三方依赖必须为 0。
- *
- * 阈值只允许在 docs/BENCH-v2.md 记录理由后上调；下调随时允许。
- */
+/** 代码预算门禁：四项硬指标与上调理由见 docs/BENCH-v2.md。 */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";

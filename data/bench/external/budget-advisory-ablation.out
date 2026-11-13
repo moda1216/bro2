@@ -1,0 +1,25 @@
+预算软预警 A/B 消融 · 端点 kilo · 4 任务 · K=2 · maxSteps=12 · maxTokens 不变
+唯一变量：budgetAdvisoryRatio（A=0 / B=0.8）
+
+  ✓ A_baseline  r0 tb-analyze-access-logs       5步/8工具/64912tok stop=guard adv=0 file=1 guards=[tokens]
+  ✓ A_baseline  r0 tb-bank-trans-filter         6步/7工具/75138tok stop=guard adv=0 file=1 guards=[tokens]
+  ✗ A_baseline  r0 tb-assign-seats              8步/11工具/53365tok stop=completed adv=0 file=1 guards=[]
+  ✓ A_baseline  r0 tb-constraints-scheduling    5步/7工具/51728tok stop=completed adv=0 file=1 guards=[]
+  ✗ A_baseline  r1 tb-analyze-access-logs       6步/9工具/69624tok stop=guard adv=0 file=0 guards=[tokens]
+  ✓ A_baseline  r1 tb-bank-trans-filter         5步/6工具/71619tok stop=completed adv=0 file=1 guards=[]
+  ✗ A_baseline  r1 tb-assign-seats              6步/13工具/37327tok stop=completed adv=0 file=1 guards=[]
+  ✗ A_baseline  r1 tb-constraints-scheduling    4步/9工具/33265tok stop=completed adv=0 file=1 guards=[]
+  ✓ B_advisory  r0 tb-analyze-access-logs       4步/8工具/21159tok stop=completed adv=0 file=1 guards=[]
+  ✓ B_advisory  r0 tb-bank-trans-filter         4步/6工具/35636tok stop=completed adv=0 file=1 guards=[]
+  ✗ B_advisory  r0 tb-assign-seats              9步/14工具/62973tok stop=completed adv=1 file=1 guards=[]
+  ✓ B_advisory  r0 tb-constraints-scheduling    5步/7工具/56540tok stop=completed adv=0 file=1 guards=[]
+  ✗ B_advisory  r1 tb-analyze-access-logs       5步/10工具/65709tok stop=guard adv=1 file=0 guards=[tokens]
+  ✗ B_advisory  r1 tb-bank-trans-filter         6步/8工具/67122tok stop=guard adv=0 file=0 guards=[tokens]
+  ✗ B_advisory  r1 tb-assign-seats              7步/13工具/50778tok stop=completed adv=0 file=1 guards=[]
+  ✓ B_advisory  r1 tb-constraints-scheduling    4步/6工具/47973tok stop=completed adv=0 file=1 guards=[]
+
+A: pass=4/8 fileMissing=1 adv=0 tokenGuard=3 holdout=0.5
+B: pass=4/8 fileMissing=2 adv=2 tokenGuard=2 holdout=0.75
+P1=true P2=false P3=true → 判据未全成立／无差异（如实记录，不宣称增益）
+报告：/workspace/agent-os/data/bench/external/budget-advisory-report.json
+EXIT=0

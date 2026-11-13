@@ -11,14 +11,14 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.30.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.31.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
 | 架构 | 8 层：kernel / models / context / tools / memory / cognition / delegation / governance / observability / interfaces |
 | 唯一真相源 | `Trajectory`（每次运行的轨迹日志，不可变追加） |
 | 源代码规模 | 68 个 `src/*.ts` + 4 个入口/脚本 `.ts` + 1 个 Web 入口 HTML + 1 个 Python 本地推理服务 |
-| 测试规模 | 38 个测试文件；`npm test` **307** 项全绿 |
+| 测试规模 | 39 个测试文件；`npm test` **313** 项全绿 |
 | 诚实判定 | `leadership.verdict = not-proven`；证据阶梯 L4 = `not-achieved`（不伪造外部基准） |
 | 仓库状态 | 已初始化 git，初始提交 `v2.0.0` tag；`.gitignore` 隔离运行时产物 |
 | 版本控制 | git（提交粒度 = 逻辑交付单元；发布 = tag + CHANGELOG 条目） |
@@ -218,7 +218,10 @@
 | 公开榜快照（v2.30.0） | `data/bench/external/tb-leaderboard-snapshot.json` | Terminal-Bench 公开榜带出处固化（非搬运、非 L4 证据） | ✅ 已发布 |
 | 公开任务集直跑对照（v2.30.0） | `data/bench/external/tb-leaderboard-compare-report.json` | bro2 完整 harness 跑公开 verifier，kilo 2/4 positioning-only（同模型锚点因端点限流无效） | ✅ 已发布 |
 | 任务清单 + 指纹（v2.30.0） | `data/bench/external/tasks.jsonl` `SHA256SUMS` | 4 个 SOUND 任务（含剔除 4 个构建时依赖任务的留痕） | ✅ 已发布 |
-| 轨迹层面能力画像（v2.30.0） | `docs/TRAJECTORY-ANALYSIS.md` | 策略 B：bro2 轨迹指标 vs 公开轨迹统计（HF 不可达，只用聚合参照轴） | ✅ 已发布 |
+| 轨迹层面能力画像（v2.30.0） | `docs/TRAJECTORY-ANALYSIS.md` | 策略 B：bro2 轨迹指标 vs 公开轨迹统计（HF 不可达，只用聚合参照轴）；§4.1 为 v2.31.0 只增式结论修正 | ✅ 已发布 |
+| 预算软预警 A/B 报告（v2.31.0） | `data/bench/external/budget-advisory-report.json` | 4 任务 × 2 臂 × K=2 的预注册对照，含逐 trial 明细；**判据未全成立、负结果、不宣称增益** | ✅ 已发布 |
+| 改进实验全记录（v2.31.0） | `docs/BUDGET-ADVISORY-EXPERIMENT.md` | 诊断证据、对 v2.30.0 结论的证伪、机制设计、预注册判据、实测与「2/4 是预算配置失真读数」的附带发现 | ✅ 已发布 |
+| 机制契约测试（v2.31.0） | `tests/budget-advisory.test.ts` | 6 项：缺省关闭 / 显式关闭 / 只触发一次 / 步数口径 / 不放宽预算 / 短任务不干扰 | ✅ 已发布 |
 
 > 运行时产物（`data/sessions/`、`data/system.jsonl`、`data/workspace/`、`data/memory/long-term.json`）由 `.gitignore` 隔离，不进版本库。
 

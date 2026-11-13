@@ -28,7 +28,7 @@ export interface RuntimeConfig {
     loopDetectionThreshold: number;
     maxToolOutputChars: number;
     /** 上下文压缩阈值。应低于 maxTokens 硬熔断，否则压缩来不及生效就被终止。 */
-    compactTokens?: number;
+    compactTokens?: number; budgetAdvisoryRatio?: number;
   };
   model: {
     default: string;

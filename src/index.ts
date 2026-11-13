@@ -188,6 +188,7 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     maxSeconds: config.budget.maxSeconds,
     loopDetectionThreshold: config.budget.loopDetectionThreshold,
     loopMode: policy.loopDetection,
+    ...(config.budget.budgetAdvisoryRatio !== undefined ? { budgetAdvisoryRatio: config.budget.budgetAdvisoryRatio } : {}),
   });
 
   // ---- 认知与记忆 ----

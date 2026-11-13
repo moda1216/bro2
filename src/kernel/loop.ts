@@ -149,6 +149,9 @@ export class AgentLoop {
           });
           answer = `任务终止：${verdict.reason}`;
           break;
+        } else if (verdict.advisory && verdict.kind !== "loop") {
+          this.record(opts, { sessionId: session.id, turn, step, type: EventType.BudgetAdvisory, payload: { kind: verdict.kind, reason: verdict.reason } });
+          pendingInject = "[预算预警] 本轮步数或 token 预算即将耗尽。请立即停止探索性工具调用，把你已经得到的结论按任务要求写入文件（或落盘当前最好结果）后再给出最终回答；尚未产出文件时不要直接宣告完成。";
         }
 
         // 2) PRE_STEP Hook（可阻断 / 可注入上下文）

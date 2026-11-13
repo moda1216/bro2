@@ -10,6 +10,38 @@
 
 ---
 
+## [2.31.0] — 2026-11-13 · 用已有外部真值证伪一次优化假设：预算软预警的预注册 A/B（MINOR）
+
+> **性质（用户新方向）**：「先不管第二端点，用已有的信息可以优化 bro2 了吗」。本轮没有直接拿 v2.30.0 的 `2/4` 去调参，而是**先用逐轨迹诊断验证「失败到底为什么」，再决定改什么**——结果证伪了上一轮的结论，并在严格预注册 A/B 下得到**负结果**，如实发布、不硬凑「优化成功」。
+> 有 `src` 改动但**默认行为完全不变**（新机制默认关闭）；运行时依赖仍 0；代码预算通过精简重复注释维持在 **16500/16500**，未上调任何阈值。诚实边界不变（自跑 / 非第三方复核 / 小样本 / 不写 `external-results.json` / 不改 L4 / `verdict`）。
+
+**① 诊断先行：v2.30.0 的轨迹结论被证伪**（`examples/traj-diag.ts`，逐事件日志）。两道失败题的真实机理与「空转不肯停」无关：
+
+- `tb-bank-trans-filter`：6 步、工具调用**全部成功**，模型已读完 CSV / 检索 / 列计划，正准备写 `data/output.json` 时被 **`guard(kind=tokens)：超过 token 预算 60000`** 静默熔断；
+- `tb-assign-seats`：复跑是 `completed`（5 步 / 10 工具）且**真写了 `results.txt`**，但写了 4 行、公开 verifier 只要 2 行（`alice, bob` / `alice, ethan`）——**模型约束求解不全，属模型推理问题**；
+- 同一题两次 K=1 跑机理完全不同（9 工具错误撞 guard vs 0 错误正常完成）→ **免费匿名端点噪声极大，K=1 读数不能作为调参依据**；
+- 量化：system 仅 177 token、30 个工具 schema 2519 token，烧掉预算的是累积历史；压缩阈值用本地估算、硬熔断用 API 真实累计，两者不同步，诊断中 `compaction` **一次都没触发**。
+- 修正按「只增不抹」留痕：`docs/TRAJECTORY-ANALYSIS.md` 新增 §4.1，指向 [`BUDGET-ADVISORY-EXPERIMENT.md`](./docs/BUDGET-ADVISORY-EXPERIMENT.md) §2。
+
+**② 改进机制：预算软预警**（`src/governance/guards.ts` / `kernel/loop.ts` / `index.ts` / `runtime.ts` / `events.ts`）。硬熔断前注入**一次**任务无关的「立即落盘收尾」提示，不含任何任务名/文件名/答案；不重置计数、不改阈值、**不放宽预算**（`maxTokens` 仍 60000）。新增独立事件 `guard.budget-advisory`，不污染 `guards`/`loopAdvisories` 统计。契约单测 `tests/budget-advisory.test.ts` **6/6**，全量回归 **313/313**。
+
+**③ 预注册 A/B（判据在跑之前固化）**：`examples/budget-advisory-ablation.ts` → `data/bench/external/budget-advisory-report.json`。控制变量：同端点 kilo / 同 4 个 SOUND 任务 / 同输入 / 同公开 verifier / 同 `maxSteps=12` / **同 `maxTokens=60000`** / 同 preset 与 policy，唯一变量 `budgetAdvisoryRatio`（A=0 vs B=0.8），**K=2、16 次运行**。划分 design set（`bank-trans-filter`）、holdout（两个 v2.30.0 通过题）、**反证锚点**（`assign-seats`：机制不该把模型推理错误「修好」）。判据含**行为对比**（呼应 `src/rsi/contrast.ts`「自报分数提升但无行为对比 → reward hacking，拒绝」），不只看分数。
+
+| 指标 | A 基线 | B 预警 | 判据 |
+| --- | --- | --- | --- |
+| 通过率 | 4/8 (0.5) | 4/8 (0.5) | P3 不退化 ✓ |
+| 产出文件未落地 | **1** | **2** | **P2 要求 B ≤ A → ✗** |
+| 预警触发 | 0 | 2 | P1 机制生效 ✓ |
+| holdout 通过率 | 0.5 | 0.75 | P3 ✓ |
+
+**`P1∧P2∧P3` 未全满足 → 判定「判据未全成立／无差异」，不宣称增益。** 结构性归因：`B r1 bank-trans-filter` 是 `adv=0` 直接熔断——单步 token 增量可一次跨过整个 0.8 预警区间，步首预警在固定预算下**来不及生效**；修复它只能延后熔断（刷分）或看着结果调阈值（过拟合），两者都不做。反证锚点成立：`assign-seats` 两臂 0/2、0/2 全 fail，机制未泄漏答案。按「默认保守、由外部断言决定」纪律，**机制默认关闭**，仅作可显式开启的候选变体保留。
+
+**④ 附带发现（比机制更重要）**：16 次运行 `steps` 最高 9，而 `maxSteps=12`；A 臂 3 次、B 臂 2 次撞 `guard(kind=tokens)`。即 **v2.30.0 声称的「12 次模型调用预算」实际只有 4–9 次有效步**——`tb-leaderboard-compare.ts` 的 `configOverride` 只覆盖 `maxSteps`、没同步 `maxTokens`，累计 60000 token 才是真瓶颈。**结论：v2.30.0 的 `2/4` 是预算配置失真下的读数，不是 bro2 能力的公平读数。** 诚实处理：**不通过调大 `maxTokens` 抬高该数字**（那是把加资源包装成能力优化），修正测量配置留待下轮并标注为读数修正。
+
+**交付物**：`docs/BUDGET-ADVISORY-EXPERIMENT.md`（实验全记录）· `docs/TRAJECTORY-ANALYSIS.md` §4.1（结论修正）· `data/bench/external/budget-advisory-report.json`（A/B 逐 trial 明细）· `examples/traj-diag.ts`（逐轨迹诊断）· `examples/budget-advisory-ablation.ts`（预注册实验）· `tests/budget-advisory.test.ts`（6 项契约）· `src/` 5 处机制改动。
+
+**定位不变（仍诚实）**：自跑、非第三方复核、4 题/K=2/免费端点、同集前后对照属弱证据；L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、外部证据仍 0 条、不写 `external-results.json`。**下一步优先级**：先修测量预算配置失真（读数修正，非能力提升），再在稳定端点 / 更大 K 下复验候选机制；同模型隔离锚点仍需第二端点。
+
 ## [2.30.0] — 2026-11-12 · 走出去测量硬化（二）：公开榜单任务集直跑 + 轨迹层面能力画像（MINOR）
 
 > **性质（用户新方向）**：上一轮把 P0-02 留成「等第三方来填对照槽」的空槽，本质是「非真正走出去测量」。

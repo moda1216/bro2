@@ -1,6 +1,4 @@
-/**
- * L6 治理层 · Guards（步数 / token / 墙钟 / 死循环 / 可传播取消）
- */
+/** L6 治理层 · Guards（步数 / token / 墙钟 / 死循环 / 预算软预警 / 可传播取消） */
 import { createHash } from "node:crypto";
 import type { ToolCall } from "../kernel/events.ts";
 import type { LoopDetectionMode } from "../runtime/policy.ts";
@@ -12,6 +10,7 @@ export interface BudgetConfig {
   loopDetectionThreshold: number;
   /** 策略变体：exact 硬终止 / advisory 先软警告。默认 exact 保持既有语义。 */
   loopMode?: LoopDetectionMode;
+  budgetAdvisoryRatio?: number;
 }
 
 export interface GuardState {
@@ -22,6 +21,7 @@ export interface GuardState {
   recentCallHashes: string[];
   /** advisory 模式下已发出的软警告次数，连续两次即升级为硬终止。 */
   loopAdvisories: number;
+  budgetAdvisoryFired: boolean;
 }
 
 export interface GuardVerdict {
@@ -33,7 +33,7 @@ export interface GuardVerdict {
 }
 
 export function newGuardState(turn: number): GuardState {
-  return { turn, steps: 0, totalTokens: 0, startedAt: Date.now(), recentCallHashes: [], loopAdvisories: 0 };
+  return { turn, steps: 0, totalTokens: 0, startedAt: Date.now(), recentCallHashes: [], loopAdvisories: 0, budgetAdvisoryFired: false };
 }
 
 export class Guards {
@@ -55,6 +55,13 @@ export class Guards {
     const elapsed = (Date.now() - state.startedAt) / 1000;
     if (elapsed >= this.config.maxSeconds) {
       return { ok: false, kind: "time", reason: `超过墙钟上限 ${this.config.maxSeconds}s` };
+    }
+    const ratio = this.config.budgetAdvisoryRatio ?? 0;
+    const tokNear = state.totalTokens >= Math.floor(this.config.maxTokens * ratio);
+    const stepNear = state.steps >= Math.floor(this.config.maxSteps * ratio);
+    if (ratio > 0 && ratio < 1 && !state.budgetAdvisoryFired && (tokNear || stepNear || elapsed >= this.config.maxSeconds * ratio)) {
+      state.budgetAdvisoryFired = true;
+      return { ok: true, advisory: true, kind: tokNear ? "tokens" : stepNear ? "steps" : "time", reason: `接近预算上限（步 ${state.steps}/${this.config.maxSteps}、累计 token ${state.totalTokens}/${this.config.maxTokens}）：注入一次收尾提示` };
     }
     return { ok: true, reason: "正常", kind: "steps" };
   }

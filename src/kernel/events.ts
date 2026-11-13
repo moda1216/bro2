@@ -27,6 +27,7 @@ export const EventType = {
   GroundingReject: "grounding.reject",
   /** 死循环软警告而非硬终止（loopDetection=advisory） */
   LoopAdvisory: "guard.advisory",
+  BudgetAdvisory: "guard.budget-advisory",
   ContextInject: "context.inject",
   Compaction: "context.compaction",
   ApprovalRequest: "approval.request",
