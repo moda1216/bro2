@@ -11,7 +11,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 名称 | `bro2`（Agent OS / Harness） |
-| 版本 | **v2.33.0**（语义化，见 CHANGELOG） |
+| 版本 | **v2.34.0**（语义化，见 CHANGELOG） |
 | 定位 | `Model + Harness = Agent` —— 你可控的 Agent 操作系统（harness 层） |
 | 语言 / 运行时 | TypeScript（Node 22 `--experimental-strip-types`，零构建步骤） |
 | 运行时依赖 | **0**（仅用 Node 内置模块） |
@@ -31,7 +31,7 @@
 
 | 验收项 | 命令 | 当前结果 | 性质 |
 | --- | --- | --- | --- |
-| 单元测试 + e2e + 故障注入 | `npm test` | **298 / 298 PASS** | 交付门禁 |
+| 单元测试 + e2e + 故障注入 | `npm test` | **313 / 313 PASS** | 交付门禁 |
 | CI 可移植性（测试不得依赖本机环境事实） | `npm test` → `tests/remote-sync.test.ts` 第 6 项 | 有/无凭证两环境均 6/6 | 防复发门禁 |
 | 能力矩阵结构自检 | `npm run verify` | 23 项 PASS | 结构门禁 |
 | 行为策略代码分支实证 | `npm run policy:check` | 19 项 PASS | 策略门禁 |
@@ -217,18 +217,21 @@
 | **外部基准** | `data/benchmark/external-results.json` | L4 证据（BFCL/τ-bench/...） | 🔲 待建（见 ROADMAP P5） |
 | 公开榜快照（v2.30.0） | `data/bench/external/tb-leaderboard-snapshot.json` | Terminal-Bench 公开榜带出处固化（非搬运、非 L4 证据） | ✅ 已发布 |
 | 公开任务集直跑对照（v2.30.0） | `data/bench/external/tb-leaderboard-compare-report.json` | bro2 完整 harness 跑公开 verifier，kilo 2/4 positioning-only（同模型锚点因端点限流无效） | ✅ 已发布 |
-| 任务清单 + 指纹（v2.30.0） | `data/bench/external/tasks.jsonl` `SHA256SUMS` | 4 个 SOUND 任务（含剔除 4 个构建时依赖任务的留痕） | ✅ 已发布 |
+| 任务清单 + 指纹（v2.34.0 扩至 6 题） | `data/bench/external/tasks.jsonl` `SHA256SUMS` | 6 个 SOUND 任务（v2.34.0 新增 aimo-airline-departures、countdown-game；含剔除构建时依赖任务与假 SOUND 反例 extract-moves-from-video 的留痕） | ✅ 已发布 |
 | 轨迹层面能力画像（v2.30.0） | `docs/TRAJECTORY-ANALYSIS.md` | 策略 B：bro2 轨迹指标 vs 公开轨迹统计（HF 不可达，只用聚合参照轴）；§4.1 为 v2.31.0 只增式结论修正 | ✅ 已发布 |
 | 预算软预警 A/B 报告（v2.31.0） | `data/bench/external/budget-advisory-report.json` | 4 任务 × 2 臂 × K=2 的预注册对照，含逐 trial 明细；**判据未全成立、负结果、不宣称增益** | ✅ 已发布 |
 | 改进实验全记录（v2.31.0） | `docs/BUDGET-ADVISORY-EXPERIMENT.md` | 诊断证据、对 v2.30.0 结论的证伪、机制设计、预注册判据、实测与「2/4 是预算配置失真读数」的附带发现 | ✅ 已发布 |
 | 机制契约测试（v2.31.0） | `tests/budget-advisory.test.ts` | 6 项：缺省关闭 / 显式关闭 / 只触发一次 / 步数口径 / 不放宽预算 / 短任务不干扰 | ✅ 已发布 |
-| **核心报告（v2.33.0，唯一交付物）** | `docs/CORE-REPORT.html` | 由 `examples/build-core-report.ts` 从可复核 JSON 生成的自包含 HTML，收敛 v2.30→v2.33 外部测量脉络与本轮全部结论；数字不手写 | ✅ 已发布 |
+| **核心报告（v2.34.0，唯一交付物）** | `docs/CORE-REPORT.html` | 由 `examples/build-core-report.ts` 从可复核 JSON 生成的自包含 HTML，收敛 v2.30→v2.34 外部测量脉络与本轮全部结论（路径 A 公开可得性审计 + 路径 B 全量结构盘点与真实扩集 4→6）；数字不手写 | ✅ 已发布 |
 | 读数修正 + 大K复验报告（v2.32.0） | `data/bench/external/readout-recalibration-report.json` | 36 次逐 trial（3 组 × 4 任务 × K=3），含预注册判据、诚实二次判读、归因锁死字段 | ✅ 已发布 |
 | 读数修正 + 大K复验实验（v2.32.0） | `examples/readout-recalibration.ts` | 成套预算口径对照（L/C/A）+ 确定性哑弹验证 + 只增二次判读层 | ✅ 已发布 |
 | 第二端点扫描报告（v2.33.0） | `data/bench/external/endpoint-scan-report.json` | 15 个端点/模型组合各一次带 tools 真实调用，逐个记录 http/错误/响应 model；5 个 TOOLS_OK、唯一身份匹配锚点 = ovhcloud/gpt-oss-120b | ✅ 已发布 |
 | 第二端点扫描脚本（v2.33.0） | `examples/endpoint-scan.ts` | 可复现扫描：已注册却跳过的 provider + config 里列着没试的模型 + 联网新发现端点，硬门槛四条 | ✅ 已发布 |
 | 同模型隔离锚点报告（v2.33.0） | `data/bench/external/same-model-anchor-report.json` | bro2(gpt-oss-120b) 完整 harness 跑冻结 4 任务 × K=2 逐 trial，含节流统计、身份核实、对照公开榜与「非严格 Δ」诚实界定 | ✅ 已发布 |
 | 同模型隔离锚点实验（v2.33.0） | `examples/same-model-anchor.ts` | 测量侧 fetch 节流适配（≥31s + 429 同节奏重试）+ 前置身份核实门禁 + 沿用 v2.32.0 校准口径；1 任务验证日志 `same-model-anchor-verify.out` | ✅ 已发布 |
+| 官方同子集成绩审计（v2.34.0，路径 A） | `data/bench/external/official-harness-audit.json` | 固化 E1–E5：公开聚合榜只给 gpt-oss-120b=26.217%（无逐题表）、官方 2.1 仓库 20 份 submission 无该模型、原 4 题中 3 题不在 89 题榜集、两代契约不同；结论=**公开可复核成绩不可得**（不否认官方内部保有或后续自跑 Harbor 重算） | ✅ 已发布 |
+| 全量任务集结构快照（v2.34.0，路径 B） | `data/bench/external/tb-tree-snapshot.json` | 固化两个未截断 git tree：original-tasks @ d28711d0 **241 题** / terminal-bench-2-1 @ 7131e437 **89 题**，同名交集 88（同名≠同题定义） | ✅ 已发布 |
+| 扩集与全量边界扫描（v2.34.0，路径 B） | `examples/task-coverage-scan.ts` `data/bench/external/task-coverage-report.json` | 全量结构分类 + 真实扩集 4→6、6/6 双向 sanity SOUND；剔除假 SOUND 反例 extract-moves-from-video；统一离线 verifier 与 Harbor 逐题独立环境是不同契约，结构覆盖≠成绩可比 | ✅ 已发布 |
 
 > 运行时产物（`data/sessions/`、`data/system.jsonl`、`data/workspace/`、`data/memory/long-term.json`）由 `.gitignore` 隔离，不进版本库。
 

@@ -25,3 +25,9 @@ c97e85dbcdd756758f8a80f4db5fd5c1dcacee79298e4d2262f46de5ff680b50  ./constraints-
 802d81ec064fad3050bbade95a2f847ac24e0b7f80fa69b0bcee0347dc92fe77  ./constraints-scheduling/solution.sh
 7a1fd98ce102f318a34b44a83d08458b0a416c95cfaba602182e860609c186bd  ./constraints-scheduling/task.yaml
 1422b345ba3aacdfc4184e962811b6379988435896c50d8cf62903e70990c5d1  ./constraints-scheduling/tests/test_outputs.py
+3d6cd256282969739f30a2fd4cd55241c868ccec4b3aa47b86dcb39171ad5b2e  ./aimo-airline-departures/task.yaml
+cbaa5777d75827ad53287ed7d8554ab2e63ad55c3ee1a0527311a994ef787783  ./aimo-airline-departures/solution.sh
+fdb23594e1cb1a079fbf8a038bbf3c0bb37451259b45cdcaf746307cb08fd3d6  ./aimo-airline-departures/tests/test_outputs.py
+a736f5651d24e88ac31b2a728b1e54221ee9a08fae24df940f36c05491af0ebe  ./countdown-game/task.yaml
+b00cada2e151626656ce4af3c03550a93eb9ff3e8ed0106167f8481e8140b2eb  ./countdown-game/solution.sh
+672beb936351b6f0c41c0700c8fbb18c5a1f320522aab8a2a7ba3c22289d7ea4  ./countdown-game/tests/test_outputs.py

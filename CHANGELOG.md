@@ -10,6 +10,18 @@
 
 ---
 
+## [2.34.0] — 2026-11-14 · 官方同子集成绩审计 + 任务集扩集与全量边界（MINOR）
+
+> 用户要求「补官方 harness 同子集成绩 / 扩任务集到全量」。本轮分别执行可得性审计与真实扩集，结论收敛于唯一交付物 [`docs/CORE-REPORT.html`](./docs/CORE-REPORT.html)。**官方同子集公开成绩未补到；任务池 4→6，但未扩到全量，也未产生新的能力分数或严格 Δ。**
+
+- **路径 A：公开不可得，不伪装成已补齐**：`official-harness-audit.json` 固化 E1–E5。公开聚合榜只给 `gpt-oss-120b = 26.217%`（2.1 / 89 题 / Terminus 2 / e2b / three repeats），无逐题表；官方 2.1 仓库 20 份 submission 中无该模型，提交文件只有聚合 metrics 与外部 trial UUID；原冻结 4 题中 3 题不在 89 题集内。结论是**公开可复核成绩不可得**，不否认官方内部可能保有数据，也不排除后续自行用官方 Harbor / Terminus 2 重跑；本轮未产出该自跑成绩。
+- **路径 B：全量结构盘点 + 有界实测扩集**：`tb-tree-snapshot.json` 固化两个未截断 git tree——`original-tasks @ d28711d0` **241 题**、`terminal-bench-2-1 @ 7131e437` **89 题**，同名交集 **88**，但同名不能证明题面/环境/评分器一致。统一离线 verifier 与 Harbor 逐题独立环境是不同契约，不能把结构覆盖当成成绩可比。
+- **真实扩集 4→6，6/6 SOUND**：内容实测受整包 gzip 尾截断限制为 **79/241 题样本**，粗筛 21 候选；新增 `aimo-airline-departures`、`countdown-game`，复用正式 `prepare/runVerifier/applyOracle` 口径，空工作区均 fail、官方 oracle 均 pass 且 exitOk。新增 2 题均不在榜单 89 题内；当前 6 题仅 `constraints-scheduling` 在榜集内，**没有消除任务集差异**。
+- **剔除假 SOUND 反例**：`extract-moves-from-video` 的 verifier 内嵌完整答案、oracle 逐行 echo 同一答案且需联网下载视频，双向 sanity 会假 PASS，按防空转仪表盘红线剔除。新增 2 题尚未跑 bro2/minimal，因此没有新通过率或新 harness-Δ。
+- **可复核产物**：`examples/task-coverage-scan.ts`、`official-harness-audit.json`、`tb-tree-snapshot.json`、`task-coverage-report.json`；`tasks.jsonl` / `UPSTREAM.json` / `SHA256SUMS` 同步到 6 题。零 `src/` 改动、零运行时依赖；不写 `external-results.json`，L4 仍 `not-achieved`、`verdict` 仍 `not-proven`。
+
+---
+
 ## [2.33.0] — 2026-11-13 · 自己找可用第二端点：端点扫描 + 同模型隔离锚点（MINOR）
 
 > 用户要求「自己找找可用的第二端点，不要被这个吓到」。本轮把悬置三轮的「下一步③ 同模型隔离锚点」从「端点限流无效」**证伪并解决**。全部结论收敛于唯一交付物 [`docs/CORE-REPORT.html`](./docs/CORE-REPORT.html)。

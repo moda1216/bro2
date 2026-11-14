@@ -273,3 +273,12 @@
 - **同模型对照仍诚实降级为「位次参照」**：对照公开榜 Terminal-Bench 全量 `gpt-oss-120b = 26.217%`，但两者**任务集不同（4 curated 静态输入子集 vs 全量）、难度不可比**，`kind=non-strict-positioning-reference`、`isStrictHarnessDelta=false`，名义差**不可归因于 harness**。要构成可归因 Δ，需官方 harness 在同子集成绩或 bro2 跑全量任务集（当前统一离线 verifier 只支持静态输入子集）。**本轮价值是把卡点从「端点不可用」推进到「端点可用 + 有读数 + Δ 边界清楚」，不是能力水位提升**。
 - **定位不变（仍诚实）**：自跑、非第三方复核、小样本、免费匿名端点；不写 `external-results.json`、L4 仍 `not-achieved`、`verdict` 仍 `not-proven`。
 - **下一步优先级**：① 让同模型对照成为**可归因 Δ**（补官方 harness 同子集成绩 / 扩任务集到全量）；② 在稳定端点 / 更大 K / 更多任务下把机制复验从「弱证据」推向可辩护；③ 任何改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠分数叙事。
+
+### 8.8 v2.34.0（2026-11-14）· 官方同子集成绩审计 + 任务集扩集与全量边界
+
+> 用户要求「补官方 harness 同子集成绩 / 扩任务集到全量」。本轮没有补到官方同子集公开成绩，也没有完成全量覆盖；交付的是可复核证据链、真实 4→6 扩集与清晰边界。详见唯一核心报告 [`CORE-REPORT.html`](./CORE-REPORT.html)。
+
+- **路径 A：公开不可得**。公开聚合榜只发布 `gpt-oss-120b = 26.217%` 的模型级成绩（2.1 / 89 题 / Terminus 2 / e2b / three repeats），没有逐题表；官方 2.1 仓库 20 份 submission 无该模型，提交 JSON 只有聚合 metrics 与外部 trial UUID。原冻结 4 题中 3 题不在 89 题集内，因此无法靠补公开数据形成同子集对照。该结论**不等于官方内部无数据，也不等于自行运行官方 Harbor 不可能**；本轮未产出官方 Harbor 自跑成绩。
+- **路径 B：结构分母全覆盖，内容实测有界**。固化完整 git tree：本仓库任务源 `original-tasks @ d28711d0` 共 **241** 题，榜单 `terminal-bench-2-1 @ 7131e437` 共 **89** 题，同名交集 **88**。两代契约不同，同名不能证明同题面/环境/评分器。整包内容实测受 gzip 截断限制为 **79/241 题样本**，不得外推为全量内容结论。
+- **扩集真实但不等于全量**：内容粗筛 21 候选，新增 `aimo-airline-departures` 与 `countdown-game`；6 题按正式口径均为空工作区 fail / 官方 oracle pass / exitOk，即 **6/6 SOUND**。新增 2 题均不在榜单 89 题内，当前 6 题仅 `constraints-scheduling` 在榜集内，榜单任务集差异未缩小。另剔除 `extract-moves-from-video` 假 SOUND（verifier 与 oracle 共享完整答案且需联网）。
+- **Δ 与水位不变**：本轮只扩任务池并做 sanity，未在新增 2 题上重跑 bro2/minimal，未产生新通过率或新 harness-Δ；v2.33.0 名义差仍为 `non-strict-positioning-reference`。后续榜单可比路径是官方 Harbor 逐题环境 + 89 题 + 第三方复核；受控 Δ 路径是在 6 题上重跑同模型/同预算/同评分器 bro2 vs minimal。L4 仍 `not-achieved`、`verdict` 仍 `not-proven`、不写 `external-results.json`。

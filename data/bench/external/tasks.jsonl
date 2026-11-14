@@ -1,13 +1,21 @@
 // 外部公开任务清单（元数据 + 指纹；不含任务原文与评分器代码）
 // 上游坐标见 UPSTREAM.json，原始文件经 examples/fetch-external-tasks.sh 按固定 commit 拉取并由 SHA256SUMS 校验。
 // 统一 verifier 镜像（python:3.11-slim + pytest，仅 stdlib）离线运行；仅收录「官方解可在该镜像内 SOUND」的任务。
-// 已核对可运行（empty ws fail / oracle pass，双向 sanity）的任务共 4 个：
+// v2.34.0 扩集：4 → 6 题。全量扫描/双向 sanity 证据见 task-coverage-report.json。
+// 已核对可运行（empty ws fail / oracle pass，双向 sanity）的任务共 6 个：
 {"id": "tb-analyze-access-logs", "dir": "analyze-access-logs", "category": "grounding", "difficulty": "easy", "instruction": "task.yaml", "inputs": [{"from": "access_log", "to": "access_log"}], "verifier": "tests/test_outputs.py", "verifierSha256": "c5e70afb14d94aa944e378b21ce13275de3d2119d6c4c68326db2cc8791d1777", "oracle": "solution.sh", "artifact": "report.txt"}
 {"id": "tb-bank-trans-filter", "dir": "bank-trans-filter", "category": "grounding", "difficulty": "easy", "instruction": "task.yaml", "inputs": [{"from": "data/bank_transactions.csv", "to": "data/bank_transactions.csv"}], "verifier": "tests/test_outputs.py", "verifierSha256": "c66afe78c0cae8edc745f18e0f7969b2b09eccc4a342ae3da51426cb6f791a1c", "oracle": "solution.sh", "artifact": "data/output.json"}
-{"id": "tb-assign-seats", "dir": "assign-seats", "category": "multi-step", "difficulty": "easy", "instruction": "task.yaml", "inputs": [{"from": "deps", "to": "deps"}], "verifier": "tests/test_outputs.py", "verifierSha256": "34dc3b7118dd4a27044279f4154a83e9a6197a746e6df2502913f7e1eb8dff02", "oracle": "solution.sh", "artifact": "results.txt"}
+{"id": "tb-assign-seats", "dir": "assign-seats", "category": "grounding", "difficulty": "easy", "instruction": "task.yaml", "inputs": [{"from": "deps", "to": "deps"}], "verifier": "tests/test_outputs.py", "verifierSha256": "34dc3b7118dd4a27044279f4154a83e9a6197a746e6df2502913f7e1eb8dff02", "oracle": "solution.sh", "artifact": "results.txt"}
 {"id": "tb-constraints-scheduling", "dir": "constraints-scheduling", "category": "grounding", "difficulty": "easy", "instruction": "task.yaml", "inputs": [{"from": "inputs/alice_calendar.ics", "to": "alice_calendar.ics"}, {"from": "inputs/bob_calendar.ics", "to": "bob_calendar.ics"}, {"from": "inputs/carol_calendar.ics", "to": "carol_calendar.ics"}, {"from": "tests/test_outputs.py", "to": "test_outputs.py"}], "verifier": "tests/test_outputs.py", "verifierSha256": "1422b345ba3aacdfc4184e962811b6379988435896c50d8cf62903e70990c5d1", "oracle": "solution.sh", "artifact": "meeting_scheduled.ics"}
-// --- 以下为「核查后剔除」：原候选扩展任务，但因依赖构建时环境（apt/pip/gcc，统一离线 verifier 无法复现）而不 SOUND ---
+// --- v2.34.0 新增 2 题：纯 stdlib 评分器 + 官方解在统一镜像内可跑，双向 sanity 均 SOUND ---
+// 无静态输入文件（题目为纯推理/数学题），inputs 仅铺 task.yaml 供 agent 读取题面；/app 语义一致。
+{"id": "tb-aimo-airline-departures", "dir": "aimo-airline-departures", "category": "grounding", "difficulty": "easy", "instruction": "task.yaml", "inputs": [{"from": "task.yaml", "to": "task.yaml"}], "verifier": "tests/test_outputs.py", "verifierSha256": "fdb23594e1cb1a079fbf8a038bbf3c0bb37451259b45cdcaf746307cb08fd3d6", "oracle": "solution.sh", "artifact": "results.txt"}
+{"id": "tb-countdown-game", "dir": "countdown-game", "category": "grounding", "difficulty": "easy", "instruction": "task.yaml", "inputs": [{"from": "task.yaml", "to": "task.yaml"}], "verifier": "tests/test_outputs.py", "verifierSha256": "672beb936351b6f0c41c0700c8fbb18c5a1f320522aab8a2a7ba3c22289d7ea4", "oracle": "solution.sh", "artifact": "output.txt"}
+// --- 以下为「核查后剔除」---
+// 构建时依赖（apt/pip/gcc，统一离线 verifier 无法复现）：
 // {"id": "tb-dna-assembly", "dir": "dna-assembly", "excludeReason": "oracle solution.sh 需 apt-get 安装依赖（联网），离线 verifier 无法复现"}
 // {"id": "tb-dna-insert", "dir": "dna-insert", "excludeReason": "oracle solution.sh 需 apt-get install emboss primer3（联网），离线 verifier 无法复现"}
 // {"id": "tb-circuit-fibsqrt", "dir": "circuit-fibsqrt", "excludeReason": "公开评分器 test_outputs.py 需 gcc 编译 sim.c；统一镜像仅 stdlib+pytest，无 gcc"}
 // {"id": "tb-gcode-to-text", "dir": "gcode-to-text", "excludeReason": "oracle 需 apt-get + pip 安装 opencv/matplotlib/pytesseract/tesseract（联网），离线 verifier 无法复现"}
+// v2.34.0 新增剔除（假 SOUND 反例，防「空转仪表盘」）：
+// {"id": "tb-extract-moves-from-video", "dir": "extract-moves-from-video", "excludeReason": "双向 sanity 会假 PASS：verifier 内嵌完整 SOLUTION 答案常量，solution.sh 逐行 echo 同一份答案，oracle 与判分器自我印证、不具判别力；且题面要求联网下载 YouTube 视频，离线不可复现"}

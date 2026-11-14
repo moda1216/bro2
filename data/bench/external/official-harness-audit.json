@@ -1,0 +1,68 @@
+{
+  "kind": "official-harness-subset-audit",
+  "generatedAt": "2026-11-14",
+  "question": "能否补到『官方 harness 在 bro2 同一任务子集上的成绩』，从而把同模型对照变成可归因 harness-Δ？",
+  "verdict": "not-publicly-available",
+  "verdictNote": "公开可复核的同子集成绩不可得：公开聚合榜只发模型级聚合 pass@1、不发布逐任务明细；官方任务仓库的提交文件也没有 gpt-oss-120b 的逐任务判分；且 bro2 原冻结任务子集与榜单任务集非同源（4 题中 3 题不在 89 题集内）。因此无法通过补公开数据对齐分母。该结论不否认官方内部可能保有数据，也不排除后续自行用官方 Harbor / Terminus 2 重跑；本轮未产出这种自跑成绩。",
+  "evidence": [
+    {
+      "id": "E1",
+      "claim": "公开榜只发布模型级聚合分，无 per-task 明细",
+      "source": "https://llmleaderboard.com/benchmarks/terminal-bench",
+      "observedAt": "2026-11-14",
+      "observation": "页面每行是 model/creator + version + harness + 聚合 pass@1（含 ± stderr 与 repeats）；gpt-oss-120b 条目为 26.217%，明细口径『gpt-oss-120b (High); 89 tasks; Terminus 2; e2b; three repeats』。页面不提供任何逐任务结果表。",
+      "reproduce": "WebFetch 该 URL，检查是否存在 per-task / 逐任务结果下载"
+    },
+    {
+      "id": "E2",
+      "claim": "官方 2.1 榜单仓库不含 gpt-oss-120b 提交，且提交文件里没有逐任务结果",
+      "source": "https://github.com/harbor-framework/terminal-bench-2-1/tree/7131e4375048a0e408a8fb404b5f499d726b695b/leaderboard/submissions",
+      "observedAt": "2026-11-14",
+      "observation": "submissions/ 仅 20 份 .json（claude-opus / gemini / gpt-5.6 / grok / muse 等），无 gpt-oss-120b。任取一份（如 2026-05-01-anthropic-claude-opus-4-7-max-terminus-2.json）：顶层 keys = source_jobs / source_filter / metadata / metrics / disqualified_trials / trials；metrics 只有 accuracy、accuracy_stderr、pass_at_2..5、token/cost 等聚合量；trials 是 445 个 UUID 字符串（指向外部 job 记录），不含逐任务判分结果。",
+      "reproduce": "curl 该 commit 的 git/trees?recursive=1 列 submissions/；curl 任一 submission .json 检视 metrics 与 trials 结构"
+    },
+    {
+      "id": "E3",
+      "claim": "第三方复现仓库同样明确声明不公开逐任务表",
+      "source": "https://github.com/tongjiu123/Fusion-MoA/blob/main/benchmarks/terminal_bench_2_1/README.md",
+      "observedAt": "2026-11-14",
+      "observation": "原文：『The public repository includes only this README summary, not per-task tables, raw scoring records, trajectories, audit reports or audit scripts.』其公开成绩为 89 题上的 PASS/FAIL/UNSCORED 计数，仍非逐任务明细。",
+      "reproduce": "WebFetch 该 README"
+    },
+    {
+      "id": "E4",
+      "claim": "bro2 冻结任务子集与榜单 2.1 的 89 题集非同源，4 题中 3 题不在榜集内",
+      "source": "data/bench/external/tb-tree-snapshot.json",
+      "observedAt": "2026-11-14",
+      "observation": "original-tasks @ d28711d0 共 241 题；terminal-bench-2-1 @ 7131e437 的 tasks/ 共 89 题；交集 88。bro2 冻结 4 题中仅 constraints-scheduling 落在 89 题集内，analyze-access-logs / bank-trans-filter / assign-seats 均不在。",
+      "reproduce": "node --experimental-strip-types --no-warnings examples/task-coverage-scan.ts（离线，从固化 git tree 重算交集）"
+    },
+    {
+      "id": "E5",
+      "claim": "两代任务集文件布局 / 契约不同，同名目录不等于同一题定义或同一评分器",
+      "source": "data/bench/external/tb-tree-snapshot.json",
+      "observedAt": "2026-11-14",
+      "observation": "original-tasks 为 task.yaml + solution.sh + tests/test_outputs.py + run-tests.sh；2.1 为 task.toml + instruction.md + solution/solve.sh + tests/test.sh + environment/Dockerfile（每题独立镜像，部分任务需 apt/pip/gcc 或联网依赖）。88 个同名目录全部是两种布局并存；仅凭同名不能认定题面、环境或评分器相同。",
+      "reproduce": "同 E4"
+    }
+  ],
+  "leaderboardAnchor": {
+    "model": "gpt-oss-120b",
+    "benchmark": "Terminal-Bench 2.1",
+    "score": 26.217,
+    "scope": "89 tasks / Terminus 2 / e2b / three repeats / pass@1",
+    "granularity": "aggregate-only",
+    "source": "tb-leaderboard-snapshot.json + llmleaderboard.com/benchmarks/terminal-bench"
+  },
+  "consequence": {
+    "isStrictHarnessDelta": false,
+    "kind": "non-strict-positioning-reference",
+    "note": "v2.33.0 的名义差 +0.2378 继续只作位次参照，不可归因于 harness。通过补公开数据获得官方同子集成绩这条路已判定为公开不可得。",
+    "whatRemains": "要让 Δ 可归因，可走：①自行用官方 Harbor / Terminus 2 在同任务上重跑，或把 bro2 接到官方 Harbor 契约并在 89 题全量上被第三方复核（需独立镜像/联网依赖/端点预算）；②用仓库内已有的『同任务/同模型/同评分器/只变 harness』受控对照（bro2 vs minimal）作为严格 Δ 载体——后者不需要官方公开成绩，也不要求全量任务集。"
+  },
+  "honesty": [
+    "本审计为自跑外部证据整理，非第三方复核",
+    "E1/E3 为网页观察，E2/E4/E5 可从固化 git tree 与 API 离线复核",
+    "结论是『公开来源未提供可复核的同子集成绩』，不等于官方内部不存在数据；本轮未自行运行官方 Harbor / Terminus 2。审计不构成 bro2 能力水位提升，不改 L4 / leadership.verdict，不写 external-results.json"
+  ]
+}
