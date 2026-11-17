@@ -1,0 +1,1 @@
+{"task": "constraints-scheduling", "repeat": 1, "status": "ok", "reward": 1, "verifyNote": "rc=0", "steps": 5, "tokens": 22584, "bro2_rc": 0, "wallSeconds": 161.6, "log": "../../tmp/tb21-logs/constraints-scheduling-r1.log", "ts": "2026-11-17T04:33:49.731257Z", "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/constraints-scheduling:20251031"}

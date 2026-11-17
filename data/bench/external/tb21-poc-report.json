@@ -1,0 +1,51 @@
+{
+  "kind": "tb21-harbor-equivalent-poc",
+  "generatedAt": "2026-11-14T07:20:00.000Z",
+  "question": "路径①：用 2.1 公开 89 题 + 官方 per-task verifier 跑 bro2(gpt-oss-120b)，能否产出与公开榜同口径、可对齐的分？",
+  "verdict": "link-proven · 链路跑通且判别力正确 · 全量 89×3 受 ovhcloud 2 req/min 限速约束",
+  "task": "constraints-scheduling",
+  "endpoint": {
+    "model": "gpt-oss-120b",
+    "provider": "ovhcloud (oai.endpoints.kepler.ai.cloud.ovh.net)",
+    "rateLimit": "匿名层 2 req/min/model/IP",
+    "throttle": "测量侧 NODE_OPTIONS=--import ovh-throttle.mjs，相邻请求 ≥31s + 429 重试（不改 src）"
+  },
+  "pipeline": [
+    "docker pull <published-image>（task.toml.docker_image，非本地现建）",
+    "注入 bro2 源码 + Node22 + 2.1 官方 tests/（Harbor 运行时本沙箱未装，改手搓 Docker 等价）",
+    "bro2 --model ovhcloud 在容器内跑任务（config.permission.workspace=/app 对齐产出目录）",
+    "官方 verifier：python3 -m pytest /tests/test_outputs.py（apt 装 python3-pytest，绕过 test.sh 不稳定的 uv 下载）",
+    "读 /logs/verifier/reward.txt（1=pass / 0=fail）"
+  ],
+  "results": {
+    "official_solve_sh": { "reward": 1, "slot": "2024-01-17T110000Z (Wed, 避开 Carol 周一偏好)", "verdict": "管线正确性基准" },
+    "bro2_gptoss120b": {
+      "reward": 0,
+      "slot": "2024-01-15T100000Z (Mon)",
+      "steps": 29, "toolCalls": 23, "tokens": 108056,
+      "failedTest": "test_constraints_conflicts_business_hours",
+      "reason": "bro2 选的周一 10:00 时段与已有日历事件冲突（_overlap 断言不过）。注意：这是初版 PoC，当时 wrapper 的 permission.allowedPaths 未含 /app，bro2 实际写到 /bro2/data/workspace，由人工 cp 到 /app 后判分；因此该 reward=0 不能排除脚手架权限断点的影响，不作为能力结论。",
+      "supersededBy": "tb21-batch.py 修复权限（allowedPaths 含 /app）后，v2.35.0 冒烟中 bro2(gpt-oss-120b) 直接在 /app 正确写出 Wed 11:00，官方 verifier 判 reward=1（见 tb21-full-results.jsonl constraints-scheduling r1）。以修复后读数为准。"
+    }
+  },
+  "adaptationPoints": [
+    "workspace 对齐：bro2 默认写 data/workspace，须设 config.permission.workspace=/app（2.1 任务 I/O 在 /app）。",
+    "verifier 基础设施：官方 test.sh 从 github 下载 uv 在本环境不稳定；改 apt 装 python3-pytest 后直接 pytest，判分器 test_outputs.py 原样使用。",
+    "墙钟/预算：2 req/min 下每题 15–40 min，须放宽 maxSeconds(→3600)/maxTokens(→240000)，否则被 budget 墙钟腰斩（同 v2.33）。",
+    "限流：ovhcloud 2 req/min，须测量侧 fetch 节流（≥31s + 429 重试），否则 provider_error 爆表。"
+  ],
+  "feasibility_for_full89": {
+    "imagePull": "89 题多为已发布镜像（task.toml.docker_image），docker pull 可行；少量需现建。",
+    "verifier": "每题 verifier 多为 uvx pytest；本环境需改用 apt pytest 直跑（网络更稳）。",
+    "cost_bottleneck": "ovhcloud 2 req/min。单题 15–40 min（含 ≥31s 间隔 + 工具执行）。",
+    "estimate_89x3repeats_hours": "≈ 89 × 3 × 25min ≈ 111 小时（约 4–5 天连续；需多会话/分批）。",
+    "estimate_89x1repeat_hours": "≈ 37 小时。",
+    "estimate_sample15x1_hours": "≈ 6 小时（先拿到首个诚实的部分 2.1 分）。"
+  },
+  "honesty": [
+    "reward 由官方 verifier 给出，与公开榜同口径（同模型 gpt-oss-120b + 同 2.1/89 任务集 + 同评分器 pytest）。",
+    "bro2=模型+harness：此分可归因到『bro2 harness 在 gpt-oss-120b 上』，对照 Terminus-2(gpt-oss-120b) 的 26.217% 即为真·榜面对齐。",
+    "限速是 ovhcloud 匿名层约束，非 harness 能力；若换不限流的 gpt-oss-120b 端点，时间可大幅压缩。",
+    "本轮仅 1 题 PoC，未产生 89 题汇总分、未改 src、未写 external-results.json、L4/verdict 未动。"
+  ]
+}
