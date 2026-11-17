@@ -21,6 +21,13 @@
 
 > 注：初版 PoC 报告里 `constraints-scheduling reward=0` 的结论已被 `supersededBy` 标注作废——那是权限脚手架 bug 的伪影。修复后该题 reward=1。
 
+## 当前运行状态（2026-11-17）
+
+- 首次全量后台进程：`nohup python3 examples/tb21-batch.py > /tmp/tb21-full-run.log 2>&1 &`，PID 30890（PPID=1，独立会话 SID 30889，会话结束后仍存活）。
+- 已提交：`b0aa95a` / tag `v2.35.0`（已推远程）。
+- 断点：见 `tb21-full-results.jsonl`，每完成一个 trial 追加一行。冒烟 `constraints-scheduling r1 reward=1` 已入库。
+- **新会话接续第一步**：`ps aux | grep tb21-batch.py` 看进程是否还在；若在，只 `python3 examples/tb21-batch.py --status` 观察；若不在，用下方命令续跑（自动跳过已完成 trial）。
+
 ## 断点续跑命令
 
 ```bash
