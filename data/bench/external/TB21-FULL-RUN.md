@@ -25,7 +25,10 @@
 
 - 首次全量后台进程：`nohup python3 examples/tb21-batch.py > /tmp/tb21-full-run.log 2>&1 &`，PID 30890（PPID=1，独立会话 SID 30889，会话结束后仍存活）。
 - 已提交：`b0aa95a` / tag `v2.35.0`（已推远程）。
-- 断点：见 `tb21-full-results.jsonl`，每完成一个 trial 追加一行。冒烟 `constraints-scheduling r1 reward=1` 已入库。
+- 断点：见 `tb21-full-results.jsonl`，每完成一个 trial 追加一行。已入库读数：
+  - `constraints-scheduling r1` reward=1（5 步 / 161s，正确解，与公开榜同模型可对齐）
+  - `adaptive-rejection-sampler r1` reward=0（31 步 / 1003s，414k tokens；孤儿进程清理修复后未再卡死，verifier rc=2 真实判定）
+  - 两题判别力 gate 均通过（空工作区 reward=0）。
 - **新会话接续第一步**：`ps aux | grep tb21-batch.py` 看进程是否还在；若在，只 `python3 examples/tb21-batch.py --status` 观察；若不在，用下方命令续跑（自动跳过已完成 trial）。
 
 ## 断点续跑命令
