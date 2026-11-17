@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>bro2 外部测量 · 核心报告 v2.34.0</title>
+<title>bro2 外部测量 · 核心报告 v2.35.0</title>
 <style>
 :root{--bg:#0d1117;--card:#161b22;--card2:#1c2330;--bd:#2a3441;--tx:#e6edf3;--dim:#8b98a5;
 --acc:#4f9cf9;--ok:#3fb950;--no:#f85149;--warn:#d29922;--hl:#1f6feb22}
@@ -61,8 +61,34 @@ ul{margin:8px 0;padding-left:22px}li{margin:5px 0}.foot{margin-top:44px;padding-
 <div class="ev"><div class="v">v2.31.0</div>用逐轨迹诊断<b>证伪</b>了上一版的「空转不肯停」结论：真实机理是 <code>guard(kind=tokens)</code> 静默熔断早于产出落地，以及模型约束求解不全。做了预注册 A/B（K=2）检验预算软预警，<b>判据未全成立／无差异（如实记录，不宣称增益）</b>，机制默认关闭。<br><span class="sub">附带发现：16 次运行 steps 最高 9 就撞 token 熔断 —— <b>v2.30.0 的读数是「预算配置失真」下的读数，不是公平读数</b>。</span></div>
 <div class="ev"><div class="v">v2.32.0</div>执行两个「下一步」：先修失真（把暗藏 <code>maxTokens=60000</code> 的半套接线改成成套显式声明 + 双口径并列实测），再在<b>校准后的公平口径</b>下用 <b>K=3</b>（&gt; 上轮 2）复验软预警。校准口径 <code>maxSteps=12 / maxTokens=120000</code> 成为后续测量的统一尺子。</div>
 <div class="ev"><div class="v">v2.33.0</div>啃下悬了三轮的「下一步③ 同模型隔离锚点」：主动扫描 15 个端点/模型组合，定位限流失配根因，用<b>测量侧节流适配</b>让 <code>gpt-oss-120b</code> 稳定跑通完整 harness，产出 bro2 在有公开榜成绩同模型上的首个可复核读数，并诚实界定其 Δ 的不可归因性。</div>
-<div class="ev now"><div class="v">v2.34.0（本轮）</div>执行「补官方 harness 同子集成绩 / 扩任务集到全量」：路径 A 被证据链判定为<b>公开不可得</b>；路径 B 固化 241 / 89 两个全量分母，实测样本 79 题，内容粗筛 21 个候选，最终只把真正通过正式双向 sanity 的任务池从 4 扩到 6，并剔除一个假 SOUND 反例。</div>
+<div class="ev"><div class="v">v2.34.0</div>执行「补官方 harness 同子集成绩 / 扩任务集到全量」：路径 A 被证据链判定为<b>公开不可得</b>；路径 B 固化 241 / 89 两个全量分母，实测样本 79 题，内容粗筛 21 个候选，最终只把真正通过正式双向 sanity 的任务池从 4 扩到 6，并剔除一个假 SOUND 反例。</div>
+<div class="ev now"><div class="v">v2.35.0（本轮）</div>用户选择路径①「直接铺全量 89×3」：把 bro2 接到 2.1 官方 per-task 镜像 + 官方判分器，模型钉死与公开榜同款的 <code>gpt-oss-120b</code>，三轴（同模型/同任务集/同评分器）对齐建可归因评测。建好可断点续跑的批量流水线并起跑，首批真实读数已入库。</div>
 </div>
+
+<h2>0.5 · 本轮（v2.35.0）：路径① 榜面对齐——89×3 全量开跑</h2>
+<div class="callout"><b>用户指令：</b>「那用 89 题公开的测试 bro2 即可，这样不就能对齐了」→「直接铺全量 89×3（多会话）」。这是上一版悬置路径的落地：v2.34.0 证明了官方同子集成绩<b>公开不可得</b>，于是改走<b>自行用官方 2.1/89 任务 + 官方判分器复现</b>，并把模型钉死为与公开榜同款的 <code>gpt-oss-120b</code>。</div>
+
+<h3>三轴对齐：为什么这次分可归因到 harness</h3>
+<table><tr><th>轴</th><th>公开榜锚点</th><th>本轮 bro2</th><th>对齐</th></tr>
+<tr><td class="k">模型</td><td class="mono">gpt-oss-120b</td><td class="mono">gpt-oss-120b（ovhcloud，响应 model 字段核实）</td><td><span class="b ok">同</span></td></tr>
+<tr><td class="k">任务集</td><td class="mono">2.1 / 89 题</td><td class="mono">2.1 / 89 题（官方 per-task 镜像）</td><td><span class="b ok">同</span></td></tr>
+<tr><td class="k">评分器</td><td class="mono">官方 verifier</td><td class="mono">官方 test_outputs.py（pytest）</td><td><span class="b ok">同</span></td></tr>
+<tr><td class="k">harness</td><td class="mono">Terminus 2</td><td class="mono">bro2</td><td><span class="b warn">唯一变量</span></td></tr></table>
+<p class="sub">三方只差 harness 一项，因此 bro2 的读数对照公开榜 26.217% 在原理上是<b>可归因 Δ</b>（区别于 v2.33.0 那份不可归因的名义差）。但本轮是<b>自跑、非第三方复核</b>；完整 Δ 结论须等全量 89×3 跑完并经复核后才有资格给出。</p>
+
+<h3>流水线与判别力红线</h3>
+<p>批量脚本 <code>examples/tb21-batch.py</code>：逐题拉官方文件 → pull 预构建镜像 → 注入 bro2 + Node22 + pytest → <b>判别力 gate</b>（初始镜像无解时 verifier 必须 fail，否则跳过该题）→ bro2 真实解题 → <b>同容器</b>跑官方 verifier → 逐 trial 原子落盘、断点续跑、严格串行。相对初版 PoC 修了 6 处脚手架断点（verifier 跨容器、<code>allowedPaths</code> 不含 /app、空题面回退、孤儿进程清理、verifier 超时、预算 400k/90min）——<b>均不改判分器、不放宽判分</b>。</p>
+
+<h3>当前进度（生成时快照，运行中持续增长）</h3>
+<div class="kpis">
+<div class="kpi"><div class="n g">2 / 267</div><div class="l">已完成 trial（89 题 × 3 repeats）</div></div>
+<div class="kpi"><div class="n">50.0%</div><div class="l">bro2(gpt-oss-120b) 当前 pass 率（partial）</div></div>
+<div class="kpi"><div class="n dim">26.217%</div><div class="l">公开榜锚点（Terminus 2 同模型，仅终局对照）</div></div>
+<div class="kpi"><div class="n w">进行中</div><div class="l">ovhcloud 2 req/min 限速 · 约 100+ 小时 · 跨会话累积</div></div>
+</div>
+<table><tr><th>任务</th><th>repeat</th><th>reward</th><th>步</th><th>tokens</th><th>墙钟</th><th>判别力</th></tr><tr><td class="k mono">constraints-scheduling</td><td>r1</td><td><span class="b ok">PASS</span></td><td>5步</td><td>22584</td><td>161.6s</td><td class="dim">empty-reward=0 (rc=1)</td></tr><tr><td class="k mono">adaptive-rejection-sampler</td><td>r1</td><td><span class="b no">FAIL</span></td><td>31步</td><td>414780</td><td>1003.6s</td><td class="dim">empty-reward=0 (rc=2)</td></tr></table>
+<p class="sub">最近 2 个 trial。完整逐 trial 见 <code>data/bench/external/tb21-full-results.jsonl</code>；跨会话续跑见 <code>TB21-FULL-RUN.md</code>。</p>
+<div class="callout warn"><b>诚实边界：</b>当前只是 partial 进度，<b>不构成榜单分数</b>；判别力 gate 已逐题通过，但不等于第三方复核。全量完成前不下「bro2 达到/未达到 26.217%」的结论，不改 L4 / verdict、不写 external-results.json。</div>
 
 <h2>1 · 路径 A：官方 harness 同子集成绩——无法补齐</h2>
 <div class="callout no"><b>判定：not-publicly-available。</b> 公开可复核的同子集成绩不可得：公开聚合榜只发模型级聚合 pass@1、不发布逐任务明细；官方任务仓库的提交文件也没有 gpt-oss-120b 的逐任务判分；且 bro2 原冻结任务子集与榜单任务集非同源（4 题中 3 题不在 89 题集内）。因此无法通过补公开数据对齐分母。该结论不否认官方内部可能保有数据，也不排除后续自行用官方 Harbor / Terminus 2 重跑；本轮未产出这种自跑成绩。</div>
@@ -220,5 +246,5 @@ node --experimental-strip-types --no-warnings examples/build-core-report.ts   # 
 <b>下一步优先级</b>：① 若目标是榜单可比，接入官方 Harbor 的逐题独立环境，在 89 题上运行并寻求第三方复核；不能继续用统一离线 verifier 代替官方口径。② 若目标是可归因 harness-Δ，直接在已扩到 6 题的任务池上跑同模型、同预算、同评分器的 bro2 vs minimal 受控对照，不依赖官方披露。③ 机制改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠任务数量或分数叙事。</div>
 
 <div class="foot">bro2 · Model + Harness = Agent · 冻结模型权重，只演进 harness · 只增账本 / 惰性真实探测 / 对比式改进<br>
-本报告由 <code>examples/build-core-report.ts</code> 从可复核 JSON 生成，测量数字不手写 · v2.34.0</div>
+本报告由 <code>examples/build-core-report.ts</code> 从可复核 JSON 生成，测量数字不手写 · v2.35.0</div>
 </div></body></html>

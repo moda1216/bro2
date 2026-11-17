@@ -1,5 +1,5 @@
 /**
- * bro2 · 核心报告生成器（v2.34.0）
+ * bro2 · 核心报告生成器（v2.35.0）
  *
  * 用户诉求「整理产出物，给一个核心报告即可，代码都是 git 远程管理的」：
  * 把 v2.30→v2.34 外部测量脉络收敛成一份自包含 HTML（内联 CSS / 无外部依赖），
@@ -37,7 +37,31 @@ const AB = opt("budget-advisory-report.json");
 const SC = opt("endpoint-scan-report.json");   // v2.33.0 第二端点扫描
 const AN = opt("same-model-anchor-report.json"); // v2.33.0 同模型锚点
 const AU = j("official-harness-audit.json");     // v2.34.0 路径 A 审计
-const CV = j("task-coverage-report.json");       // v2.34.0 路径 B 扩集（本轮主实验）
+const CV = j("task-coverage-report.json");       // v2.34.0 路径 B 扩集
+// v2.35.0 路径① 榜面对齐：逐 trial 读数（运行中持续追加，生成时取快照）
+const tb21Rows: any[] = (() => {
+  try {
+    return readFileSync(join(EXT, "tb21-full-results.jsonl"), "utf8")
+      .split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l));
+  } catch { return []; }
+})();
+const tb21Ok = tb21Rows.filter((r) => r.status === "ok" && typeof r.reward === "number");
+const tb21Pass = tb21Ok.filter((r) => r.reward === 1).length;
+const tb21N = tb21Ok.length;
+const tb21Total = 89 * 3;
+const tb21ByTask = (() => {
+  const m = new Map<string, { pass: number; n: number }>();
+  for (const r of tb21Ok) {
+    const e = m.get(r.task) ?? { pass: 0, n: 0 };
+    e.n += 1; e.pass += r.reward; m.set(r.task, e);
+  }
+  return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+})();
+const tb21RowsHtml = tb21Ok.slice(-12).map((r) =>
+  `<tr><td class="k mono">${esc(r.task)}</td><td>r${esc(r.repeat)}</td>` +
+  `<td>${r.reward === 1 ? '<span class="b ok">PASS</span>' : '<span class="b no">FAIL</span>'}</td>` +
+  `<td>${esc(r.steps)}步</td><td>${esc(r.tokens)}</td><td>${esc(r.wallSeconds)}s</td>` +
+  `<td class="dim">${esc(r.sanity ?? "")}</td></tr>`).join("");
 
 const L = R.groups.find((g: any) => g.group === "L_legacy");
 const C = R.groups.find((g: any) => g.group === "C_calibrated");
@@ -132,7 +156,7 @@ function newNamesHas(dir: string): boolean { return cvBoardTasks.includes(dir); 
 const html = `<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>bro2 外部测量 · 核心报告 v2.34.0</title>
+<title>bro2 外部测量 · 核心报告 v2.35.0</title>
 <style>
 :root{--bg:#0d1117;--card:#161b22;--card2:#1c2330;--bd:#2a3441;--tx:#e6edf3;--dim:#8b98a5;
 --acc:#4f9cf9;--ok:#3fb950;--no:#f85149;--warn:#d29922;--hl:#1f6feb22}
@@ -192,8 +216,34 @@ ul{margin:8px 0;padding-left:22px}li{margin:5px 0}.foot{margin-top:44px;padding-
 <div class="ev"><div class="v">v2.31.0</div>用逐轨迹诊断<b>证伪</b>了上一版的「空转不肯停」结论：真实机理是 <code>guard(kind=tokens)</code> 静默熔断早于产出落地，以及模型约束求解不全。做了预注册 A/B（K=2）检验预算软预警，<b>${esc(AB?.verdict ?? "负结果")}</b>，机制默认关闭。<br><span class="sub">附带发现：16 次运行 steps 最高 9 就撞 token 熔断 —— <b>v2.30.0 的读数是「预算配置失真」下的读数，不是公平读数</b>。</span></div>
 <div class="ev"><div class="v">v2.32.0</div>执行两个「下一步」：先修失真（把暗藏 <code>maxTokens=60000</code> 的半套接线改成成套显式声明 + 双口径并列实测），再在<b>校准后的公平口径</b>下用 <b>K=${esc(R.control.k)}</b>（&gt; 上轮 2）复验软预警。校准口径 <code>maxSteps=12 / maxTokens=120000</code> 成为后续测量的统一尺子。</div>
 <div class="ev"><div class="v">v2.33.0</div>啃下悬了三轮的「下一步③ 同模型隔离锚点」：主动扫描 ${esc(scTotal)} 个端点/模型组合，定位限流失配根因，用<b>测量侧节流适配</b>让 <code>gpt-oss-120b</code> 稳定跑通完整 harness，产出 bro2 在有公开榜成绩同模型上的首个可复核读数，并诚实界定其 Δ 的不可归因性。</div>
-<div class="ev now"><div class="v">v2.34.0（本轮）</div>执行「补官方 harness 同子集成绩 / 扩任务集到全量」：路径 A 被证据链判定为<b>公开不可得</b>；路径 B 固化 ${esc(cvOriginal)} / ${esc(cvPinned)} 两个全量分母，实测样本 ${esc(cvSample)} 题，内容粗筛 ${esc(cvScreened)} 个候选，最终只把真正通过正式双向 sanity 的任务池从 ${esc(cvBefore)} 扩到 ${esc(cvAfter)}，并剔除一个假 SOUND 反例。</div>
+<div class="ev"><div class="v">v2.34.0</div>执行「补官方 harness 同子集成绩 / 扩任务集到全量」：路径 A 被证据链判定为<b>公开不可得</b>；路径 B 固化 ${esc(cvOriginal)} / ${esc(cvPinned)} 两个全量分母，实测样本 ${esc(cvSample)} 题，内容粗筛 ${esc(cvScreened)} 个候选，最终只把真正通过正式双向 sanity 的任务池从 ${esc(cvBefore)} 扩到 ${esc(cvAfter)}，并剔除一个假 SOUND 反例。</div>
+<div class="ev now"><div class="v">v2.35.0（本轮）</div>用户选择路径①「直接铺全量 89×3」：把 bro2 接到 2.1 官方 per-task 镜像 + 官方判分器，模型钉死与公开榜同款的 <code>gpt-oss-120b</code>，三轴（同模型/同任务集/同评分器）对齐建可归因评测。建好可断点续跑的批量流水线并起跑，首批真实读数已入库。</div>
 </div>
+
+<h2>0.5 · 本轮（v2.35.0）：路径① 榜面对齐——89×3 全量开跑</h2>
+<div class="callout"><b>用户指令：</b>「那用 89 题公开的测试 bro2 即可，这样不就能对齐了」→「直接铺全量 89×3（多会话）」。这是上一版悬置路径的落地：v2.34.0 证明了官方同子集成绩<b>公开不可得</b>，于是改走<b>自行用官方 2.1/89 任务 + 官方判分器复现</b>，并把模型钉死为与公开榜同款的 <code>gpt-oss-120b</code>。</div>
+
+<h3>三轴对齐：为什么这次分可归因到 harness</h3>
+<table><tr><th>轴</th><th>公开榜锚点</th><th>本轮 bro2</th><th>对齐</th></tr>
+<tr><td class="k">模型</td><td class="mono">gpt-oss-120b</td><td class="mono">gpt-oss-120b（ovhcloud，响应 model 字段核实）</td><td><span class="b ok">同</span></td></tr>
+<tr><td class="k">任务集</td><td class="mono">2.1 / 89 题</td><td class="mono">2.1 / 89 题（官方 per-task 镜像）</td><td><span class="b ok">同</span></td></tr>
+<tr><td class="k">评分器</td><td class="mono">官方 verifier</td><td class="mono">官方 test_outputs.py（pytest）</td><td><span class="b ok">同</span></td></tr>
+<tr><td class="k">harness</td><td class="mono">Terminus 2</td><td class="mono">bro2</td><td><span class="b warn">唯一变量</span></td></tr></table>
+<p class="sub">三方只差 harness 一项，因此 bro2 的读数对照公开榜 26.217% 在原理上是<b>可归因 Δ</b>（区别于 v2.33.0 那份不可归因的名义差）。但本轮是<b>自跑、非第三方复核</b>；完整 Δ 结论须等全量 89×3 跑完并经复核后才有资格给出。</p>
+
+<h3>流水线与判别力红线</h3>
+<p>批量脚本 <code>examples/tb21-batch.py</code>：逐题拉官方文件 → pull 预构建镜像 → 注入 bro2 + Node22 + pytest → <b>判别力 gate</b>（初始镜像无解时 verifier 必须 fail，否则跳过该题）→ bro2 真实解题 → <b>同容器</b>跑官方 verifier → 逐 trial 原子落盘、断点续跑、严格串行。相对初版 PoC 修了 6 处脚手架断点（verifier 跨容器、<code>allowedPaths</code> 不含 /app、空题面回退、孤儿进程清理、verifier 超时、预算 400k/90min）——<b>均不改判分器、不放宽判分</b>。</p>
+
+<h3>当前进度（生成时快照，运行中持续增长）</h3>
+<div class="kpis">
+<div class="kpi"><div class="n ${tb21N > 0 ? "g" : "w"}">${tb21N} / ${tb21Total}</div><div class="l">已完成 trial（89 题 × 3 repeats）</div></div>
+<div class="kpi"><div class="n">${tb21N ? (tb21Pass / tb21N * 100).toFixed(1) + "%" : "—"}</div><div class="l">bro2(gpt-oss-120b) 当前 pass 率（partial）</div></div>
+<div class="kpi"><div class="n dim">26.217%</div><div class="l">公开榜锚点（Terminus 2 同模型，仅终局对照）</div></div>
+<div class="kpi"><div class="n w">进行中</div><div class="l">ovhcloud 2 req/min 限速 · 约 100+ 小时 · 跨会话累积</div></div>
+</div>
+${tb21N > 0 ? `<table><tr><th>任务</th><th>repeat</th><th>reward</th><th>步</th><th>tokens</th><th>墙钟</th><th>判别力</th></tr>${tb21RowsHtml}</table>
+<p class="sub">最近 ${Math.min(tb21N, 12)} 个 trial。完整逐 trial 见 <code>data/bench/external/tb21-full-results.jsonl</code>；跨会话续跑见 <code>TB21-FULL-RUN.md</code>。</p>` : '<div class="callout warn">尚无落盘 trial，流水线刚起跑。</div>'}
+<div class="callout warn"><b>诚实边界：</b>当前只是 partial 进度，<b>不构成榜单分数</b>；判别力 gate 已逐题通过，但不等于第三方复核。全量完成前不下「bro2 达到/未达到 26.217%」的结论，不改 L4 / verdict、不写 external-results.json。</div>
 
 <h2>1 · 路径 A：官方 harness 同子集成绩——无法补齐</h2>
 <div class="callout no"><b>判定：${esc(AU.verdict)}。</b> ${esc(AU.verdictNote)}</div>
@@ -355,11 +405,12 @@ node --experimental-strip-types --no-warnings examples/build-core-report.ts   # 
 <b>下一步优先级</b>：① 若目标是榜单可比，接入官方 Harbor 的逐题独立环境，在 ${esc(cvPinned)} 题上运行并寻求第三方复核；不能继续用统一离线 verifier 代替官方口径。② 若目标是可归因 harness-Δ，直接在已扩到 ${esc(cvAfter)} 题的任务池上跑同模型、同预算、同评分器的 bro2 vs minimal 受控对照，不依赖官方披露。③ 机制改进仍走预注册判据 + 行为对比 + holdout + 二次判读，不靠任务数量或分数叙事。</div>
 
 <div class="foot">bro2 · Model + Harness = Agent · 冻结模型权重，只演进 harness · 只增账本 / 惰性真实探测 / 对比式改进<br>
-本报告由 <code>examples/build-core-report.ts</code> 从可复核 JSON 生成，测量数字不手写 · v2.34.0</div>
+本报告由 <code>examples/build-core-report.ts</code> 从可复核 JSON 生成，测量数字不手写 · v2.35.0</div>
 </div></body></html>`;
 
 writeFileSync(OUT, html);
 console.log(`核心报告已生成：${OUT}`);
-console.log(`  v2.34.0 本轮：路径A=${AU.verdict} | 路径B扩集 ${cvBefore}→${cvAfter} | sanity ${cvSound}/${cvAfter} | 全量分母 ${cvOriginal}/${cvPinned}（实测样本 ${cvSample}，非全量）`);
+console.log(`  v2.34.0 前序：路径A=${AU.verdict} | 路径B扩集 ${cvBefore}→${cvAfter} | sanity ${cvSound}/${cvAfter} | 全量分母 ${cvOriginal}/${cvPinned}（实测样本 ${cvSample}，非全量）`);
+console.log(`  v2.35.0 本轮：路径①榜面对齐 89×3 进行中 | 已落盘 ${tb21Ok.length}/${tb21Total} | 当前 pass ${tb21N ? (tb21Pass/tb21N*100).toFixed(1) : "—"}% | 榜锚点 26.217%（终局对照，自跑非第三方）`);
 console.log(`  前序 v2.33.0：端点扫描 ${scOk.length}/${scTotal} TOOLS_OK | 同模型锚点 ${anPasses}/${anTrials}=${anPass} vs 榜 ${anLb} (Δ=${anDelta}, non-strict) | provider_error=${anProviderErr} | 429重试=${anRate429}`);
 console.log(`  前序 v2.32.0：${R.trials.length} trial | 读数 L=${ro.legacyPassRate} C=${ro.calibratedPassRate} | 机制 P1=${mech.P1_mechanism} P2=${mech.P2_behavior} P3=${mech.P3_result}`);
