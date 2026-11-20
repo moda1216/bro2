@@ -188,15 +188,13 @@ def prepare(task: str, img: str) -> str | None:
     shutil.copytree(os.path.join(w, "tests"), os.path.join(bdir, "tests"), dirs_exist_ok=True)
 
     dockerfile = f"""FROM {img}
-# apt 防护：容器内 apt 下载大索引（如 Packages 8MB）慢但非不通——给足超时 300s + 重试 4 次，
-# 强制 IPv4 避免 IPv6 优先解析卡顿。这是网络适配，不改判分/预算。
-RUN echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99bro2-retry && \
-    echo 'Acquire::http::Timeout "300";' >> /etc/apt/apt.conf.d/99bro2-retry && \
-    echo 'Acquire::https::Timeout "300";' >> /etc/apt/apt.conf.d/99bro2-retry && \
-    echo 'Acquire::Retries "4";' >> /etc/apt/apt.conf.d/99bro2-retry
-RUN apt-get update -qq && apt-get install -y -qq python3-pytest curl ca-certificates gnupg && \\
-    curl -fsSL --retry 3 --retry-all-errors https://deb.nodesource.com/setup_22.x | bash - && \\
-    apt-get install -y -qq nodejs && rm -rf /var/lib/apt/lists/*
+# 绕过 apt：本环境容器 apt 下载 8MB Packages 索引会卡死（pip/wget 直连却秒级），
+# 改用 pip 装 pytest + wget 装 Node22 官方 tar.gz（均实测 ~10s）。纯构建优化，不改判分/预算。
+RUN python3 -m pip install --no-cache-dir -q pytest && \
+    wget -q -O /tmp/node.tar.gz https://nodejs.org/dist/v22.13.0/node-v22.13.0-linux-x64.tar.gz && \
+    mkdir -p /usr/local/n22 && tar -xzf /tmp/node.tar.gz -C /usr/local/n22 --strip-components=1 && \
+    rm -f /tmp/node.tar.gz
+ENV PATH="/usr/local/n22/bin:${{PATH}}"
 COPY bro2/ /bro2/
 COPY tests/ /tests/
 RUN echo -n '{throttle_sha}' > /bro2/.throttle-sha
