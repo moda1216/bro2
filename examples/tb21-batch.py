@@ -273,7 +273,7 @@ def run_trial(task: str, repeat: int, tag: str) -> dict:
                  'cd /bro2 && AGENTOS_LIVE_PROVIDER=ovhcloud '
                  'NODE_OPTIONS="--import /bro2/ovh-throttle.mjs" '
                  'node --experimental-strip-types --no-warnings bin/agentos.ts run '
-                 '--model ovhcloud --strict --task "$(cat /app/instruction.md)" '
+                 '--model ovhcloud --task "$(cat /app/instruction.md)" '
                  '--preset standard --auto-approve --quiet'],
                 stdout=lf, stderr=subprocess.STDOUT, text=True,
             )
@@ -287,7 +287,7 @@ def run_trial(task: str, repeat: int, tag: str) -> dict:
         steps = int(m.group(1)) if m else None
         m = re.search(r"(\d+)\s*tokens", log, re.I)
         tokens = int(m.group(1)) if m else None
-        # 诚实红线：--strict 下若 provider 失败会报 provider_error；若日志出现 mock 字样，
+        # 诚实红线：provider 失败会报 provider_error；若 router 静默降级 mock 会出现 mock 字样，
         # 说明底层静默降级。两者都不得当有效 trial 计入 reward——判 error 并跳过 verifier。
         polluted = ("离线 Mock 模型驱动" in log) or ("provider_error" in log) or ("全部模型均不可用" in log)
         if polluted:

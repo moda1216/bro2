@@ -50,7 +50,6 @@ interface Flags {
   rounds?: number;
   all?: boolean;
   skipPreflight?: boolean;
-  strict?: boolean;
 }
 
 function parse(argv: string[]): Flags {
@@ -89,7 +88,6 @@ function parse(argv: string[]): Flags {
     else if (a === "--reset") flags.reset = true;
     else if (a === "--all") flags.all = true;
     else if (a === "--skip-preflight") flags.skipPreflight = true;
-    else if (a === "--strict") flags.strict = true;
   }
   if (flags.mode === "cli" && flags.task) flags.mode = "run";
   return flags;
@@ -301,10 +299,7 @@ else if (flags.mode === "benchmark") {
 }
 
 // ---------------------------------------------------------------- web / run / cli
-// 测量侧防污染开关：--strict 禁止 provider 失败时静默降级到 Mock（真实模型评测必须开）。
-// 默认 false，普通交互零影响；与 examples/ 下各测量脚本的 os.router.setStrict(true) 同源。
-if (flags.strict) os.router.setStrict(true);
-if (flags.mode === "web") {
+else if (flags.mode === "web") {
   const server = await startServer(os, {
     host: flags.host ?? os.config.server.host,
     port: flags.port ?? os.config.server.port,
