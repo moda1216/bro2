@@ -161,7 +161,8 @@ def prepare(task: str, img: str) -> str | None:
     # pip/wget 装 node 替代 apt）都让旧镜像作废重建，避免跑着旧 Dockerfile 的镜像。
     throttle_sha = hashlib.sha256(open(THROTTLE, "rb").read()).hexdigest()[:16]
     batch_sha = hashlib.sha256(open(os.path.abspath(__file__), "rb").read()).hexdigest()[:16]
-    fp = f"{throttle_sha}-{batch_sha}"
+    cli_sha = hashlib.sha256(open(os.path.join(ROOT, "bin", "agentos.ts"), "rb").read()).hexdigest()[:16]
+    fp = f"{throttle_sha}-{batch_sha}-{cli_sha}"
     if image_exists(tag):
         cp = run(["docker", "run", "--rm", tag, "python3", "-c",
                   "import json,os;"
@@ -272,7 +273,7 @@ def run_trial(task: str, repeat: int, tag: str) -> dict:
                  'cd /bro2 && AGENTOS_LIVE_PROVIDER=ovhcloud '
                  'NODE_OPTIONS="--import /bro2/ovh-throttle.mjs" '
                  'node --experimental-strip-types --no-warnings bin/agentos.ts run '
-                 '--model ovhcloud --task "$(cat /app/instruction.md)" '
+                 '--model ovhcloud --strict --task "$(cat /app/instruction.md)" '
                  '--preset standard --auto-approve --quiet'],
                 stdout=lf, stderr=subprocess.STDOUT, text=True,
             )
@@ -286,6 +287,14 @@ def run_trial(task: str, repeat: int, tag: str) -> dict:
         steps = int(m.group(1)) if m else None
         m = re.search(r"(\d+)\s*tokens", log, re.I)
         tokens = int(m.group(1)) if m else None
+        # 诚实红线：--strict 下若 provider 失败会报 provider_error；若日志出现 mock 字样，
+        # 说明底层静默降级。两者都不得当有效 trial 计入 reward——判 error 并跳过 verifier。
+        polluted = ("离线 Mock 模型驱动" in log) or ("provider_error" in log) or ("全部模型均不可用" in log)
+        if polluted:
+            kind = "mock-fallback" if "离线 Mock 模型驱动" in log else "provider-error"
+            return {"task": task, "repeat": repeat, "status": "error", "err": kind,
+                    "steps": steps, "tokens": tokens, "bro2_rc": bro2_rc,
+                    "wallSeconds": round(time.time() - t0, 1), "log": os.path.relpath(logf, ROOT), "ts": now()}
         # 关键：bro2 主进程退出后，其启动的解法子进程（如死循环的 Rscript）可能残留，
         # 会拖垮同容器的 verifier。先清理孤儿进程，仅保留 PID 1（容器 sleep）。
         run(["docker", "exec", cid, "bash", "-lc",
