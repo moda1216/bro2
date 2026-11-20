@@ -22,7 +22,7 @@ bro2 · Terminal-Bench 2.1 全量 89×3 批量评测（路径① 榜面对齐）
 """
 from __future__ import annotations
 
-import argparse, datetime as dt, json, os, re, shutil, subprocess, sys, time
+import argparse, datetime as dt, hashlib, json, os, re, shutil, subprocess, sys, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXT = os.path.join(ROOT, "data", "bench", "external")
@@ -152,11 +152,16 @@ def prepare(task: str, img: str) -> str | None:
 
     # 3) build wrapper（装 Node22 + pytest；注入 bro2 源码 / tests；对齐 workspace / 放宽预算）
     tag = f"bro2-tb21:{task}"
-    # 若已构建且预算配置与当前 BUDGET 一致，跳过重建；否则重建（配置变更前旧镜像作废）
+    # 版本指纹：BUDGET + throttle 脚本内容 hash。任一变更都让旧镜像作废重建，
+    # 避免改了限流策略却仍跑着注入旧脚本的镜像（v2：Retry-After/5xx 退避）。
+    throttle_sha = hashlib.sha256(open(THROTTLE, "rb").read()).hexdigest()[:16]
     if image_exists(tag):
         cp = run(["docker", "run", "--rm", tag, "python3", "-c",
-                  "import json;b=json.load(open('/bro2/agentos.config.json'))['budget'];"
-                  f"print(1 if (b['maxTokens']=={BUDGET['maxTokens']} and b['maxSeconds']=={BUDGET['maxSeconds']}) else 0)"])
+                  "import json,os;"
+                  "b=json.load(open('/bro2/agentos.config.json'))['budget'];"
+                  "t=open('/bro2/.throttle-sha').read().strip() if os.path.exists('/bro2/.throttle-sha') else '';"
+                  f"print(1 if (b['maxTokens']=={BUDGET['maxTokens']} and b['maxSeconds']=={BUDGET['maxSeconds']}"
+                  f" and t=='{throttle_sha}') else 0)"])
         if cp.stdout.strip() == "1":
             return tag
     bdir = os.path.join(w, "build")
@@ -183,6 +188,7 @@ RUN apt-get update -qq && apt-get install -y -qq python3-pytest curl ca-certific
     apt-get install -y -qq nodejs && rm -rf /var/lib/apt/lists/*
 COPY bro2/ /bro2/
 COPY tests/ /tests/
+RUN echo -n '{throttle_sha}' > /bro2/.throttle-sha
 RUN mkdir -p /logs/verifier && python3 - <<'PY'
 import json
 p='/bro2/agentos.config.json'; d=json.load(open(p)); b=d.setdefault('budget',{{}})

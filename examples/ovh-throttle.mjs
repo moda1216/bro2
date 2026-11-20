@@ -9,18 +9,27 @@
 //   AGENTOS_LIVE_PROVIDER=ovhcloud \
 //   node --experimental-strip-types bin/agentos.ts run --task "..." --preset standard
 //
+// 版本标记：改动此值时，tb21-batch.py 会检测到 wrapper 镜像内版本不一致并重建。
+// v2：遵守 Retry-After、429/5xx 均纳入节流节奏、重试耗尽仍返回原始响应。
+export const OVH_THROTTLE_VERSION = "v2";
+
 // 机制：
 //   - 相邻 ovhcloud 请求间隔 ≥31s（catalog rate_limit_api_anonymous 为 2 req/min，
 //     取 31s 留余量）；
-//   - 遇到 429 按同节奏（31s）等待并重试，最多 4 次；
+//   - 遇到 429 遵守 Retry-After（秒或 HTTP 日期），无头则按 31s 节奏等待，最多 6 次；
+//     每次尝试（含 429/5xx）都刷新 lastOvh，确保节奏不被打乱；
+//   - 5xx 视为一次消耗的配额，同样按节奏退避重试，最多 3 次；
+//   - 重试耗尽返回原始响应，由上层 harness 明确判失败（不伪造成功）；
 //   - 非 ovhcloud 的请求（如本地 mock / 其它 provider）不节流、原样透传。
 
 const OVH_HOST = "oai.endpoints.kepler.ai.cloud.ovh.net";
 const MIN_GAP_MS = 31_000;
-const MAX_429_RETRIES = 4;
+const MAX_429_RETRIES = 6;
+const MAX_5XX_RETRIES = 3;
 
 const rawFetch = globalThis.fetch.bind(globalThis);
 let lastOvh = 0;
+let last429At = 0;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -33,23 +42,52 @@ function hostOf(input) {
   }
 }
 
+function retryAfterMs(res) {
+  const h = res.headers && typeof res.headers.get === "function" ? res.headers.get("retry-after") : null;
+  if (!h) return 0;
+  const secs = Number(h);
+  if (Number.isFinite(secs)) return Math.max(0, secs * 1000);
+  const asDate = Date.parse(h);
+  if (Number.isFinite(asDate)) return Math.max(0, asDate - Date.now());
+  return 0;
+}
+
+async function paceGap() {
+  if (!lastOvh) return;
+  const gap = MIN_GAP_MS - (Date.now() - lastOvh);
+  if (gap > 0) await sleep(gap);
+}
+
 async function throttled(input, init) {
   const host = hostOf(input);
   const isOvh = host === OVH_HOST;
-  if (isOvh) {
-    const gap = MIN_GAP_MS - (Date.now() - lastOvh);
-    if (gap > 0) await sleep(gap);
-  }
-  for (let i = 0; i <= MAX_429_RETRIES; i += 1) {
+  if (isOvh) await paceGap();
+
+  let retried429 = 0;
+  let retried5xx = 0;
+  for (;;) {
     const res = await rawFetch(input, init);
-    if (res.status !== 429) {
-      if (isOvh) lastOvh = Date.now();
-      return res;
+    if (!isOvh) return res;
+
+    // 每次请求都刷新节奏基准——配额已被消耗，无论响应状态。
+    lastOvh = Date.now();
+
+    if (res.status === 429) {
+      if (retried429 >= MAX_429_RETRIES) return res;
+      retried429 += 1;
+      last429At = Date.now();
+      const wait = Math.max(retryAfterMs(res), MIN_GAP_MS, MIN_GAP_MS * retried429);
+      await sleep(wait);
+      continue;
     }
-    if (i === MAX_429_RETRIES) return res;
-    await sleep(MIN_GAP_MS);
+    if (res.status >= 500) {
+      if (retried5xx >= MAX_5XX_RETRIES) return res;
+      retried5xx += 1;
+      await sleep(MIN_GAP_MS * retried5xx);
+      continue;
+    }
+    return res;
   }
-  return rawFetch(input, init);
 }
 
 globalThis.fetch = (input, init) => throttled(input, init);
