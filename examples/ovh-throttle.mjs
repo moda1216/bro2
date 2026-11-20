@@ -73,11 +73,11 @@ async function throttled(input, init) {
     try {
       res = await rawFetch(input, init);
     } catch (err) {
-      // 网络层瞬时错误（socket/连接复位）——匿名层偶发，按节奏退避重试。
+      // 网络层瞬时错误（socket/连接复位）——失败的连接不消耗 API 配额，无需 31s 限速节奏，
+      // 用短指数退避（2s→4s→8s→16s→32s，合计 ~62s）快速重试，避免拖垮每次调用。
       if (isOvh && retriedNet < MAX_NET_RETRIES) {
         retriedNet += 1;
-        lastOvh = Date.now();
-        await sleep(MIN_GAP_MS * retriedNet);
+        await sleep(Math.min(2000 * 2 ** (retriedNet - 1), 32_000));
         continue;
       }
       throw err; // 耗尽后抛原错误，harness 判 provider_error（绝不伪造 mock 成功）
