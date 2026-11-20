@@ -157,16 +157,18 @@ def prepare(task: str, img: str) -> str | None:
 
     # 3) build wrapper（装 Node22 + pytest；注入 bro2 源码 / tests；对齐 workspace / 放宽预算）
     tag = f"bro2-tb21:{task}"
-    # 版本指纹：BUDGET + throttle 脚本内容 hash。任一变更都让旧镜像作废重建，
-    # 避免改了限流策略却仍跑着注入旧脚本的镜像（v2：Retry-After/5xx 退避）。
+    # 版本指纹：BUDGET + throttle 脚本 hash + 本构建脚本 hash。任一变更（含构建逻辑如
+    # pip/wget 装 node 替代 apt）都让旧镜像作废重建，避免跑着旧 Dockerfile 的镜像。
     throttle_sha = hashlib.sha256(open(THROTTLE, "rb").read()).hexdigest()[:16]
+    batch_sha = hashlib.sha256(open(os.path.abspath(__file__), "rb").read()).hexdigest()[:16]
+    fp = f"{throttle_sha}-{batch_sha}"
     if image_exists(tag):
         cp = run(["docker", "run", "--rm", tag, "python3", "-c",
                   "import json,os;"
                   "b=json.load(open('/bro2/agentos.config.json'))['budget'];"
                   "t=open('/bro2/.throttle-sha').read().strip() if os.path.exists('/bro2/.throttle-sha') else '';"
                   f"print(1 if (b['maxTokens']=={BUDGET['maxTokens']} and b['maxSeconds']=={BUDGET['maxSeconds']}"
-                  f" and t=='{throttle_sha}') else 0)"])
+                  f" and t=='{fp}') else 0)"])
         if cp.stdout.strip() == "1":
             return tag
     bdir = os.path.join(w, "build")
@@ -194,10 +196,13 @@ RUN python3 -m pip install --no-cache-dir -q pytest && \
     wget -q -O /tmp/node.tar.gz https://nodejs.org/dist/v22.13.0/node-v22.13.0-linux-x64.tar.gz && \
     mkdir -p /usr/local/n22 && tar -xzf /tmp/node.tar.gz -C /usr/local/n22 --strip-components=1 && \
     rm -f /tmp/node.tar.gz
-ENV PATH="/usr/local/n22/bin:${{PATH}}"
+# bash -lc 登录 shell 会重置 PATH，故软链到 /usr/local/bin（默认 PATH 内含）确保 node 可见。
+RUN ln -sf /usr/local/n22/bin/node /usr/local/bin/node && \
+    ln -sf /usr/local/n22/bin/npm /usr/local/bin/npm && \
+    ln -sf /usr/local/n22/bin/npx /usr/local/bin/npx
 COPY bro2/ /bro2/
 COPY tests/ /tests/
-RUN echo -n '{throttle_sha}' > /bro2/.throttle-sha
+RUN echo -n '{fp}' > /bro2/.throttle-sha
 RUN mkdir -p /logs/verifier && python3 - <<'PY'
 import json
 p='/bro2/agentos.config.json'; d=json.load(open(p)); b=d.setdefault('budget',{{}})
