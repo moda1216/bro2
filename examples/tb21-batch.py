@@ -51,7 +51,12 @@ def run(cmd: list[str], *, timeout: int | None = None, check: bool = False) -> s
     try:
         cp = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired as e:
-        return subprocess.CompletedProcess(cmd, 124, (e.stdout or ""), (e.stderr or "") + "\n[timeout]")
+        # text=True 下超时异常里 stdout/stderr 可能是 bytes，统一解码再拼接。
+        def dec(x):
+            if x is None:
+                return ""
+            return x.decode("utf-8", "replace") if isinstance(x, bytes) else x
+        return subprocess.CompletedProcess(cmd, 124, dec(e.stdout), dec(e.stderr) + "\n[timeout]")
     if check and cp.returncode != 0:
         raise RuntimeError(f"cmd failed ({cp.returncode}): {' '.join(cmd)}\n{cp.stdout[-800:]}\n{cp.stderr[-800:]}")
     return cp
@@ -183,8 +188,10 @@ def prepare(task: str, img: str) -> str | None:
     shutil.copytree(os.path.join(w, "tests"), os.path.join(bdir, "tests"), dirs_exist_ok=True)
 
     dockerfile = f"""FROM {img}
+# apt 网络抖动防护：单次下载超时 60s、重试 3 次，避免偶发卡顿拖垮整层 build。
+RUN echo 'Acquire::http::Timeout "60"; Acquire::https::Timeout "60"; Acquire::Retries "3";' > /etc/apt/apt.conf.d/99bro2-retry
 RUN apt-get update -qq && apt-get install -y -qq python3-pytest curl ca-certificates gnupg && \\
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \\
+    curl -fsSL --retry 3 --retry-all-errors https://deb.nodesource.com/setup_22.x | bash - && \\
     apt-get install -y -qq nodejs && rm -rf /var/lib/apt/lists/*
 COPY bro2/ /bro2/
 COPY tests/ /tests/
@@ -202,7 +209,8 @@ PY
 WORKDIR /bro2
 """
     open(os.path.join(bdir, "Dockerfile"), "w").write(dockerfile)
-    cp = run(["docker", "build", "-t", tag, bdir], timeout=900)
+    # 慢网络下 apt/node 安装可能 >15min，放宽到 30min；超时按失败处理让上层重试。
+    cp = run(["docker", "build", "-t", tag, bdir], timeout=1800)
     if cp.returncode != 0:
         return None
     return tag
