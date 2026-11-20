@@ -188,8 +188,9 @@ def prepare(task: str, img: str) -> str | None:
     shutil.copytree(os.path.join(w, "tests"), os.path.join(bdir, "tests"), dirs_exist_ok=True)
 
     dockerfile = f"""FROM {img}
-# apt 网络抖动防护：单次下载超时 60s、重试 3 次，避免偶发卡顿拖垮整层 build。
-RUN echo 'Acquire::http::Timeout "60"; Acquire::https::Timeout "60"; Acquire::Retries "3";' > /etc/apt/apt.conf.d/99bro2-retry
+# apt 防护：容器内 apt 下载大索引（如 Packages 8MB）慢但非不通——给足超时 300s + 重试 4 次，
+# 强制 IPv4 避免 IPv6 优先解析卡顿。这是网络适配，不改判分/预算。
+RUN printf 'Acquire::ForceIPv4 "true";\nAcquire::http::Timeout "300";\nAcquire::https::Timeout "300";\nAcquire::Retries "4";\n' > /etc/apt/apt.conf.d/99bro2-retry
 RUN apt-get update -qq && apt-get install -y -qq python3-pytest curl ca-certificates gnupg && \\
     curl -fsSL --retry 3 --retry-all-errors https://deb.nodesource.com/setup_22.x | bash - && \\
     apt-get install -y -qq nodejs && rm -rf /var/lib/apt/lists/*
