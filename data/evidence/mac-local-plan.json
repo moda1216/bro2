@@ -1,0 +1,485 @@
+{
+  "generatedAt": "2026-11-23T06:33:43.326Z",
+  "version": "p1-mac-local-adapter-v1",
+  "purpose": "24G 统一内存 Mac 本地推理：第一性原理内存预算 + 两条后端路径可复制配置 + 断网/无key契约校验",
+  "hardware": {
+    "unifiedGB": 24,
+    "reservedGB": 4,
+    "usableGB": 20,
+    "overheadGB": 1.5,
+    "kvBytes": 2,
+    "minCtx": 4096,
+    "note": "统一内存为 CPU/GPU 共享；预留 4G 给系统，避免 swap 把 tokens/s 打崩。"
+  },
+  "quantBits": {
+    "Q4_K_M": 4.85,
+    "Q5_K_M": 5.75,
+    "Q8_0": 8.5,
+    "F16": 16
+  },
+  "budgetTable": [
+    {
+      "model": "Qwen2.5-0.5B",
+      "quant": "Q4_K_M",
+      "weightGB": 0.3,
+      "kvGB": 0.05,
+      "overheadGB": 1.5,
+      "totalGB": 1.85,
+      "fits": true,
+      "context": "项目已实测基线（llama.cpp）",
+      "formula": "w=0.5B×4.85bit/8 + kv=2×24×4096×2×64×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-0.5B",
+      "quant": "Q5_K_M",
+      "weightGB": 0.36,
+      "kvGB": 0.05,
+      "overheadGB": 1.5,
+      "totalGB": 1.91,
+      "fits": true,
+      "context": "项目已实测基线（llama.cpp）",
+      "formula": "w=0.5B×5.75bit/8 + kv=2×24×4096×2×64×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-0.5B",
+      "quant": "Q8_0",
+      "weightGB": 0.53,
+      "kvGB": 0.05,
+      "overheadGB": 1.5,
+      "totalGB": 2.08,
+      "fits": true,
+      "context": "项目已实测基线（llama.cpp）",
+      "formula": "w=0.5B×8.5bit/8 + kv=2×24×4096×2×64×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-0.5B",
+      "quant": "F16",
+      "weightGB": 1,
+      "kvGB": 0.05,
+      "overheadGB": 1.5,
+      "totalGB": 2.55,
+      "fits": true,
+      "context": "项目已实测基线（llama.cpp）",
+      "formula": "w=0.5B×16bit/8 + kv=2×24×4096×2×64×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-1.5B",
+      "quant": "Q4_K_M",
+      "weightGB": 0.91,
+      "kvGB": 0.12,
+      "overheadGB": 1.5,
+      "totalGB": 2.53,
+      "fits": true,
+      "context": "项目已实测基线（llama.cpp）",
+      "formula": "w=1.5B×4.85bit/8 + kv=2×28×4096×2×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-1.5B",
+      "quant": "Q5_K_M",
+      "weightGB": 1.08,
+      "kvGB": 0.12,
+      "overheadGB": 1.5,
+      "totalGB": 2.7,
+      "fits": true,
+      "context": "项目已实测基线（llama.cpp）",
+      "formula": "w=1.5B×5.75bit/8 + kv=2×28×4096×2×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-1.5B",
+      "quant": "Q8_0",
+      "weightGB": 1.59,
+      "kvGB": 0.12,
+      "overheadGB": 1.5,
+      "totalGB": 3.21,
+      "fits": true,
+      "context": "项目已实测基线（llama.cpp）",
+      "formula": "w=1.5B×8.5bit/8 + kv=2×28×4096×2×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-1.5B",
+      "quant": "F16",
+      "weightGB": 3,
+      "kvGB": 0.12,
+      "overheadGB": 1.5,
+      "totalGB": 4.62,
+      "fits": true,
+      "context": "项目已实测基线（llama.cpp）",
+      "formula": "w=1.5B×16bit/8 + kv=2×28×4096×2×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-3B",
+      "quant": "Q4_K_M",
+      "weightGB": 1.82,
+      "kvGB": 0.15,
+      "overheadGB": 1.5,
+      "totalGB": 3.47,
+      "fits": true,
+      "context": "项目已实测（8GB 下 OOM，One 24G 可容纳）",
+      "formula": "w=3B×4.85bit/8 + kv=2×36×4096×2×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-3B",
+      "quant": "Q5_K_M",
+      "weightGB": 2.16,
+      "kvGB": 0.15,
+      "overheadGB": 1.5,
+      "totalGB": 3.81,
+      "fits": true,
+      "context": "项目已实测（8GB 下 OOM，One 24G 可容纳）",
+      "formula": "w=3B×5.75bit/8 + kv=2×36×4096×2×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-3B",
+      "quant": "Q8_0",
+      "weightGB": 3.19,
+      "kvGB": 0.15,
+      "overheadGB": 1.5,
+      "totalGB": 4.84,
+      "fits": true,
+      "context": "项目已实测（8GB 下 OOM，One 24G 可容纳）",
+      "formula": "w=3B×8.5bit/8 + kv=2×36×4096×2×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-3B",
+      "quant": "F16",
+      "weightGB": 6,
+      "kvGB": 0.15,
+      "overheadGB": 1.5,
+      "totalGB": 7.65,
+      "fits": true,
+      "context": "项目已实测（8GB 下 OOM，One 24G 可容纳）",
+      "formula": "w=3B×16bit/8 + kv=2×36×4096×2×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-7B",
+      "quant": "Q4_K_M",
+      "weightGB": 4.24,
+      "kvGB": 0.23,
+      "overheadGB": 1.5,
+      "totalGB": 5.97,
+      "fits": true,
+      "context": "24G Q4 主力候选",
+      "formula": "w=7B×4.85bit/8 + kv=2×28×4096×4×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-7B",
+      "quant": "Q5_K_M",
+      "weightGB": 5.03,
+      "kvGB": 0.23,
+      "overheadGB": 1.5,
+      "totalGB": 6.76,
+      "fits": true,
+      "context": "24G Q4 主力候选",
+      "formula": "w=7B×5.75bit/8 + kv=2×28×4096×4×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-7B",
+      "quant": "Q8_0",
+      "weightGB": 7.44,
+      "kvGB": 0.23,
+      "overheadGB": 1.5,
+      "totalGB": 9.17,
+      "fits": true,
+      "context": "24G Q4 主力候选",
+      "formula": "w=7B×8.5bit/8 + kv=2×28×4096×4×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-7B",
+      "quant": "F16",
+      "weightGB": 14,
+      "kvGB": 0.23,
+      "overheadGB": 1.5,
+      "totalGB": 15.73,
+      "fits": true,
+      "context": "24G Q4 主力候选",
+      "formula": "w=7B×16bit/8 + kv=2×28×4096×4×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-14B",
+      "quant": "Q4_K_M",
+      "weightGB": 8.49,
+      "kvGB": 0.81,
+      "overheadGB": 1.5,
+      "totalGB": 10.8,
+      "fits": true,
+      "context": "24G Q4 上限候选",
+      "formula": "w=14B×4.85bit/8 + kv=2×48×4096×8×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-14B",
+      "quant": "Q5_K_M",
+      "weightGB": 10.06,
+      "kvGB": 0.81,
+      "overheadGB": 1.5,
+      "totalGB": 12.37,
+      "fits": true,
+      "context": "24G Q4 上限候选",
+      "formula": "w=14B×5.75bit/8 + kv=2×48×4096×8×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-14B",
+      "quant": "Q8_0",
+      "weightGB": 14.88,
+      "kvGB": 0.81,
+      "overheadGB": 1.5,
+      "totalGB": 17.19,
+      "fits": true,
+      "context": "24G Q4 上限候选",
+      "formula": "w=14B×8.5bit/8 + kv=2×48×4096×8×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-14B",
+      "quant": "F16",
+      "weightGB": 28,
+      "kvGB": 0.81,
+      "overheadGB": 1.5,
+      "totalGB": 30.31,
+      "fits": false,
+      "context": "24G Q4 上限候选",
+      "formula": "w=14B×16bit/8 + kv=2×48×4096×8×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-32B",
+      "quant": "Q4_K_M",
+      "weightGB": 19.4,
+      "kvGB": 1.07,
+      "overheadGB": 1.5,
+      "totalGB": 21.97,
+      "fits": false,
+      "context": "24G 装不下（反证用例）",
+      "formula": "w=32B×4.85bit/8 + kv=2×64×4096×8×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-32B",
+      "quant": "Q5_K_M",
+      "weightGB": 23,
+      "kvGB": 1.07,
+      "overheadGB": 1.5,
+      "totalGB": 25.57,
+      "fits": false,
+      "context": "24G 装不下（反证用例）",
+      "formula": "w=32B×5.75bit/8 + kv=2×64×4096×8×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-32B",
+      "quant": "Q8_0",
+      "weightGB": 34,
+      "kvGB": 1.07,
+      "overheadGB": 1.5,
+      "totalGB": 36.57,
+      "fits": false,
+      "context": "24G 装不下（反证用例）",
+      "formula": "w=32B×8.5bit/8 + kv=2×64×4096×8×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-32B",
+      "quant": "F16",
+      "weightGB": 64,
+      "kvGB": 1.07,
+      "overheadGB": 1.5,
+      "totalGB": 66.57,
+      "fits": false,
+      "context": "24G 装不下（反证用例）",
+      "formula": "w=32B×16bit/8 + kv=2×64×4096×8×128×2B + oh=1.5G"
+    }
+  ],
+  "recommendedQ4": [
+    {
+      "model": "Qwen2.5-14B",
+      "quant": "Q4_K_M",
+      "weightGB": 8.49,
+      "kvGB": 0.81,
+      "overheadGB": 1.5,
+      "totalGB": 10.8,
+      "fits": true,
+      "context": "24G Q4 上限候选",
+      "formula": "w=14B×4.85bit/8 + kv=2×48×4096×8×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-7B",
+      "quant": "Q4_K_M",
+      "weightGB": 4.24,
+      "kvGB": 0.23,
+      "overheadGB": 1.5,
+      "totalGB": 5.97,
+      "fits": true,
+      "context": "24G Q4 主力候选",
+      "formula": "w=7B×4.85bit/8 + kv=2×28×4096×4×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-3B",
+      "quant": "Q4_K_M",
+      "weightGB": 1.82,
+      "kvGB": 0.15,
+      "overheadGB": 1.5,
+      "totalGB": 3.47,
+      "fits": true,
+      "context": "项目已实测（8GB 下 OOM，One 24G 可容纳）",
+      "formula": "w=3B×4.85bit/8 + kv=2×36×4096×2×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-1.5B",
+      "quant": "Q4_K_M",
+      "weightGB": 0.91,
+      "kvGB": 0.12,
+      "overheadGB": 1.5,
+      "totalGB": 2.53,
+      "fits": true,
+      "context": "项目已实测基线（llama.cpp）",
+      "formula": "w=1.5B×4.85bit/8 + kv=2×28×4096×2×128×2B + oh=1.5G"
+    },
+    {
+      "model": "Qwen2.5-0.5B",
+      "quant": "Q4_K_M",
+      "weightGB": 0.3,
+      "kvGB": 0.05,
+      "overheadGB": 1.5,
+      "totalGB": 1.85,
+      "fits": true,
+      "context": "项目已实测基线（llama.cpp）",
+      "formula": "w=0.5B×4.85bit/8 + kv=2×24×4096×2×64×2B + oh=1.5G"
+    }
+  ],
+  "paths": [
+    {
+      "backend": "mlx",
+      "why": "Apple Silicon 原生 MLX，统一内存零拷贝；适合 24G Mac 上 Q4 量化推理。",
+      "startCommand": "# 需 pip install mlx-lm；模型用 mlx-community 的 4bit 转换版\npython3.11 -m mlx_lm.server --model mlx-community/Qwen2.5-7B-Instruct-4bit --port 11434 --ctx 4096 --temperature 0",
+      "providerConfig": {
+        "type": "openai",
+        "baseUrl": "http://127.0.0.1:11434/v1",
+        "model": "mlx-community/Qwen2.5-7B-Instruct-4bit",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "stream": true,
+        "timeoutMs": 120000,
+        "maxRetries": 2
+      },
+      "toolCallPrecheck": [
+        "npm run preflight（或 provider.probe()）必须判 toolCalling=native",
+        "若返回 text-json：换 chatml-function-calling 模板或在 system prompt 强引导后重测"
+      ],
+      "caveats": [
+        "mlx-lm server 的 tool_calls 支持取决于具体模型的 chat template；未在真机验证前不得当作 PASS",
+        "tokens/s 与量化精度损失需真机 powermetrics + 基准回填（一手素材缺口）"
+      ]
+    },
+    {
+      "backend": "llama.cpp-gguf",
+      "why": "llama.cpp 在 24G Mac 走 Metal；配置命令沿用项目已实测的 0.5B/1.5B 链路，仅放大 ctx/memory。",
+      "startCommand": "# 需 pip install llama-cpp-python sse-starlette starlette-context pydantic-settings\npython3.11 -m llama_cpp.server --model ${BRO2_LOCAL_GGUF:-$HOME/.cache/bro2-llm/qwen2.5-7b.Q4_K_M.gguf} --model_alias qwen2.5:7b --host 127.0.0.1 --port 11434 --n_ctx 4096 --n_threads 8 --n_batch 128 --chat_format chatml-function-calling --verbose false",
+      "providerConfig": {
+        "type": "openai",
+        "baseUrl": "http://127.0.0.1:11434/v1",
+        "model": "qwen2.5:7b",
+        "apiKeyOptional": true,
+        "includeUsage": true,
+        "stream": false,
+        "maxTokens": 256,
+        "timeoutMs": 180000,
+        "maxRetries": 2
+      },
+      "toolCallPrecheck": [
+        "warmup：非流式 + tools 请求须返回规范 tool_calls（项目实测 10.3s @1.5B）",
+        "probe() 必须判 toolCalling=native；text-json/unsupported 一律不得进入 live"
+      ],
+      "caveats": [
+        "stream 必须 false（ENDPOINT-HEALTH §7 已证 stream:true 工具调用零输出）",
+        "n_ctx 必须 ≥ 4096；2048 撞 HTTP 400（system+tools≈3700 tokens）"
+      ]
+    }
+  ],
+  "existingAnchors": [
+    {
+      "name": "local-qwen",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "model": "qwen2.5:0.5b"
+    },
+    {
+      "name": "local-qwen3b",
+      "baseUrl": "http://127.0.0.1:11435/v1",
+      "model": "qwen2.5:3b"
+    },
+    {
+      "name": "local-qwen15b",
+      "baseUrl": "http://127.0.0.1:11436/v1",
+      "model": "qwen2.5:1.5b",
+      "stream": false
+    }
+  ],
+  "contracts": [
+    {
+      "id": "mlx.loopback",
+      "ok": true,
+      "detail": "baseUrl=http://127.0.0.1:11434/v1"
+    },
+    {
+      "id": "mlx.nokey",
+      "ok": true,
+      "detail": "apiKeyOptional=true（断网/无 key 可跑）"
+    },
+    {
+      "id": "mlx.precheck",
+      "ok": true,
+      "detail": "2 条 tool_calls 预检"
+    },
+    {
+      "id": "llama.cpp-gguf.loopback",
+      "ok": true,
+      "detail": "baseUrl=http://127.0.0.1:11434/v1"
+    },
+    {
+      "id": "llama.cpp-gguf.nokey",
+      "ok": true,
+      "detail": "apiKeyOptional=true（断网/无 key 可跑）"
+    },
+    {
+      "id": "llama.cpp-gguf.precheck",
+      "ok": true,
+      "detail": "2 条 tool_calls 预检"
+    },
+    {
+      "id": "llama.cpp-gguf.nonstream",
+      "ok": true,
+      "detail": "stream=false（避开 chatml 流式工具陷阱）"
+    },
+    {
+      "id": "llama.cpp-gguf.ctx",
+      "ok": true,
+      "detail": "n_ctx=4096（≥3700 硬需求）"
+    },
+    {
+      "id": "anchor.localProviders",
+      "ok": true,
+      "detail": "3 个 local-* 锚点均为回环地址"
+    },
+    {
+      "id": "budget.falsifiable",
+      "ok": true,
+      "detail": "5 组合判 not-fits（含 32B F16=66.57G>20G）"
+    },
+    {
+      "id": "budget.recommends",
+      "ok": true,
+      "detail": "7B Q4_K_M fits（有可用主力候选）"
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "passed": 11,
+    "failed": 0
+  },
+  "verdict": "contract-green",
+  "honest": {
+    "scope": "预算可复算 + 配置自洽 + 契约满足；非真机性能证明",
+    "notMeasuredInSandbox": [
+      "tokens/s",
+      "峰值内存实测",
+      "量化精度损失",
+      "真机 tool_calls 通过率"
+    ],
+    "reason": "本沙箱 8GB Linux，无 Apple Silicon / MLX / GPU；真机基准是 REWRITE-BRIEF §3 一手素材缺口，须人工回填",
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}

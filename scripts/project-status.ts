@@ -1,12 +1,10 @@
 /**
  * bro2 · 产出物健康度聚合器（project:status）
  * ----------------------------------------------------------
- * 复跑全部离线验收门禁，把分散的 "产出物验收脚本" 聚合成一张
- * "产出物健康度" 报告。CI 与本地均可用。
+ * 复跑全部离线验收门禁，把分散的验收脚本聚合成一张健康度报告；CI 与本地均可用。
  *
- * 设计原则：
- *  - 零依赖（仅 Node 内置模块）；失败 → 退出码非 0（CI 据此阻断）；
- *  - 每门禁只取可信 "退出码" 判定，摘要行仅用于展示。
+ * 设计原则：零依赖（仅 Node 内置模块）；失败 → 退出码非 0（CI 据此阻断）；
+ * 每门禁只取可信 "退出码" 判定，摘要行仅用于展示。
  *
  * 用法：npm run project:status
  */
@@ -49,6 +47,8 @@ const GATES: Gate[] = [
   { id: "ledger", label: "只增账本 git 历史完整性（journal/lessons 跨 commit 不可删改）", cmd: "npm run ledger:check", timeoutMs: 60_000, gate: true },
   { id: "evidence", label: "P0 独立证据重算（inter-rater：独立实现 vs 运行时尺子）", cmd: "npm run evidence:recompute", timeoutMs: 60_000, gate: true },
   { id: "redteam", label: "P0 红队安全基线（路径/命令/脱敏/越权/尺子完整性）", cmd: "npm run redteam:baseline", timeoutMs: 60_000, gate: true },
+  { id: "maclocal", label: "P1 本地自治（24G Mac 预算/双后端配置/断网无key契约）", cmd: "npm run mac:local", timeoutMs: 60_000, gate: true },
+  { id: "failover", label: "P1 端点失效零污染（8/8超时+断网闭环+可证伪对照）", cmd: "npm run failover:proof", timeoutMs: 120_000, gate: true },
   { id: "livesmoke", label: "live 链路自检（仿真，非能力分）", cmd: "npm run live:smoke", timeoutMs: 60_000, gate: false },
 ];
 

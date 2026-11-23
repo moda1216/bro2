@@ -1,0 +1,241 @@
+{
+  "generatedAt": "2026-11-23T06:33:43.605Z",
+  "version": "p1-failover-proof-v1",
+  "purpose": "端点失效降级零污染出口条件：8/8 超时零 reward + 断网闭环跑通 + 证据环防污染 + 可证伪对照",
+  "scenarios": [
+    {
+      "id": "A",
+      "name": "strict 8/8 超时零污染",
+      "detail": "strict 模式下连续 8 次全超时：8/8 判 error、0 个 mock 进入成功路径、0 reward 可计",
+      "pass": true,
+      "evidence": {
+        "total": 8,
+        "countedRewards": 0,
+        "mockInSuccess": 0,
+        "trials": [
+          {
+            "ok": false,
+            "provider": "(none)",
+            "text": "ERROR 全部模型均不可用 → dead: fetch failed: ETIMEDOUT connection timed out (injected fault)",
+            "countedReward": false,
+            "kind": "provider-error"
+          },
+          {
+            "ok": false,
+            "provider": "(none)",
+            "text": "ERROR 全部模型均不可用 → dead: fetch failed: ETIMEDOUT connection timed out (injected fault)",
+            "countedReward": false,
+            "kind": "provider-error"
+          },
+          {
+            "ok": false,
+            "provider": "(none)",
+            "text": "ERROR 全部模型均不可用 → dead: fetch failed: ETIMEDOUT connection timed out (injected fault)",
+            "countedReward": false,
+            "kind": "provider-error"
+          },
+          {
+            "ok": false,
+            "provider": "(none)",
+            "text": "ERROR 全部模型均不可用 → dead: 熔断冷却中",
+            "countedReward": false,
+            "kind": "provider-error"
+          },
+          {
+            "ok": false,
+            "provider": "(none)",
+            "text": "ERROR 全部模型均不可用 → dead: 熔断冷却中",
+            "countedReward": false,
+            "kind": "provider-error"
+          },
+          {
+            "ok": false,
+            "provider": "(none)",
+            "text": "ERROR 全部模型均不可用 → dead: 熔断冷却中",
+            "countedReward": false,
+            "kind": "provider-error"
+          },
+          {
+            "ok": false,
+            "provider": "(none)",
+            "text": "ERROR 全部模型均不可用 → dead: 熔断冷却中",
+            "countedReward": false,
+            "kind": "provider-error"
+          },
+          {
+            "ok": false,
+            "provider": "(none)",
+            "text": "ERROR 全部模型均不可用 → dead: 熔断冷却中",
+            "countedReward": false,
+            "kind": "provider-error"
+          }
+        ]
+      }
+    },
+    {
+      "id": "B",
+      "name": "可证伪对照 non-strict",
+      "detail": "关闭 strict 后超时会降级到 mock：router 出现成功响应，但证据环按 mock 关键词拒绝计分",
+      "pass": true,
+      "evidence": {
+        "routerRawSuccess": 8,
+        "mockInSuccess": 8,
+        "countedRewardsAfterEvidenceRing": 0,
+        "falsification": "若 A 与 B 的 countedRewards 相同（都为0且B无mock成功），则 strict/证据环是哑弹 → FAIL",
+        "trials": [
+          {
+            "ok": true,
+            "provider": "mock",
+            "text": "provider=mock content=我先列个计划，然后逐步执行。",
+            "countedReward": false,
+            "kind": "mock-fallback"
+          },
+          {
+            "ok": true,
+            "provider": "mock",
+            "text": "provider=mock content=我先列个计划，然后逐步执行。",
+            "countedReward": false,
+            "kind": "mock-fallback"
+          },
+          {
+            "ok": true,
+            "provider": "mock",
+            "text": "provider=mock content=我先列个计划，然后逐步执行。",
+            "countedReward": false,
+            "kind": "mock-fallback"
+          },
+          {
+            "ok": true,
+            "provider": "mock",
+            "text": "provider=mock content=我先列个计划，然后逐步执行。",
+            "countedReward": false,
+            "kind": "mock-fallback"
+          },
+          {
+            "ok": true,
+            "provider": "mock",
+            "text": "provider=mock content=我先列个计划，然后逐步执行。",
+            "countedReward": false,
+            "kind": "mock-fallback"
+          },
+          {
+            "ok": true,
+            "provider": "mock",
+            "text": "provider=mock content=我先列个计划，然后逐步执行。",
+            "countedReward": false,
+            "kind": "mock-fallback"
+          },
+          {
+            "ok": true,
+            "provider": "mock",
+            "text": "provider=mock content=我先列个计划，然后逐步执行。",
+            "countedReward": false,
+            "kind": "mock-fallback"
+          },
+          {
+            "ok": true,
+            "provider": "mock",
+            "text": "provider=mock content=我先列个计划，然后逐步执行。",
+            "countedReward": false,
+            "kind": "mock-fallback"
+          }
+        ]
+      }
+    },
+    {
+      "id": "C",
+      "name": "断网跑通闭环",
+      "detail": "无云端/无 key 的本地端点 + strict：完整任务跑通，含原生 tool_calls，provider=ollama 而非 mock",
+      "pass": true,
+      "evidence": {
+        "stoppedBy": "completed",
+        "steps": 1,
+        "toolCalls": 1,
+        "answer": "任务完成。工具返回：sum([7,8,15]) = 30。合计 30。",
+        "requestLog": [
+          {
+            "stream": true,
+            "hasTools": true,
+            "hasAuth": false
+          },
+          {
+            "stream": true,
+            "hasTools": true,
+            "hasAuth": false
+          }
+        ],
+        "simulationNote": "OpenAI 兼容协议仿真（无 Ollama/GPU），非真机能力分"
+      }
+    },
+    {
+      "id": "D",
+      "name": "证据环防污染判定（agent 之外）",
+      "detail": "复现 batch.py 判定：provider_error / 全部模型均不可用 / mock 兜底一律拦，干净响应放行",
+      "pass": true,
+      "evidence": {
+        "cases": [
+          {
+            "name": "provider_error 日志",
+            "text": "stoppedBy=provider_error",
+            "expectBlock": true,
+            "actualBlock": true,
+            "kind": "provider-error"
+          },
+          {
+            "name": "全部模型均不可用",
+            "text": "Error: 全部模型均不可用 → dead: timeout",
+            "expectBlock": true,
+            "actualBlock": true,
+            "kind": "provider-error"
+          },
+          {
+            "name": "mock 兜底终答",
+            "text": "本次由离线 Mock 模型驱动",
+            "expectBlock": true,
+            "actualBlock": true,
+            "kind": "mock-fallback"
+          },
+          {
+            "name": "mock 单步响应(P1发现)",
+            "text": "provider=mock content=我先列个计划",
+            "expectBlock": true,
+            "actualBlock": true,
+            "kind": "mock-fallback"
+          },
+          {
+            "name": "mock 降级前缀",
+            "text": "provider=keyless/mock content=...",
+            "expectBlock": true,
+            "actualBlock": true,
+            "kind": "mock-fallback"
+          },
+          {
+            "name": "干净成功响应",
+            "text": "provider=ollama/... content=任务完成",
+            "expectBlock": false,
+            "actualBlock": false,
+            "kind": "clean"
+          }
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0
+  },
+  "verdict": "zero-pollution-proven",
+  "honest": {
+    "scope": "进程内故障注入 + OpenAI 兼容协议仿真；证明错误分类与计分闸门正确，非能力分数",
+    "notProven": [
+      "真机 Ollama/MLX 断网能力",
+      "89×3 全量任务通过率",
+      "量化精度损失"
+    ],
+    "separation": "端点失效（provider_error）= 基础设施问题；数据污染（mock 计分）= 诚实红线。二者分开记录、互不混报（R6）",
+    "p1Finding": "batch.py 原仅匹配 agent 终答中文标记；证据环加宽为优先认 provider=mock 机器字段（泄漏最早发生处）。建议后续把该字段判据回填 tb21-batch.py，属 P2 轨迹留痕范畴，本版不改评测脚本以免动冻结流程。",
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}

@@ -47,6 +47,8 @@
     "content:address": "node --experimental-strip-types --no-warnings examples/content-address.ts",
     "content:verify": "node --experimental-strip-types --no-warnings examples/content-address.ts --verify",
     "redteam:baseline": "node --experimental-strip-types --no-warnings examples/redteam-baseline.ts",
+    "mac:local": "node --experimental-strip-types --no-warnings examples/mac-local/adapter.ts",
+    "failover:proof": "node --experimental-strip-types --no-warnings examples/mac-local/failover-proof.ts",
     "ship": "sh scripts/ship.sh",
     "push:remote": "sh scripts/push-remote.sh",
     "push:check": "node --experimental-strip-types --no-warnings scripts/remote-check.ts",
