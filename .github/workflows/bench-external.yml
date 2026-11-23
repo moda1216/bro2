@@ -1,0 +1,118 @@
+name: bro2 · 外部真实评测（Terminal-Bench 2.1 · 89×3 常驻）
+
+# ---------------------------------------------------------------------------
+# 目标：把 89×3 全量评测从「沙箱内后台」（会话休眠即死）迁到 GitHub Actions
+# 定时调度，实现真正不依赖本地会话的 7×24 断点续跑。
+#
+# 诚实红线（与 examples/tb21-batch.py 一致，本 workflow 不触碰）：
+#   - 不写 external-results.json、不改评分器、不改 src、不改 verdict/L4；
+#   - 只驱动测量，逐 trial 原子落盘到 tb21-full-results.jsonl；
+#   - 每个 trial 经官方 per-task 镜像 + 官方 verifier 判分；
+#   - mock/provider_error 一律判 error、不计 reward（由 batch.py 保证）。
+#
+# 断点续跑：batch.py 天然跳过已完成的 (task,repeat)，每个 job 只跑 --limit 个新 trial，
+# 结果 commit 回 main 才持久——GitHub 仓库是跨会话的唯一事实源。
+# ---------------------------------------------------------------------------
+on:
+  schedule:
+    # 每 6 小时一次（UTC）：单个 job 受 ovhcloud 2 req/min 约束，--limit 6 约 3-4h，留余量
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "本轮新跑 trial 数（默认 6；GitHub job 上限 6h）"
+        required: false
+        default: "6"
+        type: string
+
+# 同一时刻只允许一个评测 job（防止 cron 与手动触发重叠导致重复计分）
+concurrency:
+  group: external-bench
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # 需要把评测结果 commit 回 main
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350   # 低于 GitHub 6h 硬上限，避免被强杀导致半落盘
+
+    steps:
+      - name: Checkout（分支模式，便于回写 push）
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: 确保处于 main 分支（非 detached HEAD）
+        run: git checkout -B main origin/main
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.6.0"
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Docker 可用性自检
+        run: docker version --format '{{.Server.Version}}'
+
+      - name: 评测前进度快照
+        id: before
+        run: |
+          n=$(grep -c '"status"' data/bench/external/tb21-full-results.jsonl 2>/dev/null || echo 0)
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+          echo "评测前完成: $n / 267"
+
+      - name: 端点健康检查（ovhcloud / gpt-oss-120b 免 key）
+        run: |
+          code=$(curl -sS -o /tmp/ovh-probe.json -w '%{http_code}' \
+            -X POST "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions" \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"gpt-oss-120b","messages":[{"role":"user","content":"ping"}],"max_tokens":4}' \
+            || echo 000)
+          echo "ovh HTTP=$code"
+          if [ "$code" != "200" ]; then
+            echo "::warning::ovhcloud 端点当前不可用（HTTP=$code）；本轮 batch 可能整批 provider_error，不计分。"
+          fi
+
+      - name: 运行批量评测（断点续跑，限本轮 trial 数）
+        run: |
+          LIMIT="${{ inputs.limit || '6' }}"
+          echo "本轮 --limit=$LIMIT"
+          python3 examples/tb21-batch.py --limit "$LIMIT"
+
+      - name: 评测后进度 + 心跳落盘
+        id: after
+        run: |
+          n=$(grep -c '"status"' data/bench/external/tb21-full-results.jsonl 2>/dev/null || echo 0)
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+          python3 examples/bench-heartbeat.py "$n"
+
+      - name: 回写结果到 main（仅当有新 trial）
+        env:
+          BEFORE: ${{ steps.before.outputs.count }}
+          AFTER: ${{ steps.after.outputs.count }}
+        run: |
+          git config user.name "bro2-bench-bot"
+          git config user.email "bro2-bench-bot@users.noreply.github.com"
+          if [ "$AFTER" -gt "$BEFORE" ]; then
+            git add data/bench/external/tb21-full-results.jsonl \
+                    data/bench/external/tb21-supervisor-heartbeat.json
+            git commit -m "bench(ci): 外部真实评测 +$((AFTER-BEFORE)) trial ($AFTER/267) [skip ci]"
+            # 同步远端（cron 间隔 6h，concurrency 保证单 job，冲突概率极低）
+            git pull --rebase origin main
+            git push origin main
+            echo "已回写 $((AFTER-BEFORE)) 个新 trial 到 main"
+          else
+            echo "本轮无新 trial（$BEFORE→$AFTER），不提交。多为端点限流/全批 error，进度不变。"
+          fi
+
+      - name: 完成度摘要
+        env:
+          AFTER: ${{ steps.after.outputs.count }}
+        run: |
+          echo "::notice::外部评测进度 $AFTER/267（verdict=not-proven，partial≠榜单分数）"

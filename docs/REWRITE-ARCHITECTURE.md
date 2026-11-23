@@ -299,3 +299,27 @@ bro2 已有可复用底座，重写是在其上深化：
 
 > 全阶段恪守「深入而非更大」：源码净增 0（16500/16500），新增逻辑全部落 `examples/`/`data/`/`docs/` 豁免目录，门禁接线等量压缩注释抵消。
 > 所有阶段均不产出能力分数；`verdict=not-proven`、`L4=not-achieved` 不因重写改变。P5 的统计显著与第三方复核是真实未完成项，须待 89×3 全量完成 + 独立标注后方可评估。
+
+---
+
+## 9.12 外部调度迁移（89×3 真实评测的常驻化 · 决策记录）
+
+### 问题（二次实证）
+
+沙箱内后台 supervisor 两次随会话休眠被回收：心跳停在启动后约 8 分钟，`break-filter-js-from-html-r3` 容器 `Exited (255)`，进度始终 9/267。根因不是进程崩溃（supervisor 自愈循环可处理），而是**承载进程的整个沙箱被冻结**——任何沙箱内后台任务在会话结束时必然死亡。此前"三层机制对抗会话重置"的判断过于乐观，此处更正。
+
+### 决策：迁移到 GitHub Actions cron
+
+用户选择「上外部调度器真常驻」。落地为 `.github/workflows/bench-external.yml`：
+
+- **调度**：`schedule` cron `17 */6 * * *`（每 6h）+ `workflow_dispatch`（手动，可传 `limit`）。
+- **单次预算**：`--limit 6`（ovhcloud 2 req/min 下约 3-4h），`timeout-minutes: 350` 留余量，`concurrency: external-bench` 防并发重复计分。
+- **跨会话持久化**：结果 `tb21-full-results.jsonl` + 心跳 commit 回 `main`——GitHub 仓库是跨会话唯一事实源，替代易失的沙箱文件系统。
+- **诚实红线不变**：不写 external-results.json、不改评分器/源码/verdict；mock/provider_error 仍判 error 不计分；心跳 `verdict=not-proven`。
+- **预检**：每轮先探 ovhcloud 端点（HTTP 200 + model=gpt-oss-120b 身份核实），不可用则告警、整批 error 不计分。
+
+### 诚实边界
+
+- 外部调度的常驻性依赖 GitHub Actions 服务可用性；免费公开仓库有 cron 调度延迟（高峰可能延后数十分钟），非精确实时。
+- 全量 267 trial 在 2 req/min 下仍需累计 100+ 小时，跨数十个 cron 周期；`verdict=not-proven`、`L4=not-achieved` 在 267/267 由独立复核前不变。
+- `examples/tb21-supervisor.sh` 保留为「单会话内手动批量续跑」的补充工具，主路径已是 GitHub Actions。

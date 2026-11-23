@@ -1,0 +1,10 @@
+{
+  "ts": "2026-11-23T18:33:57.942032Z",
+  "done": 9,
+  "total": 267,
+  "pct": 3.37,
+  "state": "running",
+  "source": "github-actions/cron",
+  "verdict": "not-proven",
+  "note": "partial≠榜单分数；GitHub Actions 跨会话持久累积"
+}
