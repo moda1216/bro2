@@ -1,0 +1,70 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>bro2 · 深度重写核心报告 P2–P5</title>
+<style>
+body{font-family:system-ui,-apple-system,"PingFang SC",sans-serif;margin:0;padding:2rem;max-width:960px;margin:auto;color:#1a1a1a;background:#fbfbfd;line-height:1.6}
+h1{border-bottom:3px solid #2c3e50;padding-bottom:.4rem}
+h2{font-size:1.25rem;margin-top:2rem;border-left:4px solid #2c3e50;padding-left:.6rem}
+.badge{font-size:.8rem;background:#e8f5e9;color:#1a7f37;padding:2px 8px;border-radius:10px;vertical-align:middle}
+.meta{color:#666;font-size:.9rem}
+.checks{list-style:none;padding-left:0}.checks li{padding:2px 0;font-size:.92rem}
+.g{color:#1a7f37;font-weight:bold}.r{color:#c62828;font-weight:bold}
+.honest{background:#fff8e1;border-left:3px solid #f9a825;padding:.6rem .9rem;font-size:.88rem;color:#5d4b00}
+code{background:#eef0f3;padding:1px 5px;border-radius:4px;font-size:.88em}
+.summary{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:1rem 1.4rem;margin:1.2rem 0}
+.muted{color:#777;font-size:.85rem}
+table{border-collapse:collapse;width:100%;margin:1rem 0;background:#fff}td,th{border:1px solid #e0e0e0;padding:6px 10px;text-align:left;font-size:.9rem}th{background:#f0f2f5}
+</style></head><body>
+<h1>bro2 · 深度重写核心报告 <small style="font-size:.6rem;color:#888">P2–P5</small></h1>
+<p class="muted">数字全部读自 <code>data/evidence/*.json</code>，不手写。生成于 2026-11-23T09:53:55.926Z</p>
+<div class="summary">
+<b>总览：</b>25/25 项可证伪检查通过 · 源码净增 0（16500/16500）· 发布门禁 32/32 + 2/2 全绿。<br>
+<b>贯穿原则：</b>深入而非更大——骨架更厚（验证/约束/可回滚）、源码不增、能力靠接线与外置。<br>
+<b>诚实底线：</b>所有阶段均不产出能力分数；<code>verdict=not-proven</code>、<code>L4=not-achieved</code> 不变。
+</div>
+<table><thead><tr><th>阶段</th><th>出口条件达成</th><th>状态</th></tr></thead><tbody>
+<tr><td>P0 证据环</td><td>独立重算 + 红队基线</td><td class="g">✅</td></tr>
+<tr><td>P1 本地自治</td><td>断网跑通 + 8/8 零污染</td><td class="g">✅ 机制（真机实测缺口待回填）</td></tr>
+<tr><td>P2 轨迹飞轮</td><td>可追溯 delta + 失败留痕</td><td class="g">✅（delta 为全局 IPA 代理）</td></tr>
+<tr><td>P3 训练器闸门</td><td>无对照不晋升 + 回滚</td><td class="g">✅ 闸门（真实训练未测）</td></tr>
+<tr><td>P4 白盒面板</td><td>决策链可重建 + 拦截可触发</td><td class="g">✅（真机能耗/SSE 未测）</td></tr>
+<tr><td>P5 统计复核</td><td>inter-rater + 统计显著</td><td style="color:#e65100">⚠️ 骨架达成；显著性/第三方复核未达成（9/267）</td></tr>
+</tbody></table>
+<section>
+<h2>P2 · 轨迹飞轮系统化 <span class="badge">flywheel-audited</span></h2>
+<p class="meta">8/8 检查通过 · 门禁 <code>npm run flywheel:check</code> · P2 轨迹飞轮系统化：质量判据+脱敏+分级+失败留痕+判据回填（可证伪）</p>
+<ul class="checks"><li><span class="g">✓</span> 只增账本 seq 连续无缺口</li><li><span class="g">✓</span> 失败轨迹全部留痕可追溯</li><li><span class="g">✓</span> 可证伪：单次成功不得判 gold</li><li><span class="g">✓</span> 可证伪：已失效经验不得判 gold</li><li><span class="g">✓</span> 可证伪：分级有区分度（非全 gold）</li><li><span class="g">✓</span> 轨迹脱敏：密钥明文不可见</li><li><span class="g">✓</span> 回填判据：provider=mock 6 类分类自洽</li><li><span class="g">✓</span> 接受判定仍走行为对比（经验不越权）</li></ul>
+<p class="honest"><b>诚实边界：</b>真实账本分级 + 真实模块脱敏/行为对比；分级是经验质量启发式审查，非能力分数<br>
+未证明：逐条轨迹的因果 delta · 真机重放可复现性 · 89×3 全量任务通过率<br>
+verdict=not-proven · L4=not-achieved</p>
+</section><section>
+<h2>P3 · 训练器薄调度 + 上线闸门 <span class="badge">gate-green</span></h2>
+<p class="meta">7/7 检查通过 · 门禁 <code>npm run promotion:gate</code> · P3 训练器薄调度+上线闸门：无对照不晋升+回滚演练（可证伪）</p>
+<ul class="checks"><li><span class="g">✓</span> 薄调度：样本只读取自经验池且 hash 化</li><li><span class="g">✓</span> 训练调用是契约+命令生成（无假权重/假分数）</li><li><span class="g">✓</span> F1 无对照候选一律拒绝</li><li><span class="g">✓</span> F2 自报提升但无对照必拒（reward hacking）</li><li><span class="g">✓</span> F3 holdout/OOD 退化候选 A/B 阶段必拒</li><li><span class="g">✓</span> 正例：shadow→A/B→canary→promoted 走通</li><li><span class="g">✓</span> F4 回滚演练精确恢复到上一 hash</li></ul>
+<p class="honest"><b>诚实边界：</b>闸门状态机+契约化调度；本沙箱无 GPU/LoRA，不执行训练、不产出真实权重或能力分数<br>
+未证明：真实 QLoRA 训练收敛 · 候选权重真实能力提升 · 89×3 任务通过率<br>
+verdict=not-proven · L4=not-achieved</p>
+</section><section>
+<h2>P4 · 统一白盒面板 + 审批 + 能效 <span class="badge">whitebox-green</span></h2>
+<p class="meta">6/6 检查通过 · 门禁 <code>npm run whitebox:panel</code> · P4 白盒面板：决策链可重建+审批拦截+外部能效偏差告警（可证伪）</p>
+<ul class="checks"><li><span class="g">✓</span> 单一时间线串联四类决策链</li><li><span class="g">✓</span> 外部观察者可从事件流重建决策链</li><li><span class="g">✓</span> F1 篡改事件 payload 后重建检出不一致</li><li><span class="g">✓</span> F2 审批 deny 生效且留审计事件</li><li><span class="g">✓</span> 审批审计密钥脱敏</li><li><span class="g">✓</span> F3 自报 token 远低于外部计数触发告警</li></ul>
+<p class="honest"><b>诚实边界：</b>真实事件总线/审批/脱敏模块 + 进程 RSS；决策链重建证明可审计，非能力分数<br>
+未证明：真机 powermetrics 能耗 · SSE 实时推送链路 · 89×3 任务通过率<br>
+verdict=not-proven · L4=not-achieved</p>
+</section><section>
+<h2>P5 · 统计骨架 + 第三方复核 <span class="badge">stats-skeleton-green</span></h2>
+<p class="meta">4/4 检查通过 · 门禁 <code>npm run thirdparty:review</code> · P5 统计骨架：inter-rater kappa + McNemar + 功效审计（可证伪，如实声明 partial）</p>
+<ul class="checks"><li><span class="g">✓</span> F1 完全一致评分器 kappa=1</li><li><span class="g">✓</span> F2 完全相反评分器 kappa&lt;0</li><li><span class="g">✓</span> McNemar p 值可复算（0..1）</li><li><span class="g">✓</span> F3 真实 n 不足必须声明功效不足</li></ul>
+<p class="honest"><b>诚实边界：</b>统计原语正确性 + 真实 partial 数据的功效审计；kappa/p 值均为可复算数字，不是能力结论<br>
+未证明：独立第三方复核一致 · 统计显著性 · 89×3 全量完成 · 能力领先或 L4<br>
+verdict=not-proven · L4=not-achieved</p>
+</section>
+<h2>统一的未完成项（如实）</h2>
+<ul>
+<li>89×3 全量评测仅 9/267，partial 不构成榜单分数；P5 的统计显著与独立第三方复核须待全量完成 + 独立标注后评估。</li>
+<li>真机缺口：Apple Silicon 上 MLX/llama.cpp 的 tokens/s、峰值内存、量化精度损失；powermetrics 能耗；SSE 实时推送链路。</li>
+<li>真缺口：本地 QLoRA 训练收敛与候选权重真实提升（本沙箱无 GPU，仅闸门契约）。</li>
+<li>P2 的 provider=mock 判据已固化验证，但未回填冻结脚本 tb21-batch.py（避免动冻结流程）。</li>
+</ul>
+<p class="muted">重写不改变评测事实：partial、自跑非第三方、not-proven、L4 not-achieved。本报告是「重写工程的证据汇总」，不是「能力领先」的声明。</p>
+</body></html>

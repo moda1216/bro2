@@ -1,0 +1,120 @@
+{
+  "generatedAt": "2026-11-23T09:52:01.207Z",
+  "version": "2.36.0",
+  "purpose": "P3 训练器薄调度+上线闸门：无对照不晋升+回滚演练（可证伪）",
+  "scheduler": {
+    "source": "data/rsi/experience.jsonl",
+    "rawSamples": 14,
+    "uniqueSamples": 1,
+    "datasetHash": "231988f2cf3edb5f",
+    "baseWeightHash": "5ae82132bd8e60d3",
+    "candidateWeightHash": "bda21af4cdd77073",
+    "trainConfig": {
+      "method": "QLoRA",
+      "rank": 16,
+      "alpha": 32,
+      "lr": 0.0002,
+      "epochs": 1,
+      "seed": 42
+    },
+    "trainCommand": "llama-finetune --base 5ae82132bd8e60d3 --data 231988f2cf3edb5f --method qlora --rank 16 --out candidate_bda21af4"
+  },
+  "gate": {
+    "stages": [
+      "shadow",
+      "ab",
+      "canary",
+      "promoted"
+    ],
+    "decisionRule": "仅采信冻结验证集前后对照+显著性；scoreGain 只进审计不进判定；无对照/退化/不显著一律 rejected"
+  },
+  "checks": [
+    {
+      "name": "薄调度：样本只读取自经验池且 hash 化",
+      "pass": true,
+      "evidence": {
+        "rawSamples": 14,
+        "uniqueSamples": 1,
+        "datasetHash": "231988f2cf3edb5f",
+        "noPlaintextAnswers": true
+      }
+    },
+    {
+      "name": "训练调用是契约+命令生成（无假权重/假分数）",
+      "pass": true,
+      "evidence": {
+        "baseWeightHash": "5ae82132bd8e60d3",
+        "candidateWeightHash": "bda21af4cdd77073",
+        "trainCommand": "llama-finetune --base 5ae82132bd8e60d3 --data 231988f2cf3edb5f --method qlora --rank 16 --out candidate_bda21af4",
+        "honest": "本沙箱无 GPU，不执行训练；候选 hash 为确定性派生，非真实训练产物"
+      }
+    },
+    {
+      "name": "F1 无对照候选一律拒绝",
+      "pass": true,
+      "evidence": {
+        "next": "rejected",
+        "reason": "缺冻结验证集前后对照 → 拒绝（无对照不晋升）"
+      }
+    },
+    {
+      "name": "F2 自报提升但无对照必拒（reward hacking）",
+      "pass": true,
+      "evidence": {
+        "next": "rejected",
+        "reason": "缺冻结验证集前后对照 → 拒绝（无对照不晋升）"
+      }
+    },
+    {
+      "name": "F3 holdout/OOD 退化候选 A/B 阶段必拒",
+      "pass": true,
+      "evidence": {
+        "next": "rejected",
+        "reason": "holdout/OOD 退化 → 拒绝"
+      }
+    },
+    {
+      "name": "正例：shadow→A/B→canary→promoted 走通",
+      "pass": true,
+      "evidence": {
+        "stages": [
+          "shadow",
+          "ab",
+          "canary"
+        ],
+        "final": "promoted",
+        "history": [
+          "shadow->ab:cand-good",
+          "ab->canary:cand-good",
+          "canary->promoted:cand-good"
+        ]
+      }
+    },
+    {
+      "name": "F4 回滚演练精确恢复到上一 hash",
+      "pass": true,
+      "evidence": {
+        "restored": "5ae82132bd8e60d3",
+        "expected": "5ae82132bd8e60d3",
+        "stage": "shadow"
+      }
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "passed": 7,
+    "verdict": "gate-green"
+  },
+  "honest": {
+    "scope": "闸门状态机+契约化调度；本沙箱无 GPU/LoRA，不执行训练、不产出真实权重或能力分数",
+    "strictDelta": "权重改动即新模型，须重新锚定；训练提升不得伪装成 harness Δ",
+    "significantSource": "显著性由外部统计器（P5）提供，本工具信任其结论不自造 p 值",
+    "notProven": [
+      "真实 QLoRA 训练收敛",
+      "候选权重真实能力提升",
+      "89×3 任务通过率"
+    ],
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}

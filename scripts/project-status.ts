@@ -1,11 +1,7 @@
 /**
  * bro2 · 产出物健康度聚合器（project:status）
- * ----------------------------------------------------------
- * 复跑全部离线验收门禁，把分散的验收脚本聚合成一张健康度报告；CI 与本地均可用。
- *
- * 设计原则：零依赖（仅 Node 内置模块）；失败 → 退出码非 0（CI 据此阻断）；
- * 每门禁只取可信 "退出码" 判定，摘要行仅用于展示。
- *
+ * 复跑全部离线验收门禁聚合成健康度报告；CI 与本地均可用。
+ * 零依赖（仅 Node 内置）；失败→退出码非 0（CI 据此阻断）；只看退出码。
  * 用法：npm run project:status
  */
 import { spawnSync } from "node:child_process";
@@ -49,6 +45,10 @@ const GATES: Gate[] = [
   { id: "redteam", label: "P0 红队安全基线（路径/命令/脱敏/越权/尺子完整性）", cmd: "npm run redteam:baseline", timeoutMs: 60_000, gate: true },
   { id: "maclocal", label: "P1 本地自治（24G Mac 预算/双后端配置/断网无key契约）", cmd: "npm run mac:local", timeoutMs: 60_000, gate: true },
   { id: "failover", label: "P1 端点失效零污染（8/8超时+断网闭环+可证伪对照）", cmd: "npm run failover:proof", timeoutMs: 120_000, gate: true },
+  { id: "flywheel", label: "P2 轨迹飞轮（分级+脱敏+失败留痕+mock判据回填）", cmd: "npm run flywheel:check", timeoutMs: 60_000, gate: true },
+  { id: "trainergate", label: "P3 训练器闸门（无对照不晋升+回滚+reward-hacking拦截）", cmd: "npm run promotion:gate", timeoutMs: 60_000, gate: true },
+  { id: "whitebox", label: "P4 白盒面板（决策链可重建+审批拦截+能效偏差告警）", cmd: "npm run whitebox:panel", timeoutMs: 60_000, gate: true },
+  { id: "thirdparty", label: "P5 统计骨架（kappa+McNemar+功效不足诚实声明）", cmd: "npm run thirdparty:review", timeoutMs: 60_000, gate: true },
   { id: "livesmoke", label: "live 链路自检（仿真，非能力分）", cmd: "npm run live:smoke", timeoutMs: 60_000, gate: false },
 ];
 

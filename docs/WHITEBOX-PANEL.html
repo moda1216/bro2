@@ -1,0 +1,22 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>bro2 · 白盒决策链</title>
+<style>body{font-family:system-ui;margin:2rem;color:#222;background:#fafafa}h1{border-bottom:2px solid #444}table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid #ddd;padding:6px 10px;font-size:14px;text-align:left}th{background:#eee}.verdict{font-size:20px;font-weight:bold;color:#1a7f37}.muted{color:#666;font-size:13px}code{background:#f3f3f3;padding:1px 5px}</style></head><body>
+<h1>bro2 · 统一白盒决策链</h1>
+<p class="muted">生成于 2026-11-23T09:52:01.377Z · 数字读自 evidence JSON · verdict=whitebox-green · 非能力分数</p>
+<h2>单一时间线（四类 lane）</h2>
+<table><thead><tr><th>seq</th><th>lane</th><th>event.type</th><th>label</th><th>decision</th></tr></thead><tbody><tr><td>1</td><td>任务执行</td><td>run.start</td><td>任务启动</td><td><code>任务启动·decision-1</code></td></tr>
+<tr><td>2</td><td>任务执行</td><td>tool.call</td><td>工具调用</td><td><code>工具调用·decision-2</code></td></tr>
+<tr><td>3</td><td>轨迹沉淀</td><td>metrics</td><td>轨迹质量入库</td><td><code>轨迹质量入库·decision-3</code></td></tr>
+<tr><td>4</td><td>模型进化</td><td>hook.fired</td><td>候选权重晋升</td><td><code>候选权重晋升·decision-4</code></td></tr>
+<tr><td>5</td><td>harness 进化</td><td>context.inject</td><td>harness 编辑采纳</td><td><code>harness 编辑采纳·decision-5</code></td></tr>
+<tr><td>6</td><td>任务执行</td><td>run.end</td><td>任务结束</td><td><code>任务结束·decision-6</code></td></tr>
+<tr><td>7</td><td></td><td>approval.request</td><td></td><td><code></code></td></tr>
+<tr><td>8</td><td></td><td>approval.resolved</td><td></td><td><code>deny</code></td></tr></tbody></table>
+<h2>可证伪检查</h2>
+<table><thead><tr><th>结果</th><th>检查</th><th>证据</th></tr></thead><tbody><tr><td>✓</td><td>单一时间线串联四类决策链</td><td>{"events":6,"lanes":["任务执行","轨迹沉淀","模型进化","harness 进化"]}</td></tr>
+<tr><td>✓</td><td>外部观察者可从事件流重建决策链</td><td>{"chain":["任务执行:任务启动:任务启动·decision-1","任务执行:工具调用:工具调用·decision-2","轨迹沉淀:轨迹质量入库:轨迹质量入库·decision-3","模型进化:候选权重晋升:候选权重晋升·decision-4","harness 进化:harness 编辑采纳:harne</td></tr>
+<tr><td>✓</td><td>F1 篡改事件 payload 后重建检出不一致</td><td>{"original":"轨迹沉淀:轨迹质量入库:轨迹质量入库·decision-3","tampered":"轨迹沉淀:轨迹质量入库:TAMPERED"}</td></tr>
+<tr><td>✓</td><td>F2 审批 deny 生效且留审计事件</td><td>{"decision":"deny","audit":[{"type":"approval.request","decision":"request"},{"type":"approval.resolved","decision":"deny"}]}</td></tr>
+<tr><td>✓</td><td>审批审计密钥脱敏</td><td>{"redacted":"{\"api_key\":\"***REDACTED***\"}"}</td></tr>
+<tr><td>✓</td><td>F3 自报 token 远低于外部计数触发告警</td><td>{"externalTokens":4200,"selfReportedTokens":1500,"deviation":0.643,"threshold":0.5,"rssMB":78.3,"source":"process.memoryUsage().rss + 系统侧 token 计数（非 agent 自报）"}</td></tr></tbody></table>
+<h2>诚实边界</h2><p class="muted">真实事件总线/审批/脱敏模块 + 进程 RSS；决策链重建证明可审计，非能力分数<br>真机 powermetrics 能耗 · SSE 实时推送链路 · 89×3 任务通过率<br>verdict=not-proven · L4=not-achieved</p>
+</body></html>

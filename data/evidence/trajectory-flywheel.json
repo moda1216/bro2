@@ -1,0 +1,192 @@
+{
+  "generatedAt": "2026-11-23T09:52:01.077Z",
+  "version": "2.36.0",
+  "purpose": "P2 轨迹飞轮系统化：质量判据+脱敏+分级+失败留痕+判据回填（可证伪）",
+  "inputs": {
+    "experience": "data/rsi/experience.jsonl",
+    "velocity": "data/rsi/velocity.jsonl"
+  },
+  "stats": {
+    "events": 29,
+    "entries": 3,
+    "failures": 15,
+    "velocityRounds": 14,
+    "globalIPA": 0.4828,
+    "gradeCount": {
+      "bronze": 1,
+      "rejected": 2
+    }
+  },
+  "graded": [
+    {
+      "id": "harness-edit|F:tool-error|low|tooled|enable-args-repair",
+      "grade": "bronze",
+      "successes": 14,
+      "failures": 0,
+      "reproducible": false,
+      "positiveDelta": true,
+      "nonLucky": true
+    },
+    {
+      "id": "harness-edit|F:tool-error|low|tooled|noop-tuning",
+      "grade": "rejected",
+      "successes": 0,
+      "failures": 14,
+      "reproducible": false,
+      "positiveDelta": true,
+      "nonLucky": false
+    },
+    {
+      "id": "harness-edit|F:tool-error|low|tooled|score-only-hack",
+      "grade": "rejected",
+      "successes": 0,
+      "failures": 1,
+      "reproducible": false,
+      "positiveDelta": true,
+      "nonLucky": false
+    }
+  ],
+  "checks": [
+    {
+      "name": "只增账本 seq 连续无缺口",
+      "pass": true,
+      "evidence": {
+        "events": 29,
+        "first": 0,
+        "last": 28
+      }
+    },
+    {
+      "name": "失败轨迹全部留痕可追溯",
+      "pass": true,
+      "evidence": {
+        "failureEvents": 15,
+        "traceable": true,
+        "sample": [
+          {
+            "seq": 1,
+            "prescription": "noop-tuning",
+            "source": "evolve-loop#rejected"
+          },
+          {
+            "seq": 2,
+            "prescription": "score-only-hack",
+            "source": "evolve-loop#rejected"
+          }
+        ]
+      }
+    },
+    {
+      "name": "可证伪：单次成功不得判 gold",
+      "pass": true,
+      "evidence": {
+        "grade": "bronze",
+        "nonLucky": false
+      }
+    },
+    {
+      "name": "可证伪：已失效经验不得判 gold",
+      "pass": true,
+      "evidence": {
+        "grade": "bronze",
+        "invalidations": 1
+      }
+    },
+    {
+      "name": "可证伪：分级有区分度（非全 gold）",
+      "pass": true,
+      "evidence": {
+        "gradeCount": {
+          "bronze": 1,
+          "rejected": 2
+        },
+        "total": 3
+      }
+    },
+    {
+      "name": "轨迹脱敏：密钥明文不可见",
+      "pass": true,
+      "evidence": {
+        "secretGone": true,
+        "bearerGone": true,
+        "hasRedactedMarker": true,
+        "truncateWorks": true
+      }
+    },
+    {
+      "name": "回填判据：provider=mock 6 类分类自洽",
+      "pass": true,
+      "evidence": {
+        "cases": [
+          {
+            "name": "机器字段 provider=ollama/...mock",
+            "text": "provider=ollama/mock content=ok",
+            "expect": true,
+            "actual": true,
+            "kind": "mock-fallback"
+          },
+          {
+            "name": "机器字段 provider=ovhcloud（真上游）",
+            "text": "provider=ovhcloud content=ok",
+            "expect": false,
+            "actual": false,
+            "kind": "clean"
+          },
+          {
+            "name": "终答中文 mock 标记",
+            "text": "本次由离线 Mock 模型驱动",
+            "expect": true,
+            "actual": true,
+            "kind": "mock-fallback"
+          },
+          {
+            "name": "provider_error",
+            "text": "stoppedBy=provider_error",
+            "expect": true,
+            "actual": true,
+            "kind": "provider-error"
+          },
+          {
+            "name": "全部模型均不可用",
+            "text": "Error: 全部模型均不可用",
+            "expect": true,
+            "actual": true,
+            "kind": "provider-error"
+          },
+          {
+            "name": "干净成功",
+            "text": "provider=local/llama content=任务完成",
+            "expect": false,
+            "actual": false,
+            "kind": "clean"
+          }
+        ]
+      }
+    },
+    {
+      "name": "接受判定仍走行为对比（经验不越权）",
+      "pass": true,
+      "evidence": {
+        "evidence": "工具错误 2 → 0，行为对比成立"
+      }
+    }
+  ],
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "verdict": "flywheel-audited"
+  },
+  "honest": {
+    "scope": "真实账本分级 + 真实模块脱敏/行为对比；分级是经验质量启发式审查，非能力分数",
+    "deltaProxy": "正向 delta 以 velocity 全局 IPA 代理（账本无 signature 维度），非逐条 delta 真值",
+    "notProven": [
+      "逐条轨迹的因果 delta",
+      "真机重放可复现性",
+      "89×3 全量任务通过率"
+    ],
+    "backfill": "provider=mock 判据已固化并验证 6 类；本版不改冻结的 tb21-batch.py，仅提供可引用判据",
+    "falsificationFinding": "可证伪对照 A 初版把「单次成功+全局正IPA」误判 silver（非幸运路径被正向水位掩盖）；已要求 gold/silver 均满足 nonLucky 后修正，分级不再恒真",
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}

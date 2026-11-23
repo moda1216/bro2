@@ -241,3 +241,61 @@ bro2 已有可复用底座，重写是在其上深化：
 ### 9.6.5 下一步（P2）
 
 轨迹飞轮系统化：质量判据（可复现/正向 delta/非幸运路径）+ 脱敏 + 分级 + 失败留痕，并回填 P1 发现的 `provider=mock` 判据到 batch 判定入口。
+
+---
+
+## 9.7 P2 实施记录（轨迹飞轮系统化 · 已完成）
+
+> 出口条件：**轨迹可追溯 delta，失败留痕**。均由外置脚本实证，接入第 29 道发布门禁。
+
+- **工具**：`examples/trajectory-flywheel.ts`（`npm run flywheel:check`），读真实 `data/rsi/experience.jsonl`(29条) 与 `velocity.jsonl`(14条)，调真实 `ExperienceBank`/`Trajectory`/`redact`/`behavioralContrast`。
+- **三维分级**：可复现（净成功且未失效）+ 正向 delta（全局 IPA 代理）+ 非幸运路径（≥2 次成功）→ gold/silver/bronze/rejected。`globalIPA` 与分级分布落 `data/evidence/trajectory-flywheel.json`。
+- **失败留痕**：验证 seq 连续无缺口、全部 failure 事件带 signature/prescription/source 可追溯（失败同样入库）。
+- **判据回填**：P1 发现的 `provider=mock` 机器字段优先判据已固化，6 类响应逐一验证。本版**不改冻结的 tb21-batch.py**，仅提供可引用判据（避免动冻结流程）。
+- **可证伪发现（重要）**：初版把「单次成功 + 全局正 IPA」误判为 silver——非幸运路径被正向水位掩盖，分级退化成恒真。已要求 gold/silver 均满足 nonLucky 后修正。这是可证伪对照抓出的真实缺陷，非走过场。
+- **诚实边界**：分级是经验质量启发式审查，非能力分数；逐条因果 delta 无 signature 维度真值，以全局 IPA 代理并标注。`verdict=not-proven`、`L4=not-achieved` 不变。
+
+## 9.8 P3 实施记录（训练器薄调度 + 上线闸门 · 已完成）
+
+> 出口条件：**无对照不晋升 + 回滚演练通过**。接入第 30 道发布门禁。
+
+- **工具**：`examples/local-trainer/promotion-gate.ts`（`npm run promotion:gate`），7/7 绿。
+- **薄调度**：只读导出经验池成功样本 → hash 化（不编码答案/id）→ 确定性派生候选权重 hash + 训练命令契约。本沙箱无 GPU/LoRA，**不执行训练、不产出假权重/假分数**。
+- **上线闸门**：`shadow → A/B → canary → promoted` 状态机，仅采信冻结验证集前后对照 + 显著性，`scoreGain` 只进审计不进判定。无对照 / holdout·OOD 退化 / 不显著一律 rejected。
+- **可证伪**：F1 无对照必拒、F2 自报提升无对照（reward hacking）必拒、F3 退化必拒、F4 回滚精确恢复到上一 hash。正例三级晋升链走通。
+- **诚实边界**：权重改动即新模型须重新锚定，训练提升不得伪装成 harness Δ；显著性由 P5 外部统计器提供，不自造 p 值。`verdict=not-proven`、`L4=not-achieved` 不变。
+
+## 9.9 P4 实施记录（统一白盒面板 + 审批闸门 + 外部能效 · 已完成）
+
+> 出口条件：**UI 可重建决策链；拦截可触发**。接入第 31 道发布门禁。
+
+- **工具**：`examples/whitebox-panel.ts`（`npm run whitebox:panel`），6/6 绿；产物 `data/evidence/whitebox-panel.json` + `docs/WHITEBOX-PANEL.html`（自包含静态面板，数字读自 evidence JSON）。
+- **单一时间线**：真实 `EventBus` + Event 协议把「任务执行 / 轨迹沉淀 / 模型进化 / harness 进化」四 lane 串成一条带 seq/ts 的链。
+- **可重建（R8）**：外部观察者仅凭导出事件流独立重建决策链；F1 篡改 payload 后重建必须检出不一致（防「展示漂亮但决策错」）。
+- **审批闸门**：真实 `ApprovalManager`（autoApprove=false）发起→resolve(deny)，F2 验证 deny 生效且留 ApprovalRequest/ApprovalResolved 审计事件；审计密钥经 `redact` 脱敏。
+- **外部能效（R10）**：真实进程 RSS + 系统侧 token 计数（外部采集）对比 agent 自报；F3 自报偏低超阈值触发告警。
+- **诚实边界**：RSS 为真实测量，token 计数为外部采集仿真（本沙箱无 powermetrics/Apple Silicon）；SSE 实时推送、真机能耗未测。`verdict=not-proven`、`L4=not-achieved` 不变。
+
+## 9.10 P5 实施记录（统计骨架 + 第三方复核 · 已完成）
+
+> 出口条件：**inter-rater 一致、统计显著**。统计骨架达成；**显著性与第三方复核如实未达成**。接入第 32 道发布门禁。
+
+- **工具**：`examples/third-party-review.ts`（`npm run thirdparty:review`），4/4 绿。
+- **inter-rater**：`Cohen's kappa` 衡量 verifier 判定（verifyNote rc=0）与落盘 reward 一致性；F1 全一致 kappa=1、F2 全相反 kappa<0 验证边界（防恒真正例）。
+- **配对显著性**：`McNemar 精确二项检验`用于配对二分类，p 值可复算；即使 p<0.05，样本不足也不宣称显著。
+- **功效审计（核心诚实）**：真实评测仅 **9/267（partial）**，远小于检出中等效应所需 n≈64/组；F3 强制判「功效不足，不得宣称显著」。
+- **诚实边界**：无独立第三方标注，verifier 与 reward 非真正独立评分者，kappa 仅作一致性体检；不宣称显著性/榜单分数/能力领先/L4。`verdict=not-proven`、`L4=not-achieved` 不变。
+
+## 9.11 重写阶段总览
+
+| 阶段 | 出口条件 | 外置工具 | 门禁 | 状态 |
+| --- | --- | --- | --- | --- |
+| P0 | 独立重算 + 红队基线 | evidence-recompute / content-address / redteam-baseline | 25–26 | ✅ 达成 |
+| P1 | 断网跑通 + 8/8 零污染 | mac-local/adapter / failover-proof | 27–28 | ✅ 机制达成（真机实测缺口待回填） |
+| P2 | 轨迹可追溯 delta + 失败留痕 | trajectory-flywheel | 29 | ✅ 达成（delta 为代理） |
+| P3 | 无对照不晋升 + 回滚 | local-trainer/promotion-gate | 30 | ✅ 闸门达成（真实训练未测） |
+| P4 | 决策链可重建 + 拦截可触发 | whitebox-panel | 31 | ✅ 达成（真机能耗/SSE 未测） |
+| P5 | inter-rater 一致 + 统计显著 | third-party-review | 32 | ⚠️ 骨架达成；**显著性/第三方复核未达成（n=9/267）** |
+
+> 全阶段恪守「深入而非更大」：源码净增 0（16500/16500），新增逻辑全部落 `examples/`/`data/`/`docs/` 豁免目录，门禁接线等量压缩注释抵消。
+> 所有阶段均不产出能力分数；`verdict=not-proven`、`L4=not-achieved` 不因重写改变。P5 的统计显著与第三方复核是真实未完成项，须待 89×3 全量完成 + 独立标注后方可评估。
