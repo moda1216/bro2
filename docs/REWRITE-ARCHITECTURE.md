@@ -200,6 +200,44 @@ bro2 已有可复用底座，重写是在其上深化：
 - 内容寻址对账本漂移的语义=「提示核对 git 只增历史」，而非「账本不得增长」。
 - `verdict=not-proven`、`L4=not-achieved` 不变。
 
-### 9.5 下一步（P1，未开工）
+### 9.5 下一步（P1）
 
-24G Mac 的 MLX/GGUF 本地推理适配器 + 端点失效降级不污染 trial（对应特性 #1）。入口条件已由 P0 满足。
+见 §9.6——已完成，入口条件由 P0 满足。
+
+---
+
+## 9.6 P1 实施记录（本地自治加固 · 已完成）
+
+> 出口条件：**断网跑通 + 8/8 超时零污染**。两项均已由外置脚本实证，接入第 27、28 道发布门禁。
+
+### 9.6.1 两个外置工具（均在 `examples/mac-local/`，源码零增）
+
+| 脚本 | npm 命令 | 职责 | 验证结果 |
+| --- | --- | --- | --- |
+| `examples/mac-local/adapter.ts` | `mac:local` | 24G 统一内存第一性原理预算（权重=params×bits/8，KV=2·layers·ctx·kv_heads·head_dim·2B）+ MLX/GGUF 两条可复制启动配置 + 断网/无key 契约校验 | 预算 **11/11**：7B Q4_K_M=5.97G fits，32B Q4=21.97G / F16=66.57G **not-fits**（可证伪自检成立）→ `contract-green` |
+| `examples/mac-local/failover-proof.ts` | `failover:proof` | A strict 8/8 超时零污染；B non-strict 可证伪对照；C 断网本地闭环；D 证据环防污染判定 | **4/4**：A 8/8 error+0 reward；B 降级到 mock 但被证据环拦截；C completed+原生 tool_calls；D 6 类判定自洽 → `zero-pollution-proven` |
+
+### 9.6.2 关键设计落实
+
+- **可证伪性而非恒真**：预算模型必须判出「32B 装不下 24G」，否则自检失败（防止一个永远说 yes 的假预算）；故障注入必须显示「关掉 strict 就会污染」，否则 strict 闸门是哑弹（B 场景）。两条都是「证明机制真的动了」而非摆设。
+- **两条后端路径具体化**：MLX（`mlx_lm.server`，Apple Silicon 原生）与 GGUF（`llama_cpp.server`，Metal），各自含启动命令 + provider 配置片段；强制注入两条项目一手教训——`n_ctx≥4096`（system+tools≈3700 tokens）、llama.cpp function-calling 必须 `stream:false`（stream:true 抛 ValueError）。
+- **防污染判定加宽（P1 实测发现）**：`tb21-batch.py` 原只匹配 agent 终答里的中文标记「离线 Mock 模型驱动」，但该标记仅在 loop 写出终答时才出现；泄漏最早发生在 provider 单步响应处。证据环加宽为优先认机器可读的 `provider=mock` 字段。**本版不改评测脚本**（避免动冻结流程），建议 P2 回填。
+- **失效与污染分离（R6）**：端点失效=`provider_error`（基础设施问题），数据污染=`mock 计分`（诚实红线），二者分开记录、互不混报。
+- **预算守恒**：两门禁接入 `project:status` 的同时压缩 2 行注释，源码净增 **0**，维持 16500/16500。
+
+### 9.6.3 验证证据
+
+- `npm run budget:check`：16500/16500 通过。
+- `npm run project:status`：**28/28 阻断门禁 + 2/2 信息项**，EXIT=0。
+- 报告落盘：`data/evidence/{mac-local-plan,failover-proof}.json`。
+
+### 9.6.4 诚实边界
+
+- 两工具证明的是「预算可复算 + 配置自洽 + 断网链路可跑通 + 错误分类与计分闸门正确」，**不是**能力分数或「断网能完成 89 题」的证据。
+- C 场景是 OpenAI 兼容协议仿真（本沙箱无 Ollama/GPU/Apple Silicon），非真机能力证明。
+- **未测实测缺口**（REWRITE-BRIEF §3 一手素材）：具体 Mac 型号上 MLX/llama.cpp 的 tokens/s、峰值内存、量化精度损失——须真机执行生成命令后回填。
+- 红队/证据环仍是已知模式基线；`verdict=not-proven`、`L4=not-achieved` 不变。
+
+### 9.6.5 下一步（P2）
+
+轨迹飞轮系统化：质量判据（可复现/正向 delta/非幸运路径）+ 脱敏 + 分级 + 失败留痕，并回填 P1 发现的 `provider=mock` 判据到 batch 判定入口。
