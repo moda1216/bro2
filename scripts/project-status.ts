@@ -5,9 +5,8 @@
  * "产出物健康度" 报告。CI 与本地均可用。
  *
  * 设计原则：
- *  - 零依赖（仅 Node 内置模块）；
- *  - 任一门禁失败 → 进程退出码非 0（CI 据此阻断）；
- *  - 每个门禁只取可信的 "退出码" 作为判定，摘要行仅用于展示。
+ *  - 零依赖（仅 Node 内置模块）；失败 → 退出码非 0（CI 据此阻断）；
+ *  - 每门禁只取可信 "退出码" 判定，摘要行仅用于展示。
  *
  * 用法：npm run project:status
  */
@@ -18,8 +17,7 @@ interface Gate {
   id: string;
   label: string;
   cmd: string; // npm run <script>
-  /** 透传给脚本的参数；不带参数的门禁省略此项 */
-  args?: string[];
+  args?: string[]; // 透传参数，不带参数的门禁省略
   timeoutMs: number;
   gate: boolean; // 是否计入发布阻断（false = 仅信息展示）
 }
@@ -49,6 +47,8 @@ const GATES: Gate[] = [
   { id: "phasec", label: "阶段 C 接入（judgePromotion 消费真实三段 / OOD 只读 / 退化写 journal）", cmd: "npm run phasec:check", timeoutMs: 60_000, gate: true },
   { id: "p0.5c", label: "P0.5-c 成本晋升目标（remoteAvoided↑ 且分数不降才纳入晋升）", cmd: "npm run p0.5c:check", timeoutMs: 60_000, gate: true },
   { id: "ledger", label: "只增账本 git 历史完整性（journal/lessons 跨 commit 不可删改）", cmd: "npm run ledger:check", timeoutMs: 60_000, gate: true },
+  { id: "evidence", label: "P0 独立证据重算（inter-rater：独立实现 vs 运行时尺子）", cmd: "npm run evidence:recompute", timeoutMs: 60_000, gate: true },
+  { id: "redteam", label: "P0 红队安全基线（路径/命令/脱敏/越权/尺子完整性）", cmd: "npm run redteam:baseline", timeoutMs: 60_000, gate: true },
   { id: "livesmoke", label: "live 链路自检（仿真，非能力分）", cmd: "npm run live:smoke", timeoutMs: 60_000, gate: false },
 ];
 

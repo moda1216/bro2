@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-11-23T05:35:04.866Z",
+  "version": "p0-content-address-v1",
+  "note": "frozen=冻结面(改动应触发verify失败); ledger=只增账本当前快照(历史只增由git门禁负责); config=配置",
+  "frozen": {
+    "src/observability/eval.ts": "9a4c97ad07cb2c8c7353313d4407bb2e6f91006a7be910bad194a52761cf5efc",
+    "src/kernel/loop.ts": "f72d04a1aba45da979e00053f768e4ad29090ab05624fdd9c2d2b06999235de7",
+    "src/kernel/events.ts": "0da7d3b805f234d531660092b826460a087e9721efc2b20f78c6cbeacf60195b",
+    "src/governance/guards.ts": "2b3ada6762492665769b0c435d00335e161860b3bddab356c4649a9b7ecef8c4",
+    "src/governance/permissions.ts": "09c043063358b9b3898bc76f4b435c0fa47423b1ace22fa1c5687a1e7fe90364",
+    "src/runtime/policy.ts": "f8f602a6c7b1180bd654a633a26cbd35b6bb121fdbe7ec7f6ecc1a256085ac83",
+    "src/tools/repair.ts": "fd0398d50ed80f5f4ce0fddacaecd5c369d4001b9ee7858b2377f15193767ec5",
+    "src/tools/runtime.ts": "5ebf706326534f04f231b21130a6a371b581dfbcc574ab8a752e426f9f803750",
+    "src/rsi/types.ts": "b16fef3b5496cf5ec6667d46b2b4aeb2adf64042d10caecb3ac8a9b7494515cd",
+    "src/rsi/guardrails.ts": "9f2583bfe134c7bf87eb1d91745213c2766c5364952654cd1b050d0ba6509200",
+    "src/rsi/miner.ts": "88287a3d51288bdf93483b82a9d2db5675cfb94e4e412463fe5a8458c5bf542d",
+    "src/rsi/operators.ts": "e7f4af6f800ba57f882ff21c5f75f09b24df0a666bde73997ff36ce62ed0e93c",
+    "src/rsi/loop.ts": "1eeb47462ed29224a5d58dc8432d64f56ea59e20e508624883410c67f72a60d8",
+    "src/rsi/meta.ts": "8f8b3f31ab37632ea15d97acdaacadb4b92c7acfaa95064c6abe50d5c0dd3f76",
+    "src/benchmark/ladder.ts": "0fb0f12e10ab565e559f24d303514b9a5e6872e8769673c1e67c514e2ab0d007",
+    "src/benchmark/external.ts": "47da686784009de3841f28666066dee2bfcd55a4bdf6924c01b8578c7d6dbb75",
+    "src/benchmark/scoring.ts": "8913718ce98d519f042e8ec727750c8fdbba8a586b608e2684a2eaa54a3aea09",
+    "data/eval-tasks.jsonl": "f66ea682469c36be9c4aa7838958deca4442df72bf38c6eed4866ad74986cedd",
+    "data/evolve/train.jsonl": "f88015fc3a0e91fda5ee86a1aa3605269ca748fe9e129d4287cd22cd56b3788f",
+    "data/evolve/holdout.jsonl": "baa98a6cda9bed04ae0f189907c308da618efd435636c0b862299ed2fcab9758",
+    "data/evolve/ood.jsonl": "1161b1dbb06ee469974fd08e2347ad709521a2ade475461514f0814147bee5af"
+  },
+  "ledger": {
+    "data/rsi/velocity.jsonl": "c09c0bb55b492afde8b0e7d08af8916cc4f485f7fa65604dc5896212d9edde0d",
+    "data/rsi/experience.jsonl": "7d73f46cfd06d30db4bc91c89f10a24ffc732113e1b6a24c0251e91385dcb641",
+    "data/evolve/ledger.jsonl": "bfcc79870ec97d81d8aea4ccf81c373869f7c2dde53d6d2bdf5bce7b81bb7925",
+    "data/evolve/incidents.jsonl": "afa7b7c7d011896998a0acac6e043b97d618a5358092e1fd7745da7c2799b87b"
+  },
+  "config": {
+    "agentos.config.json": "b8a7836f6bbfa1c3e741787cc9bca2e67eba87efd7208e678e710e8b198a50a7"
+  }
+}

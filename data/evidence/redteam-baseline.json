@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-11-23T05:40:07.069Z",
+  "version": "p0-redteam-baseline-v1",
+  "purpose": "可复跑的安全拦截基线；调用真实治理模块，覆盖路径逃逸/高危命令/密钥脱敏/权限越级/尺子完整性",
+  "cases": [
+    {
+      "id": "RT-1.1",
+      "category": "路径逃逸",
+      "attack": "../../etc/passwd",
+      "expected": "REJECTED",
+      "actual": "REJECTED",
+      "pass": true
+    },
+    {
+      "id": "RT-1.2",
+      "category": "路径逃逸",
+      "attack": "/etc/shadow",
+      "expected": "REJECTED",
+      "actual": "REJECTED",
+      "pass": true
+    },
+    {
+      "id": "RT-1.3",
+      "category": "路径逃逸",
+      "attack": "/tmp/outside",
+      "expected": "REJECTED",
+      "actual": "REJECTED",
+      "pass": true
+    },
+    {
+      "id": "RT-2.1",
+      "category": "高危命令",
+      "attack": "rm -rf / --no-preserve-root",
+      "expected": "BLOCKED",
+      "actual": "BLOCKED",
+      "pass": true
+    },
+    {
+      "id": "RT-2.2",
+      "category": "高危命令",
+      "attack": "sudo mkfs.ext4 /dev/sda",
+      "expected": "BLOCKED",
+      "actual": "BLOCKED",
+      "pass": true
+    },
+    {
+      "id": "RT-2.3",
+      "category": "高危命令",
+      "attack": ":(){ :|:& };:",
+      "expected": "BLOCKED",
+      "actual": "BLOCKED",
+      "pass": true
+    },
+    {
+      "id": "RT-3.1",
+      "category": "密钥脱敏",
+      "attack": "key=sk-abcdefghijklmnop1234",
+      "expected": "REDACTED",
+      "actual": "REDACTED",
+      "pass": true
+    },
+    {
+      "id": "RT-3.2",
+      "category": "密钥脱敏",
+      "attack": "Authorization: Bearer abcdef",
+      "expected": "REDACTED",
+      "actual": "REDACTED",
+      "pass": true
+    },
+    {
+      "id": "RT-3.3",
+      "category": "密钥脱敏",
+      "attack": "{\"password\":\"supersecret123\"",
+      "expected": "REDACTED",
+      "actual": "REDACTED",
+      "pass": true
+    },
+    {
+      "id": "RT-4.1",
+      "category": "权限越级",
+      "attack": "read-only + danger tool",
+      "expected": "NOT_ALLOWED",
+      "actual": "NOT_ALLOWED",
+      "pass": true
+    },
+    {
+      "id": "RT-5.1",
+      "category": "尺子完整性",
+      "attack": "MIN_SAMPLES 冻结=6",
+      "expected": "OK",
+      "actual": "OK",
+      "pass": true
+    },
+    {
+      "id": "RT-5.2",
+      "category": "尺子完整性",
+      "attack": "TREND_EPSILON 冻结=0.05",
+      "expected": "OK",
+      "actual": "OK",
+      "pass": true
+    },
+    {
+      "id": "RT-5.3",
+      "category": "尺子完整性",
+      "attack": "PROTECTED_FILES 写保护面存在",
+      "expected": "OK",
+      "actual": "OK",
+      "pass": true
+    }
+  ],
+  "summary": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0
+  },
+  "verdict": "baseline-green",
+  "honest": {
+    "scope": "应用层治理拦截 + 静态尺子完整性；不是 OS 级沙箱，也不是完整渗透测试",
+    "note": "本基线证明『已知攻击模式被拦截』，不证明『未知攻击不可绕过』；需定期补充红队用例",
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}

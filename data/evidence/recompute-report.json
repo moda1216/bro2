@@ -1,0 +1,106 @@
+{
+  "generatedAt": "2026-11-23T05:40:06.863Z",
+  "version": "p0-evidence-recompute-v1",
+  "purpose": "独立实现从原始账本重算曲线，与运行时 watermark 交叉对照（inter-rater reliability）",
+  "independence": {
+    "importsRuntimeRuler": false,
+    "declaredConstants": {
+      "MIN_SAMPLES": 6,
+      "TREND_EPSILON": 0.05,
+      "ipaFormula": "sum(improvement)/sum(attempts)"
+    },
+    "ledgerSha256": "c09c0bb55b492afde8b0e7d08af8916cc4f485f7fa65604dc5896212d9edde0d",
+    "readOnly": true
+  },
+  "ledger": {
+    "records": 14,
+    "wellFormed": true
+  },
+  "independentSnapshot": {
+    "samples": 14,
+    "usableSamples": 14,
+    "firstTryHitRate": 1,
+    "avgAttempts": 2.0714285714285716,
+    "avgProbesAvoided": 0.9285714285714286,
+    "improvementPerAttempt": 0.4827586206896552,
+    "reuseRate": 0.9285714285714286,
+    "trend": "accelerating"
+  },
+  "runtimeSnapshot": {
+    "samples": 14,
+    "usableSamples": 14,
+    "firstTryHitRate": 1,
+    "avgAttempts": 2.0714285714285716,
+    "avgProbesAvoided": 0.9285714285714286,
+    "improvementPerAttempt": 0.4827586206896552,
+    "reuseRate": 0.9285714285714286,
+    "firstHalfIPA": 0.4666666666666667,
+    "secondHalfIPA": 0.5,
+    "trend": "accelerating",
+    "honesty": {
+      "frozenMetric": true,
+      "selfReported": false,
+      "reason": "样本 14（前半 7 / 后半 7）；IPA 0.467→0.500，探测 2.14→2.00，首轮命中 1.00→1.00；协议违规 0 轮已排除"
+    }
+  },
+  "comparisons": [
+    {
+      "field": "samples",
+      "independent": 14,
+      "runtime": 14,
+      "match": true
+    },
+    {
+      "field": "usableSamples",
+      "independent": 14,
+      "runtime": 14,
+      "match": true
+    },
+    {
+      "field": "firstTryHitRate",
+      "independent": 1,
+      "runtime": 1,
+      "match": true
+    },
+    {
+      "field": "avgAttempts",
+      "independent": 2.0714285714285716,
+      "runtime": 2.0714285714285716,
+      "match": true
+    },
+    {
+      "field": "avgProbesAvoided",
+      "independent": 0.9285714285714286,
+      "runtime": 0.9285714285714286,
+      "match": true
+    },
+    {
+      "field": "improvementPerAttempt",
+      "independent": 0.4827586206896552,
+      "runtime": 0.4827586206896552,
+      "match": true
+    },
+    {
+      "field": "reuseRate",
+      "independent": 0.9285714285714286,
+      "runtime": 0.9285714285714286,
+      "match": true
+    },
+    {
+      "field": "trend",
+      "independent": "accelerating",
+      "runtime": "accelerating",
+      "match": true
+    }
+  ],
+  "pointCrossCheck": {
+    "compared": 14,
+    "mismatches": 0
+  },
+  "verdict": "independent-agrees-with-runtime",
+  "honest": {
+    "scope": "只验证『运行时水位报告 == 冻结尺子对原始账本的独立重算』，不构成能力分数或领先证据",
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}
