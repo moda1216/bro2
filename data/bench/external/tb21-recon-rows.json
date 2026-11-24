@@ -1,0 +1,536 @@
+[
+ {
+  "task": "adaptive-rejection-sampler",
+  "ok": true,
+  "docker_image": "alexgshaw/adaptive-rejection-sampler:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "bn-fit-modify",
+  "ok": true,
+  "docker_image": "alexgshaw/bn-fit-modify:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "break-filter-js-from-html",
+  "ok": true,
+  "docker_image": "alexgshaw/break-filter-js-from-html:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "build-cython-ext",
+  "ok": true,
+  "docker_image": "alexgshaw/build-cython-ext:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "build-pmars",
+  "ok": true,
+  "docker_image": "alexgshaw/build-pmars:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "build-pov-ray",
+  "ok": true,
+  "docker_image": "alexgshaw/build-pov-ray:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "caffe-cifar-10",
+  "ok": true,
+  "docker_image": "alexgshaw/caffe-cifar-10:20260403",
+  "prebuilt": true
+ },
+ {
+  "task": "cancel-async-tasks",
+  "ok": true,
+  "docker_image": "alexgshaw/cancel-async-tasks:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "chess-best-move",
+  "ok": true,
+  "docker_image": "alexgshaw/chess-best-move:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "circuit-fibsqrt",
+  "ok": true,
+  "docker_image": "alexgshaw/circuit-fibsqrt:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "cobol-modernization",
+  "ok": true,
+  "docker_image": "alexgshaw/cobol-modernization:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "code-from-image",
+  "ok": true,
+  "docker_image": "alexgshaw/code-from-image:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "compile-compcert",
+  "ok": true,
+  "docker_image": "alexgshaw/compile-compcert:20260403",
+  "prebuilt": true
+ },
+ {
+  "task": "configure-git-webserver",
+  "ok": true,
+  "docker_image": "alexgshaw/configure-git-webserver:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "constraints-scheduling",
+  "ok": true,
+  "docker_image": "alexgshaw/constraints-scheduling:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "count-dataset-tokens",
+  "ok": true,
+  "docker_image": "alexgshaw/count-dataset-tokens:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "crack-7z-hash",
+  "ok": true,
+  "docker_image": "alexgshaw/crack-7z-hash:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "custom-memory-heap-crash",
+  "ok": true,
+  "docker_image": "alexgshaw/custom-memory-heap-crash:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "db-wal-recovery",
+  "ok": true,
+  "docker_image": "alexgshaw/db-wal-recovery:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "distribution-search",
+  "ok": true,
+  "docker_image": "alexgshaw/distribution-search:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "dna-assembly",
+  "ok": true,
+  "docker_image": "alexgshaw/dna-assembly:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "dna-insert",
+  "ok": true,
+  "docker_image": "alexgshaw/dna-insert:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "extract-elf",
+  "ok": true,
+  "docker_image": "alexgshaw/extract-elf:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "extract-moves-from-video",
+  "ok": true,
+  "docker_image": "alexgshaw/extract-moves-from-video:20260403",
+  "prebuilt": true
+ },
+ {
+  "task": "feal-differential-cryptanalysis",
+  "ok": true,
+  "docker_image": "alexgshaw/feal-differential-cryptanalysis:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "feal-linear-cryptanalysis",
+  "ok": true,
+  "docker_image": "alexgshaw/feal-linear-cryptanalysis:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "filter-js-from-html",
+  "ok": true,
+  "docker_image": "alexgshaw/filter-js-from-html:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "financial-document-processor",
+  "ok": true,
+  "docker_image": "alexgshaw/financial-document-processor:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "fix-code-vulnerability",
+  "ok": true,
+  "docker_image": "alexgshaw/fix-code-vulnerability:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "fix-git",
+  "ok": true,
+  "docker_image": "alexgshaw/fix-git:20260403",
+  "prebuilt": true
+ },
+ {
+  "task": "fix-ocaml-gc",
+  "ok": true,
+  "docker_image": "alexgshaw/fix-ocaml-gc:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "gcode-to-text",
+  "ok": true,
+  "docker_image": "alexgshaw/gcode-to-text:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "git-leak-recovery",
+  "ok": true,
+  "docker_image": "alexgshaw/git-leak-recovery:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "git-multibranch",
+  "ok": true,
+  "docker_image": "alexgshaw/git-multibranch:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "gpt2-codegolf",
+  "ok": true,
+  "docker_image": "alexgshaw/gpt2-codegolf:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "headless-terminal",
+  "ok": true,
+  "docker_image": "alexgshaw/headless-terminal:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "hf-model-inference",
+  "ok": true,
+  "docker_image": "alexgshaw/hf-model-inference:20260430",
+  "prebuilt": true
+ },
+ {
+  "task": "install-windows-3.11",
+  "ok": true,
+  "docker_image": "alexgshaw/install-windows-3.11:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "kv-store-grpc",
+  "ok": true,
+  "docker_image": "alexgshaw/kv-store-grpc:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "large-scale-text-editing",
+  "ok": true,
+  "docker_image": "alexgshaw/large-scale-text-editing:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "largest-eigenval",
+  "ok": true,
+  "docker_image": "alexgshaw/largest-eigenval:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "llm-inference-batching-scheduler",
+  "ok": true,
+  "docker_image": "alexgshaw/llm-inference-batching-scheduler:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "log-summary-date-ranges",
+  "ok": true,
+  "docker_image": "alexgshaw/log-summary-date-ranges:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "mailman",
+  "ok": true,
+  "docker_image": "alexgshaw/mailman:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "make-doom-for-mips",
+  "ok": true,
+  "docker_image": "alexgshaw/make-doom-for-mips:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "make-mips-interpreter",
+  "ok": true,
+  "docker_image": "alexgshaw/make-mips-interpreter:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "mcmc-sampling-stan",
+  "ok": true,
+  "docker_image": "alexgshaw/mcmc-sampling-stan:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "merge-diff-arc-agi-task",
+  "ok": true,
+  "docker_image": "alexgshaw/merge-diff-arc-agi-task:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "model-extraction-relu-logits",
+  "ok": true,
+  "docker_image": "alexgshaw/model-extraction-relu-logits:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "modernize-scientific-stack",
+  "ok": true,
+  "docker_image": "alexgshaw/modernize-scientific-stack:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "mteb-leaderboard",
+  "ok": true,
+  "docker_image": "alexgshaw/mteb-leaderboard:20260430",
+  "prebuilt": true
+ },
+ {
+  "task": "mteb-retrieve",
+  "ok": true,
+  "docker_image": "alexgshaw/mteb-retrieve:20260430",
+  "prebuilt": true
+ },
+ {
+  "task": "multi-source-data-merger",
+  "ok": true,
+  "docker_image": "alexgshaw/multi-source-data-merger:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "nginx-request-logging",
+  "ok": true,
+  "docker_image": "alexgshaw/nginx-request-logging:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "openssl-selfsigned-cert",
+  "ok": true,
+  "docker_image": "alexgshaw/openssl-selfsigned-cert:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "overfull-hbox",
+  "ok": true,
+  "docker_image": "alexgshaw/overfull-hbox:20260403",
+  "prebuilt": true
+ },
+ {
+  "task": "password-recovery",
+  "ok": true,
+  "docker_image": "alexgshaw/password-recovery:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "path-tracing",
+  "ok": true,
+  "docker_image": "alexgshaw/path-tracing:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "path-tracing-reverse",
+  "ok": true,
+  "docker_image": "alexgshaw/path-tracing-reverse:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "polyglot-c-py",
+  "ok": true,
+  "docker_image": "alexgshaw/polyglot-c-py:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "polyglot-rust-c",
+  "ok": true,
+  "docker_image": "alexgshaw/polyglot-rust-c:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "portfolio-optimization",
+  "ok": true,
+  "docker_image": "alexgshaw/portfolio-optimization:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "protein-assembly",
+  "ok": true,
+  "docker_image": "alexgshaw/protein-assembly:20260403",
+  "prebuilt": true
+ },
+ {
+  "task": "prove-plus-comm",
+  "ok": true,
+  "docker_image": "alexgshaw/prove-plus-comm:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "pypi-server",
+  "ok": true,
+  "docker_image": "alexgshaw/pypi-server:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "pytorch-model-cli",
+  "ok": true,
+  "docker_image": "alexgshaw/pytorch-model-cli:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "pytorch-model-recovery",
+  "ok": true,
+  "docker_image": "alexgshaw/pytorch-model-recovery:20260430",
+  "prebuilt": true
+ },
+ {
+  "task": "qemu-alpine-ssh",
+  "ok": true,
+  "docker_image": "alexgshaw/qemu-alpine-ssh:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "qemu-startup",
+  "ok": true,
+  "docker_image": "alexgshaw/qemu-startup:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "query-optimize",
+  "ok": true,
+  "docker_image": "alexgshaw/query-optimize:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "raman-fitting",
+  "ok": true,
+  "docker_image": "alexgshaw/raman-fitting:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "regex-chess",
+  "ok": true,
+  "docker_image": "alexgshaw/regex-chess:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "regex-log",
+  "ok": true,
+  "docker_image": "alexgshaw/regex-log:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "reshard-c4-data",
+  "ok": true,
+  "docker_image": "alexgshaw/reshard-c4-data:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "rstan-to-pystan",
+  "ok": true,
+  "docker_image": "alexgshaw/rstan-to-pystan:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "sam-cell-seg",
+  "ok": true,
+  "docker_image": "alexgshaw/sam-cell-seg:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "sanitize-git-repo",
+  "ok": true,
+  "docker_image": "alexgshaw/sanitize-git-repo:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "schemelike-metacircular-eval",
+  "ok": true,
+  "docker_image": "alexgshaw/schemelike-metacircular-eval:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "sparql-university",
+  "ok": true,
+  "docker_image": "alexgshaw/sparql-university:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "sqlite-db-truncate",
+  "ok": true,
+  "docker_image": "alexgshaw/sqlite-db-truncate:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "sqlite-with-gcov",
+  "ok": true,
+  "docker_image": "alexgshaw/sqlite-with-gcov:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "torch-pipeline-parallelism",
+  "ok": true,
+  "docker_image": "alexgshaw/torch-pipeline-parallelism:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "torch-tensor-parallelism",
+  "ok": true,
+  "docker_image": "alexgshaw/torch-tensor-parallelism:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "train-fasttext",
+  "ok": true,
+  "docker_image": "alexgshaw/train-fasttext:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "tune-mjcf",
+  "ok": true,
+  "docker_image": "alexgshaw/tune-mjcf:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "video-processing",
+  "ok": true,
+  "docker_image": "alexgshaw/video-processing:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "vulnerable-secret",
+  "ok": true,
+  "docker_image": "alexgshaw/vulnerable-secret:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "winning-avg-corewars",
+  "ok": true,
+  "docker_image": "alexgshaw/winning-avg-corewars:20251031",
+  "prebuilt": true
+ },
+ {
+  "task": "write-compressor",
+  "ok": true,
+  "docker_image": "alexgshaw/write-compressor:20251031",
+  "prebuilt": true
+ }
+]

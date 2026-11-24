@@ -34,7 +34,10 @@ REPO = "harbor-framework/terminal-bench-2-1"
 BASE = f"https://raw.githubusercontent.com/{REPO}/{COMMIT}/tasks"
 THROTTLE = os.path.join(ROOT, "examples", "ovh-throttle.mjs")
 TASKS_FILE = "/tmp/tb21-tasks.json"
-RECON_FILE = "/tmp/tb21-recon-rows.json"
+# 镜像映射必须随仓库走：GitHub Actions runner 没有本地 /tmp 的 recon 文件。
+# 优先读仓库内落库版本（data/bench/external/tb21-recon-rows.json），/tmp 作为本地回退。
+RECON_FILE = os.path.join(EXT, "tb21-recon-rows.json")
+RECON_FILE_LEGACY = "/tmp/tb21-recon-rows.json"
 
 # 每题预算：受 ovhcloud 2 req/min 限制，放宽墙钟（同 v2.33）。
 # 冒烟实测：gpt-oss-120b 在 2.1 复杂题（ars）上 32 步耗尽 247k tokens，240k 不够；
@@ -76,8 +79,11 @@ def load_tasks() -> list[str]:
 
 
 def load_images() -> dict[str, str]:
-    if os.path.exists(RECON_FILE):
-        return {r["task"]: r.get("docker_image") for r in json.load(open(RECON_FILE)) if r.get("docker_image")}
+    # 仓库落库优先；本地 /tmp 回退（兼容旧的手工 recon 流程）。
+    for path in (RECON_FILE, RECON_FILE_LEGACY):
+        if os.path.exists(path):
+            rows = json.load(open(path))
+            return {r["task"]: r.get("docker_image") for r in rows if r.get("docker_image")}
     return {}
 
 

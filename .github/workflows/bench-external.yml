@@ -63,9 +63,10 @@ jobs:
       - name: 评测前进度快照
         id: before
         run: |
-          n=$(grep -c '"status"' data/bench/external/tb21-full-results.jsonl 2>/dev/null || echo 0)
+          # 只数有效 ok trial；error/no-image 是基础设施失败，不计进度（防虚假 98/267）
+          n=$(grep -c '"status": "ok"' data/bench/external/tb21-full-results.jsonl 2>/dev/null || echo 0)
           echo "count=$n" >> "$GITHUB_OUTPUT"
-          echo "评测前完成: $n / 267"
+          echo "评测前有效完成: $n / 267"
 
       - name: 端点健康检查（ovhcloud / gpt-oss-120b 免 key）
         run: |
@@ -88,7 +89,8 @@ jobs:
       - name: 评测后进度 + 心跳落盘
         id: after
         run: |
-          n=$(grep -c '"status"' data/bench/external/tb21-full-results.jsonl 2>/dev/null || echo 0)
+          # 只数有效 ok trial；error/no-image 不计进度
+          n=$(grep -c '"status": "ok"' data/bench/external/tb21-full-results.jsonl 2>/dev/null || echo 0)
           echo "count=$n" >> "$GITHUB_OUTPUT"
           python3 examples/bench-heartbeat.py "$n"
 
