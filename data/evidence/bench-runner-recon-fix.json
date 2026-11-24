@@ -1,0 +1,62 @@
+{
+  "kind": "bench-runner-recon-fix",
+  "version": 1,
+  "generatedAt": "2026-11-24T04:13:00Z",
+  "verdict": "not-proven",
+  "note": "本记录是基础设施修复证据，不是能力分数。partial≠榜单分数；L4=not-achieved 不变。",
+  "issue": {
+    "symptom": "bench-external.yml 首次手动触发后 completed success，但新写 89 条 status=error/err=no-image，进度虚增为 98/267",
+    "workflowRunsBefore": 0,
+    "eventHistory": "全仓 71 次 run 全为 push，schedule 事件 0 —— cron 从未被 GitHub 触发",
+    "firstRun": {
+      "id": 45322637834,
+      "event": "workflow_dispatch",
+      "headSHA": "9d3d6b0",
+      "conclusion": "success",
+      "commit": "c831576",
+      "newTrials": 89,
+      "newTrialStatus": "全部 err=no-image（基础设施失败，非有效评测）",
+      "validTrialsBefore": 9,
+      "validTrialsAfter": 9,
+      "rewardDistribution": {"1": 1, "0": 8}
+    }
+  },
+  "rootCause": {
+    "file": "examples/tb21-batch.py",
+    "line": "RECON_FILE = /tmp/tb21-recon-rows.json",
+    "detail": "镜像映射文件只存在于本地 /tmp，未随仓库提交。GitHub Actions runner 上该文件不存在 → load_images() 返回空 → 每个 task 写 err=no-image → 整批快速失败，无一条真正执行。",
+    "secondary": "workflow 进度快照用 grep -c '\"status\"' 数所有行（含 error），把基础设施失败计入进度，形成虚假 98/267。"
+  },
+  "fix": {
+    "commits": ["f8df81a", "2648887"],
+    "changes": [
+      "data/bench/external/tb21-recon-rows.json 落库（89 任务 docker_image 映射随仓库走）",
+      "load_images() 仓库路径优先、/tmp 回退；runner 模拟（移除 /tmp 文件）验证仍返回 89 条",
+      "bench-external.yml 两处进度统计改为只数 status=ok，error 不计",
+      "examples/tb21-clean-infra-errors.py 幂等清理脚本：只删 err∈{no-image,pull-failed,build-failed}，保留全部 status=ok",
+      "远程结果文件 98→9 行（剔除 89 条 no-image），heartbeat 重算 9/267=3.37%"
+    ],
+    "sourceBudget": "16500/16500 不变（改动均在 examples/、data/、.github/ 豁免目录）",
+    "ciGate": {"run": 45324675439, "headSHA": "2648887", "conclusion": "success", "blockingGates": "38/38"}
+  },
+  "verification": {
+    "reconRunnerSimulation": "PASS（/tmp 无文件时 load_images() 仍返回 89 条）",
+    "cleanIdempotent": "PASS（二次运行删 0 行）",
+    "cleanExact": "98 行 → 9 行；89 条 no-image 全删，9 条真实 trial（1 分/8 分）全留",
+    "secondDispatch": {
+      "id": 45324696365,
+      "event": "workflow_dispatch",
+      "headSHA": "2648887",
+      "limit": 3,
+      "http": 204,
+      "statusAtRecord": "in_progress",
+      "expectation": "runner 从仓库读 recon 映射，应真正执行 3 个 trial；结果待回填"
+    }
+  },
+  "honestBoundary": [
+    "首轮 89 条 no-image 不是模型能力失败，是基础设施失败，已从结果集剔除。",
+    "有效评测进度仍是 9/267（1 分/8 分），reward=0 的失败题是有效证据，全部保留。",
+    "第二轮 dispatch 已触发但结果尚未回填；本记录不预判其成败。",
+    "GitHub cron schedule 仍未自动触发过（0 次）；手动 dispatch 可用，但定时激活问题需另行观察下个 cron 窗口。"
+  ]
+}
