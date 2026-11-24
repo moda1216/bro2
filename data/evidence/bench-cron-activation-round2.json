@@ -1,0 +1,51 @@
+{
+  "kind": "bench-cron-activation-round2",
+  "version": 1,
+  "generatedAt": "2026-11-24T10:32:00Z",
+  "verdict": "not-proven",
+  "note": "基础设施进展证据，不是能力分数。partial≠榜单分数；L4=not-achieved 不变。",
+  "goodNews": {
+    "cronActivated": {
+      "run": 45370930811,
+      "event": "schedule",
+      "headSHA": "823f7d07",
+      "created": "2026-11-24T10:02:39Z",
+      "status": "in_progress",
+      "detail": "首条 schedule 事件出现——此前全仓 71 次 run 全为 push、cron 0 次。改 cron 后重新注册生效。",
+      "cron": "17 */6 * * *"
+    },
+    "reconFixEffective": {
+      "detail": "第二轮手动 run #45324696365 日志不再有 err=no-image；task 能 prepare 成功并进入运行（break-filter-js-from-html、modernize-scientific-stack 均开跑 trial）。recon 落库修复达成目标。"
+    }
+  },
+  "remainingBlockers": {
+    "endpointProviderError": {
+      "evidence": "trial 日志: break-filter r3 / modernize r1,r2 均 reward=None steps=3 wall≈1135s；端点健康检查 ovh HTTP=200，但 trial 内 bro2 跑 3 步即 provider_error。",
+      "rootCause": "ovhcloud gpt-oss-120b 免 key 端点在 trial 内调用失败（限流/配额/质量），reward=None 触发 batch.py 诚实红线（provider_error 判 error、不计 reward），非判分器问题。",
+      "impact": "有效 trial 不增加，进度停滞 9/267。"
+    },
+    "imagePullFail": {
+      "evidence": "日志 89 个 task 中大面积 '[task] prepare...' → 'SKIP: prepare 失败'，每个仅 3-8s（非网络重试 60s），集中在 alexgshaw/*:20251031 官方镜像。",
+      "rootCause": "GitHub runner 上 docker pull 多数官方镜像失败（本地环境有缓存镜像故未暴露）。",
+      "impact": "即使端点恢复，多数 task 仍无法进入运行。"
+    },
+    "writebackGap": {
+      "evidence": "runner 上跑完的 error trial 未 commit 回 main（日志: '本轮无新 trial（9→9），不提交'）。",
+      "rootCause": "workflow 回写条件 AFTER>BEFORE 只数 status=ok；provider_error 的 error 行不计入，故判断为无新增、不提交。这是诚实红线副作用——error 证据留在 runner 临时盘丢失。",
+      "impact": "失败的诊断证据未持久化；但有效进度判定正确（9/267），无误判。"
+    }
+  },
+  "progress": {
+    "effectiveTrials": 9,
+    "total": 267,
+    "reward": {"1": 1, "0": 8},
+    "pct": 3.37,
+    "unchangedSince": "2026-11-17"
+  },
+  "honestBoundary": [
+    "本轮无新有效 trial，进度仍是 9/267——这不是退步，是端点与镜像两个外部障碍共同作用的结果。",
+    "cron 激活与 recon 修复是真实的基础设施进展，已通过 GitHub 事实源核实。",
+    "reward=None 的 trial 被诚实判为 provider_error、未计分——防污染红线正常工作，未伪造结论。",
+    "当前 cron run #45370930811 仍在 in_progress，结果未出；本记录不预判。"
+  ]
+}
