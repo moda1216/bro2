@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bro2 · 外部评测 CI 首轮诊断与修复报告</title>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--bd:#30363d;--fg:#e6edf3;--mut:#8b949e;--ok:#3fb950;--err:#f85149;--warn:#d29922;--acc:#58a6ff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.65;padding:32px 20px}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 4px}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:26px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:20px 22px;margin-bottom:18px}
+  h2{font-size:17px;margin:0 0 14px;padding-left:10px;border-left:3px solid var(--acc)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--bd);vertical-align:top}
+  th{color:var(--mut);font-weight:600;width:34%}
+  code{background:#010409;padding:2px 6px;border-radius:4px;font-family:ui-monospace,monospace;font-size:12.5px;color:#79c0ff}
+  .ok{color:var(--ok);font-weight:600}.err{color:var(--err);font-weight:600}.warn{color:var(--warn);font-weight:600}
+  .tag{display:inline-block;padding:2px 9px;border-radius:12px;font-size:12px;font-weight:600;margin-right:6px}
+  .tag.ok{background:rgba(63,185,80,.15);border:1px solid rgba(63,185,80,.4)}
+  .tag.err{background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.4)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0}
+  .flow .step{background:#010409;border:1px solid var(--bd);border-radius:8px;padding:8px 12px;font-size:12.5px}
+  .arrow{color:var(--mut)}
+  ul{margin:8px 0;padding-left:20px}li{margin:5px 0;font-size:13.5px}
+  .note{background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.3);border-radius:8px;padding:12px 14px;color:#e3b341;font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>bro2 · 外部评测 CI 首轮诊断与修复</h1>
+  <div class="sub">Terminal-Bench 2.1 · 89×3 常驻评测 · 2026-11-24 · verdict=not-proven / L4=not-achieved（不变）</div>
+
+  <div class="card">
+    <h2>一句话结论</h2>
+    <p>你手动触发的第一条 run <span class="ok">确实成功完成</span>，但它写出的 89 条新记录<strong>全是 <code>err=no-image</code> 基础设施失败</strong>，没有一条真正跑评测 —— 所谓「98/267」是<strong>虚假进度</strong>。有效成绩仍是原来的 <strong>9/267（1 分 / 8 分）</strong>。根因已定位并修复，已推送远程、通过 38 门禁，并触发第二轮真实验证。</p>
+  </div>
+
+  <div class="card">
+    <h2>诊断链条</h2>
+    <div class="flow">
+      <span class="step">workflow 0 runs<br>cron 从未触发</span><span class="arrow">→</span>
+      <span class="step">手动 dispatch<br>run #45322637834 成功</span><span class="arrow">→</span>
+      <span class="step err">+89 条 no-image<br>虚增成 98/267</span><span class="arrow">→</span>
+      <span class="step">根因：recon 文件<br>只在本地 /tmp</span><span class="arrow">→</span>
+      <span class="step ok">落库 + 统计口径<br>修复并推送</span><span class="arrow">→</span>
+      <span class="step">第二轮 dispatch<br>#45324696365 验证中</span>
+    </div>
+    <table style="margin-top:14px">
+      <tr><th>schedule 事件历史</th><td>全仓 71 次 run <strong>全为 push，schedule = 0</strong>。配置合法、active、在 main，但 GitHub 从未触发 cron。</td></tr>
+      <tr><th>首轮 run</th><td><code>#45322637834</code> · workflow_dispatch · head <code>9d3d6b0</code> · conclusion <span class="ok">success</span></td></tr>
+      <tr><th>首轮产物</th><td>98 行 = 9 条真实 trial（status=ok）+ 89 条 <span class="err">err=no-image</span>；89 条全部 <code>status=error / reward=None</code>，无镜像、无日志、无 rc。</td></tr>
+      <tr><th>根因（主）</th><td><code>tb21-batch.py</code> 的 <code>RECON_FILE = /tmp/tb21-recon-rows.json</code> 只在本地存在，未随仓库提交；runner 上读不到 → <code>load_images()</code> 返回空 → 每题写 <code>no-image</code> 快速失败。</td></tr>
+      <tr><th>根因（次）</th><td>进度统计用 <code>grep -c '"status"'</code> 数了所有行（含 error），把基础设施失败计入进度。</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>修复内容（commits f8df81a / 2648887 / 4d35f93）</h2>
+    <ul>
+      <li><strong>recon 映射落库</strong>：<code>data/bench/external/tb21-recon-rows.json</code>（89 任务 docker_image 随仓库走）。</li>
+      <li><strong>load_images 改仓库优先</strong>：/tmp 仅本地回退；模拟 runner（移走 /tmp 文件）验证仍返回 89 条 —— <span class="ok">PASS</span>。</li>
+      <li><strong>进度口径纠正</strong>：workflow 两处改为只数 <code>status=ok</code>，error 不计。</li>
+      <li><strong>幂等清理脚本</strong>：<code>examples/tb21-clean-infra-errors.py</code> 只删基础设施失败行、保留全部真实 trial；98→9 行精确验证，二次运行删 0 行。</li>
+      <li><strong>数据修复</strong>：远程结果文件 98→9 行，heartbeat 重算 9/267 = 3.37%。</li>
+      <li><strong>证据固化</strong>：<code>data/evidence/bench-runner-recon-fix.json</code> 记录完整链条。</li>
+    </ul>
+    <div class="note">源码预算 16500/16500 不变 —— 所有改动均在 examples/、data/、.github/ 豁免目录。CI 门禁 run <code>#45324675439</code>（head <code>2648887</code>）<span class="ok">success，38/38 阻断门禁全绿</span>。</div>
+  </div>
+
+  <div class="card">
+    <h2>当前状态与诚实边界</h2>
+    <table>
+      <tr><th>远程 main</th><td><code>4d35f93</code>（已含全部修复）</td></tr>
+      <tr><th>有效评测进度</th><td><strong>9/267</strong>（1 分 / 8 分，reward=0 的失败题是有效证据，全部保留）</td></tr>
+      <tr><th>第二轮验证</th><td><code>#45324696365</code> · workflow_dispatch · head <code>2648887</code> · limit=3 · <span class="warn">in_progress（结果尚未回填）</span></td></tr>
+      <tr><th>cron 定时</th><td><span class="warn">仍未自动触发过</span>。手动 dispatch 已可用；需在修改 cron 后观察下个窗口是否激活。</td></tr>
+    </table>
+    <div class="note">
+      ① 首轮 89 条 no-image 是基础设施失败，不是模型能力失败，已剔除。② 本轮修复不产出任何能力结论，verdict 恒为 not-proven。③ 第二轮 dispatch 结果未出，本报告不预判成败；待其完成后再回填真实进度。
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
