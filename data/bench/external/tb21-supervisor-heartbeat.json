@@ -1,8 +1,8 @@
 {
-  "ts": "2026-11-24T03:54:16.737462Z",
-  "done": 98,
+  "ts": "2026-11-24T04:11:35.550048Z",
+  "done": 9,
   "total": 267,
-  "pct": 36.7,
+  "pct": 3.37,
   "state": "running",
   "source": "github-actions/cron",
   "verdict": "not-proven",
