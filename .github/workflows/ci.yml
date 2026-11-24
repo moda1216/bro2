@@ -24,6 +24,12 @@ jobs:
         with:
           node-version: "22.6.0"
 
+      # F6 判据库 tb21-batch-guard.py 为评测流水线复用的 Python 实现（guard:backfill 门禁依赖）。
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       - name: 运行产出物健康度聚合（含全部离线验收门禁）
         run: npm run project:status
 

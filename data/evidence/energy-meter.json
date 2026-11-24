@@ -1,47 +1,47 @@
 {
-  "generatedAt": "2026-11-24T02:54:21.106Z",
+  "generatedAt": "2026-11-24T03:09:39.402Z",
   "purpose": "F3：用真实 OS 计数器替换 whitebox 的仿真能效值；无 usage 标 unmeasured",
   "realSnapshot": {
-    "rssMB": 125.2,
-    "cgroupMemMB": 2565.02,
-    "cgroupCpuUsec": 220375212,
-    "measuredAt": "2026-11-24T02:54:21.106Z",
-    "source": "OS /proc + cgroup v2（外部系统计数器，非 agent 自报）"
+    "rssMB": 125.48,
+    "cgroupMemMB": 2655.26,
+    "cgroupCpuUsec": 285451189,
+    "measuredAt": "2026-11-24T03:09:39.402Z",
+    "source": "OS /proc + cgroup v2（不可用时标 unmeasured，非 agent 自报、不造数）"
   },
   "checks": [
     {
       "name": "A VmRSS 真实读取为有限正数",
       "pass": true,
       "evidence": {
-        "rssKB": 74256,
-        "rssMB": 72.52
+        "rssKB": 74880,
+        "rssMB": 73.13
       }
     },
     {
-      "name": "A2 cgroup memory.current 真实读取",
+      "name": "A2 cgroup memory.current（可用则真读，不可用标 unmeasured）",
       "pass": true,
       "evidence": {
-        "memBytes": 2636787712,
-        "memMB": 2514.64
+        "memBytes": 2731679744,
+        "memMB": 2605.13
       }
     },
     {
       "name": "B 分配缓冲区后 VmRSS 单调不减",
       "pass": true,
       "evidence": {
-        "rss0KB": 74256,
-        "rss1KB": 110112,
-        "deltaKB": 35856,
+        "rss0KB": 74880,
+        "rss1KB": 110208,
+        "deltaKB": 35328,
         "sink": true
       }
     },
     {
-      "name": "C cgroup CPU 计数忙等后单调增",
+      "name": "C cgroup CPU（可用则单调增，不可用标 unmeasured）",
       "pass": true,
       "evidence": {
-        "cpu0Usec": 220322038,
-        "cpu1Usec": 220374207,
-        "deltaUsec": 52169
+        "cpu0Usec": 285397787,
+        "cpu1Usec": 285451189,
+        "deltaUsec": 53402
       }
     },
     {
