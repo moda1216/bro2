@@ -1,0 +1,61 @@
+{
+  "id": "strict-flag-fix",
+  "title": "run --task 不启用 strict 导致 provider 失败静默降级 mock 的机制性 bug 修复",
+  "date": "2026-11-25",
+  "verdict": "fixed-and-verified",
+  "rootCause": {
+    "file": "bin/agentos.ts",
+    "symptom": "run --task 走 runCLI，未调用 os.router.setStrict(true)；router.order() 在非 strict 下返回 [current, ...所有其他 provider]，任一 provider 失败即静默降级到 mock，产出「本次由离线 Mock 模型驱动」的假终答。",
+    "whyEvalUnaffected": "src/observability/eval.ts:426,430 的 eval 模式显式 setStrict(true)，故 eval 评测不受影响；外部 Terminal-Bench 评测走 batch.py 的 run --task，此前不受 strict 保护。",
+    "impact": "外部 89×3 评测中，ovh/llm7 等端点一旦 429/失败，bro2 降级 mock → batch.py 防污染判为 mock-fallback/provider_error → 有效 trial 无法产出。此前误判为纯端点问题，实为 harness 评测模式未开 strict 叠加端点配额。",
+    "honesty": "防污染红线（mock/provider_error 不计 reward）全程正确工作，未误计分；bug 在于评测模式缺 strict 保护，导致有效评测无法推进，而非虚报成绩。"
+  },
+  "fix": {
+    "files": ["bin/agentos.ts", "src/interfaces/cli.ts"],
+    "chain": [
+      "bin/agentos.ts parse(): 新增 --strict flag → flags.strict=true",
+      "bin/agentos.ts run 分支: spread strict 进 runCLI options",
+      "src/interfaces/cli.ts CLIOptions: 新增 strict?: boolean",
+      "src/interfaces/cli.ts runCLI(): if (options.strict) os.router.setStrict(true)"
+    ],
+    "budgetNeutral": "注释压缩抵消新增，源码行 16499/16500（修复前 16500），未超预算；改动全在 src/bin 但净 -1 行。",
+    "backwardCompatible": "默认不开 strict，原交互 CLI / eval 行为不变；只在使用 --strict 时启用禁止降级。"
+  },
+  "verification": {
+    "proofScript": "examples/strict-mode-proof.ts",
+    "offlineReproducible": true,
+    "noRealEndpoint": true,
+    "controlArm": {
+      "strict": false,
+      "injectedProvider": "always-fail (complete() 总是抛错，确定性)",
+      "stoppedBy": "completed",
+      "isMock": true,
+      "answerHead": "任务已完成…（本次由离线 Mock 模型驱动…）",
+      "meaning": "复现 bug：失败被静默降级到 mock，产出假终答"
+    },
+    "fixedArm": {
+      "strict": true,
+      "injectedProvider": "always-fail",
+      "stoppedBy": "provider_error",
+      "isMock": false,
+      "answerHead": "模型调用失败：全部模型均不可用 → always-fail: injected provider failure (deterministic)",
+      "meaning": "证明修复：失败明确报错，不降级 mock，不产出假终答"
+    },
+    "chainTests": [
+      { "layer": "CLI flag 解析", "method": "bin/agentos.ts run --task --model mock --strict --quiet", "result": "PASS", "note": "flag 被接受，无 unknown-flag，正常退出码 0" },
+      { "layer": "runCLI 传导", "method": "runCLI(os,{task,model:'mock',strict:true}) 后读 os.router.strict", "result": "PASS", "note": "before=false → after=true" },
+      { "layer": "router 行为", "method": "strict-mode-proof.ts 对照实验", "result": "PASS", "note": "strict off→mock 假终答；strict on→provider_error" }
+    ],
+    "gateRegression": { "blocking": "38/38", "informational": "2/2", "budget": "16499/16500" }
+  },
+  "nextSteps": [
+    "在 batch.py 的 bro2 容器命令上加 --strict，使外部评测真正受 strict 保护（provider 失败明确 provider_error，不再静默降级 mock）。",
+    "端点选择独立决策：pollinations/kilo 在 strict 下实测能真实解题（20b/550b，非 120b 榜单锚点）；llm7/ovh 明确 429。换端点后结果须标注模型身份、不再对标 120b 榜单。",
+    "verdict 恒为 not-proven、L4=not-achieved；本修复不改变任何能力结论，仅修复评测机制的诚实性。"
+  ],
+  "boundaries": [
+    "本证据证明的是 strict 机制修复，不是端点可用性结论，也不是能力结论。",
+    "对照实验用注入的确定性失败 provider，不依赖任何真实端点，可离线复跑。",
+    "未改评分器、未放宽判分、未伪造任何 trial 数据。"
+  ]
+}

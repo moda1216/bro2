@@ -1,14 +1,9 @@
 #!/usr/bin/env node
 /**
- * bro2 入口
- *   node --experimental-strip-types bin/agentos.ts                    交互 CLI
- *   ... bin/agentos.ts run --task "..." --preset standard             单次任务（headless）
- *   ... bin/agentos.ts web --port 3080                               Web UI + REST/SSE API
- *   ... bin/agentos.ts doctor                                        模型接入诊断（面向人，永远 EXIT=0）
- *   ... bin/agentos.ts preflight [--provider X] [--all] [--json]      接入门禁（未就绪 EXIT=1，CI 可用）
- *   ... bin/agentos.ts eval --mode deterministic                      框架能力回归评测 → eval-report.json
- *   ... bin/agentos.ts eval --mode live                               真实模型评测（先过 preflight）→ eval-live-report.json
- *   ... bin/agentos.ts evolve --reset                                 有界可验证自我改进
+ * bro2 入口（--strict 禁止 provider 失败静默降级 mock，评测/CI 必开）
+ *   node ... bin/agentos.ts                                          交互 CLI
+ *   ... bin/agentos.ts run --task "..." [--strict]                    单次任务（headless）
+ *   ... bin/agentos.ts web / doctor / preflight / eval / evolve        UI / 诊断 / 门禁 / 评测 / 自改进
  */
 import { existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
@@ -50,6 +45,7 @@ interface Flags {
   rounds?: number;
   all?: boolean;
   skipPreflight?: boolean;
+  strict?: boolean;
 }
 
 function parse(argv: string[]): Flags {
@@ -88,6 +84,7 @@ function parse(argv: string[]): Flags {
     else if (a === "--reset") flags.reset = true;
     else if (a === "--all") flags.all = true;
     else if (a === "--skip-preflight") flags.skipPreflight = true;
+    else if (a === "--strict") flags.strict = true;
   }
   if (flags.mode === "cli" && flags.task) flags.mode = "run";
   return flags;
@@ -312,6 +309,7 @@ else if (flags.mode === "web") {
     ...(flags.preset ? { preset: flags.preset } : {}),
     ...(flags.model ? { model: flags.model } : {}),
     ...(flags.task ? { task: flags.task } : {}),
+    ...(flags.strict ? { strict: true } : {}),
     autoApprove: flags.autoApprove,
     quiet: flags.quiet,
   });

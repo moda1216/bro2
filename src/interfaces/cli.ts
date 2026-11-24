@@ -25,14 +25,15 @@ export interface CLIOptions {
   preset?: string;
   model?: string;
   autoApprove?: boolean;
-  /** 单次任务，执行完退出（CI 友好）。 */
-  task?: string;
+  task?: string; // 单次任务，执行完退出（CI 友好）
   quiet?: boolean;
+  strict?: boolean; // 禁止 provider 失败静默降级 mock，评测必开
 }
 
 export async function runCLI(os: AgentOS, options: CLIOptions = {}): Promise<void> {
   let session = os.createSession(options.preset ?? "standard");
   if (options.model) os.router.setDefault(options.model);
+  if (options.strict) os.router.setStrict(true);
   os.approvals.setAutoApprove(options.autoApprove ?? false);
 
   const rl = createInterface({ input: process.stdin, output: process.stdout });
