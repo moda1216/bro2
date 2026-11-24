@@ -1,0 +1,53 @@
+{
+  "kind": "endpoint-rescan",
+  "version": 1,
+  "generatedAt": "2026-11-24T15:32:00Z",
+  "verdict": "not-proven",
+  "note": "端点可用性探测证据，非能力评测。单次/短时探测不证明长期稳定；不写 external-results.json、不改 verdict/L4。",
+  "trigger": "ovhcloud 端点在 cron run #45370930811 与手动 run 中稳定 reward=None steps=3，判定为 provider_error；需找替代端点。",
+  "rootCauseConfirmed": {
+    "endpoint": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
+    "model": "gpt-oss-120b",
+    "finding": "本地实测 8 连发全部 HTTP 429 'API rate limit exceeded'，单次请求亦 429。匿名层 2 req/min per IP 且 runner 出口为共享 IP 池，配额已被耗尽——非节流参数问题，端点在当前时段实质不可用。",
+    "impact": "bro2 连续调用撞 429，重试耗尽→provider_error→reward=None，触发诚实红线不计分。这是有效 trial 停滯 9/267 的直接原因。"
+  },
+  "probes": {
+    "singleCallTools": [
+      {"tag": "blockrun120", "http": 200, "respModel": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", "toolCalls": 0, "status": "MODEL_SUBSTITUTION", "note": "请求 gpt-oss-120b 却重定向到 nemotron-3-nano-omni-30b 且不返回 tool_calls——模型身份陷阱，不可用"},
+      {"tag": "blockrun20", "http": 200, "respModel": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", "toolCalls": 0, "status": "MODEL_SUBSTITUTION"},
+      {"tag": "kilo-auto", "http": 200, "respModel": "nvidia/nemotron-3-ultra-550b-a55b:free", "toolCalls": 1, "status": "TOOLS_OK"},
+      {"tag": "kilo-gateway", "http": 200, "respModel": "nvidia/nemotron-3.5-super-vl:free", "toolCalls": 1, "status": "TOOLS_OK"},
+      {"tag": "llm7-20", "http": 200, "respModel": "gpt-oss:20b", "toolCalls": 1, "status": "TOOLS_OK"},
+      {"tag": "pollinations", "http": 200, "respModel": "gpt-oss-20b", "toolCalls": 1, "status": "TOOLS_OK"}
+    ],
+    "burst8": {
+      "kilo-auto": [200, 200, 200, "TimeoutError", "TimeoutError", "TimeoutError", 200, "TimeoutError"],
+      "kilo-gateway": [503, 200, 200, 200, 200, 200, 200, 200],
+      "llm7-20": [200, 200, 200, 200, 200, 200, 200, 200],
+      "pollinations": [200, 200, 200, 200, 200, 200, 200, 200],
+      "ovh-120": [429, 429, 429, 429, 429, 429, 429, 429]
+    },
+    "agentLoop4Turn": {
+      "llm7-20": "t0 200/tool_calls(1)/1.8s | t1 200/stop/3.2s — 正常收尾",
+      "pollinations": "t0 200/tool_calls(1)/6.1s | t1 200/stop/7.5s — 正常收尾",
+      "kilo-gateway": "t0 200/tool_calls(1)/102.8s | t1 200/length/12.3s — 极慢"
+    }
+  },
+  "ranking": [
+    {"rank": 1, "tag": "llm7", "model": "gpt-oss:20b", "base": "https://api.llm7.io/v1", "verdict": "最稳最快：8/8 200 + agent loop 正常；身份明确"},
+    {"rank": 2, "tag": "pollinations", "model": "gpt-oss-20b", "base": "https://text.pollinations.ai/openai", "verdict": "稳定但慢（6-7s/轮）"},
+    {"rank": 3, "tag": "kilo-gateway", "model": "nvidia/nemotron-3.5-super-vl:free", "base": "https://ai-gateway.kilo.ai/api/v1", "verdict": "可用但首轮 102s，模型非榜"}
+  ],
+  "honestTradeoff": {
+    "anchorModel": "gpt-oss-120b",
+    "anchorScore": 26.217,
+    "issue": "唯一可对齐公开榜 120b 锚点的 ovh 端点已 100% 429；llm7/pollinations 是 gpt-oss-20b（不同/更弱模型），换用后评测可推进，但结果不可再对标 120b 榜单分数。",
+    "existingInfra": "agentos.config.json 已有 keyless 聚合器（smart-fallback）+ hybrid 双层，但评测用 AGENTOS_LIVE_PROVIDER=ovhcloud 强制钉死单端点以保同模型锚点，故绕过回退。",
+    "decisionNeeded": "换端点会改变评测可比性——需人决定：A) 换 20b 端点推进评测（放弃 120b 榜单对标）；B) 保留 120b 锚点语义，等 ovh 恢复或另寻 120b 免 key 端点；C) 用 keyless 聚合器自动回退（模型身份随回退变化，需在结果中记录实际 respModel）。"
+  },
+  "honest": [
+    "本探测为端点能力测试，不产出 bro2 能力分数。",
+    "模型身份以响应 model 字段为准——blockrun 120b/20b 均重定向为 nemotron-3-nano-omni-30b，是身份陷阱。",
+    "短时 8 连发全 200 不等于长期稳定；需在实际多小时 trial 中复核。"
+  ]
+}
