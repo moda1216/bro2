@@ -1,0 +1,233 @@
+{
+  "generatedAt": "2026-11-24T02:54:21.245Z",
+  "purpose": "F2：独立判分器不 import 判分器，对可得信号重判；审计产出重判的数据可得性",
+  "method": "从官方 verifier rc 独立推导 reward（rc=0→1 否则 0），与落盘逐条比对",
+  "coverage": {
+    "rows": 9,
+    "comparable": 9,
+    "agree": 9,
+    "perRowAgreement": [
+      {
+        "task": "constraints-scheduling",
+        "repeat": 1,
+        "stored": 1,
+        "derived": 1,
+        "agree": true
+      },
+      {
+        "task": "adaptive-rejection-sampler",
+        "repeat": 1,
+        "stored": 0,
+        "derived": 0,
+        "agree": true
+      },
+      {
+        "task": "adaptive-rejection-sampler",
+        "repeat": 2,
+        "stored": 0,
+        "derived": 0,
+        "agree": true
+      },
+      {
+        "task": "adaptive-rejection-sampler",
+        "repeat": 3,
+        "stored": 0,
+        "derived": 0,
+        "agree": true
+      },
+      {
+        "task": "bn-fit-modify",
+        "repeat": 1,
+        "stored": 0,
+        "derived": 0,
+        "agree": true
+      },
+      {
+        "task": "bn-fit-modify",
+        "repeat": 2,
+        "stored": 0,
+        "derived": 0,
+        "agree": true
+      },
+      {
+        "task": "bn-fit-modify",
+        "repeat": 3,
+        "stored": 0,
+        "derived": 0,
+        "agree": true
+      },
+      {
+        "task": "break-filter-js-from-html",
+        "repeat": 1,
+        "stored": 0,
+        "derived": 0,
+        "agree": true
+      },
+      {
+        "task": "break-filter-js-from-html",
+        "repeat": 2,
+        "stored": 0,
+        "derived": 0,
+        "agree": true
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "A 独立推导出 reward 与落盘逐条一致",
+      "pass": true,
+      "evidence": {
+        "comparable": 9,
+        "agree": 9,
+        "perRow": [
+          {
+            "t": "constraints-scheduling",
+            "r": 1,
+            "stored": 1,
+            "derived": 1,
+            "agree": true
+          },
+          {
+            "t": "adaptive-rejection-sampler",
+            "r": 1,
+            "stored": 0,
+            "derived": 0,
+            "agree": true
+          },
+          {
+            "t": "adaptive-rejection-sampler",
+            "r": 2,
+            "stored": 0,
+            "derived": 0,
+            "agree": true
+          },
+          {
+            "t": "adaptive-rejection-sampler",
+            "r": 3,
+            "stored": 0,
+            "derived": 0,
+            "agree": true
+          },
+          {
+            "t": "bn-fit-modify",
+            "r": 1,
+            "stored": 0,
+            "derived": 0,
+            "agree": true
+          },
+          {
+            "t": "bn-fit-modify",
+            "r": 2,
+            "stored": 0,
+            "derived": 0,
+            "agree": true
+          },
+          {
+            "t": "bn-fit-modify",
+            "r": 3,
+            "stored": 0,
+            "derived": 0,
+            "agree": true
+          },
+          {
+            "t": "break-filter-js-from-html",
+            "r": 1,
+            "stored": 0,
+            "derived": 0,
+            "agree": true
+          },
+          {
+            "t": "break-filter-js-from-html",
+            "r": 2,
+            "stored": 0,
+            "derived": 0,
+            "agree": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "B 篡改一条 reward → 独立重判检出不一致",
+      "pass": true,
+      "evidence": {
+        "original": 1,
+        "tampered": 0,
+        "derived": 1
+      }
+    },
+    {
+      "name": "C verifier rc→reward 口径边界可复算",
+      "pass": true,
+      "evidence": [
+        {
+          "verifyNote": "rc=0",
+          "expect": 1,
+          "actual": 1
+        },
+        {
+          "verifyNote": "rc=1",
+          "expect": 0,
+          "actual": 0
+        },
+        {
+          "verifyNote": "rc=2",
+          "expect": 0,
+          "actual": 0
+        },
+        {
+          "verifyNote": "无 rc",
+          "expect": null,
+          "actual": null
+        }
+      ]
+    },
+    {
+      "name": "D workspace/终答缺失 → 产出重判判 not-proven（如实）",
+      "pass": true,
+      "evidence": {
+        "keys": [
+          "task",
+          "repeat",
+          "status",
+          "reward",
+          "verifyNote",
+          "steps",
+          "tokens",
+          "bro2_rc",
+          "wallSeconds",
+          "log",
+          "ts",
+          "sanity",
+          "image"
+        ],
+        "hasWorkspace": false,
+        "hasAnswer": false,
+        "consequence": "真实「对 agent 产出重判」不可做；本工具只对可得的 verifier rc 做独立一致性核对"
+      }
+    },
+    {
+      "name": "E 不 import eval-grade.ts（判分器独立）",
+      "pass": true,
+      "evidence": {
+        "importsEvalGrade": false
+      }
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "verdict": "independent-grade-green"
+  },
+  "honest": {
+    "scope": "独立核对 verifier rc→reward 一致性 + 数据可得性审计；不是对 agent 产出的真正重判",
+    "notProven": [
+      "对 agent 终答/workspace 的独立重判（结果行未存 workspace/answer，物理不可做）",
+      "榜单级能力结论（9/267 partial）",
+      "第三方判分器一致性（verifier 与落盘同源，非独立评分者）"
+    ],
+    "gap": "要让 V2 真正成立，评测流水线需逐 trial 留存 workspace 快照与终答 hash，供独立判分器重判。本沙箱不伪造该数据。",
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}

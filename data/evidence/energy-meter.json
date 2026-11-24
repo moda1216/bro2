@@ -1,0 +1,99 @@
+{
+  "generatedAt": "2026-11-24T02:54:21.106Z",
+  "purpose": "F3：用真实 OS 计数器替换 whitebox 的仿真能效值；无 usage 标 unmeasured",
+  "realSnapshot": {
+    "rssMB": 125.2,
+    "cgroupMemMB": 2565.02,
+    "cgroupCpuUsec": 220375212,
+    "measuredAt": "2026-11-24T02:54:21.106Z",
+    "source": "OS /proc + cgroup v2（外部系统计数器，非 agent 自报）"
+  },
+  "checks": [
+    {
+      "name": "A VmRSS 真实读取为有限正数",
+      "pass": true,
+      "evidence": {
+        "rssKB": 74256,
+        "rssMB": 72.52
+      }
+    },
+    {
+      "name": "A2 cgroup memory.current 真实读取",
+      "pass": true,
+      "evidence": {
+        "memBytes": 2636787712,
+        "memMB": 2514.64
+      }
+    },
+    {
+      "name": "B 分配缓冲区后 VmRSS 单调不减",
+      "pass": true,
+      "evidence": {
+        "rss0KB": 74256,
+        "rss1KB": 110112,
+        "deltaKB": 35856,
+        "sink": true
+      }
+    },
+    {
+      "name": "C cgroup CPU 计数忙等后单调增",
+      "pass": true,
+      "evidence": {
+        "cpu0Usec": 220322038,
+        "cpu1Usec": 220374207,
+        "deltaUsec": 52169
+      }
+    },
+    {
+      "name": "D 无 usage 字段 → token 标 unmeasured（不造数）",
+      "pass": true,
+      "evidence": {
+        "measured": false,
+        "note": "unmeasured: 端点未提供 usage 字段，token 未测量（不仿真填充）"
+      }
+    },
+    {
+      "name": "E 有 usage 字段 → 采信原始值并标注来源",
+      "pass": true,
+      "evidence": {
+        "measured": true,
+        "prompt": 120,
+        "completion": 30,
+        "note": "端点原始 usage 字段"
+      }
+    },
+    {
+      "name": "F 自报与外部一致 → 不误报告警",
+      "pass": true,
+      "evidence": {
+        "deviation": 0,
+        "alert": false
+      }
+    },
+    {
+      "name": "F2 自报显著偏低 → 告警（真偏差）",
+      "pass": true,
+      "evidence": {
+        "deviation": 0.643,
+        "alert": true
+      }
+    }
+  ],
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0,
+    "verdict": "energy-meter-green"
+  },
+  "honest": {
+    "scope": "VmRSS/cgroup CPU/内存为真实 OS 计数；token 只认端点 usage 字段，缺失标 unmeasured",
+    "notProven": [
+      "整机能耗（无 powermetrics/RAPL，本环境不测）",
+      "Apple Silicon 统一内存峰值",
+      "端点 usage 字段的真实可得性（取决于端点实现）"
+    ],
+    "replacedSimulated": "whitebox-panel.json 的 externalTokens=4200/selfReportedTokens=1500 为构造演示值，本工具不再沿用",
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}

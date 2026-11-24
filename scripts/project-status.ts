@@ -1,9 +1,4 @@
-/**
- * bro2 · 产出物健康度聚合器（project:status）
- * 复跑全部离线验收门禁聚合成健康度报告；CI 与本地均可用。
- * 零依赖（仅 Node 内置）；失败→退出码非 0（CI 据此阻断）；只看退出码。
- * 用法：npm run project:status
- */
+/** bro2 产出物健康度聚合器：复跑全部离线门禁，失败→非0阻断 CI；用法 project:status。 */
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 
@@ -16,7 +11,6 @@ interface Gate {
   gate: boolean; // 是否计入发布阻断（false = 仅信息展示）
 }
 
-// 离线验收门禁（不需要真实模型端点、不需要网络）
 const GATES: Gate[] = [
   { id: "test", label: "单元测试 + e2e + 故障注入", cmd: "npm test", timeoutMs: 180_000, gate: true },
   { id: "verify", label: "能力矩阵结构自检", cmd: "npm run verify", timeoutMs: 60_000, gate: true },
@@ -49,6 +43,12 @@ const GATES: Gate[] = [
   { id: "trainergate", label: "P3 训练器闸门（无对照不晋升+回滚+reward-hacking拦截）", cmd: "npm run promotion:gate", timeoutMs: 60_000, gate: true },
   { id: "whitebox", label: "P4 白盒面板（决策链可重建+审批拦截+能效偏差告警）", cmd: "npm run whitebox:panel", timeoutMs: 60_000, gate: true },
   { id: "thirdparty", label: "P5 统计骨架（kappa+McNemar+功效不足诚实声明）", cmd: "npm run thirdparty:review", timeoutMs: 60_000, gate: true },
+  { id: "injectdef", label: "F4 提示注入防御（不可信隔离+几何检测+审批deny）", cmd: "npm run inject:defense", timeoutMs: 60_000, gate: true },
+  { id: "promolive", label: "F5 judgePromotion接线（OOD阻断+reward-hacking+缺格）", cmd: "npm run promotion:live", timeoutMs: 60_000, gate: true },
+  { id: "guardback", label: "F6 provider=mock判据回填（机器字段优先+盲区对照）", cmd: "npm run guard:backfill", timeoutMs: 60_000, gate: true },
+  { id: "energymeter", label: "F3 真系统计数器（VmRSS+cgroup+unmeasured不造数）", cmd: "npm run energy:meter", timeoutMs: 60_000, gate: true },
+  { id: "gradeind", label: "F2 独立判分（verifier重判+产出缺失诚实声明）", cmd: "npm run grade:independent", timeoutMs: 60_000, gate: true },
+  { id: "hwrunbook", label: "真机流程闭环（契约+脚本+回填schema，未执行）", cmd: "npm run hw:runbook", timeoutMs: 60_000, gate: true },
   { id: "livesmoke", label: "live 链路自检（仿真，非能力分）", cmd: "npm run live:smoke", timeoutMs: 60_000, gate: false },
 ];
 

@@ -1,0 +1,101 @@
+{
+  "generatedAt": "2026-11-24T02:54:20.932805+00:00",
+  "purpose": "F6：provider=mock 机器字段判据回填（wrapper，不改冻结 tb21-batch.py）",
+  "finding": "旧判据只匹配终答中文标记；机器字段 provider=mock 在 provider 单步响应即出现，是更早信号",
+  "priority": [
+    "provider=mock 机器字段",
+    "provider_error / 全部模型不可用",
+    "旧中文终答标记"
+  ],
+  "checks": [
+    {
+      "id": "A1",
+      "text": "assistant provider=mock content=我先列个计划",
+      "expect_block": true,
+      "actual_block": true,
+      "expect_kind": "provider-mock-machine",
+      "actual_kind": "provider-mock-machine",
+      "pass": true
+    },
+    {
+      "id": "A2",
+      "text": "{\"provider\":\"mock\",\"content\":\"done\"}",
+      "expect_block": true,
+      "actual_block": true,
+      "expect_kind": "provider-mock-machine",
+      "actual_kind": "provider-mock-machine",
+      "pass": true
+    },
+    {
+      "id": "A3",
+      "text": "provider: mock\nstep=1 tool_calls=0",
+      "expect_block": true,
+      "actual_block": true,
+      "expect_kind": "provider-mock-machine",
+      "actual_kind": "provider-mock-machine",
+      "pass": true
+    },
+    {
+      "id": "B1",
+      "text": "本次由离线 Mock 模型驱动，任务完成",
+      "expect_block": true,
+      "actual_block": true,
+      "expect_kind": "mock-fallback-legacy",
+      "actual_kind": "mock-fallback-legacy",
+      "pass": true
+    },
+    {
+      "id": "C1",
+      "text": "stoppedBy=provider_error after 8 retries",
+      "expect_block": true,
+      "actual_block": true,
+      "expect_kind": "provider-error",
+      "actual_kind": "provider-error",
+      "pass": true
+    },
+    {
+      "id": "C2",
+      "text": "Error: 全部模型均不可用 → dead: timeout",
+      "expect_block": true,
+      "actual_block": true,
+      "expect_kind": "provider-error",
+      "actual_kind": "provider-error",
+      "pass": true
+    },
+    {
+      "id": "D1",
+      "text": "provider=ollama/qwen2.5 content=任务完成 steps=5",
+      "expect_block": false,
+      "actual_block": false,
+      "expect_kind": "clean",
+      "actual_kind": "clean",
+      "pass": true
+    },
+    {
+      "id": "D2",
+      "text": "provider=kilo-auto tool_calls=2 reward=1",
+      "expect_block": false,
+      "actual_block": false,
+      "expect_kind": "clean",
+      "actual_kind": "clean",
+      "pass": true
+    }
+  ],
+  "realLogs": [],
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0,
+    "verdict": "guard-green"
+  },
+  "honest": {
+    "scope": "判定函数机器字段优先 + 兼容旧标记；真实日志样本按实际内容判定",
+    "notProven": [
+      "tb21-batch.py 本体已替换判据（本工具是 wrapper/判据库，未改冻结脚本）",
+      "全量 89×3 结果是否受旧判据污染（需逐条重扫，样本有限）"
+    ],
+    "note": "回填路径：评测流水线在判定前调用 is_polluted()，机器字段命中即判 error 不计 reward。本沙箱不改冻结脚本以免动评测口径。",
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}

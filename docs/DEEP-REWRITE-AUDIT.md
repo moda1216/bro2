@@ -218,3 +218,58 @@
 4. **真机项（H1/需求 6 的 Apple Silicon/MLX/powermetrics）**——本沙箱无硬件，交付契约与复跑步骤，标注待人工回填。
 
 > 以上为方案。是否进入实现（Gate B），以及优先做哪几项，等你确认后再动。
+
+---
+
+## 10. Gate B 实现记录（按建议顺序 · 已完成）
+
+> 用户确认"按建议顺序进入实现"。本节记录本轮落地，所有产物落 `examples/` 豁免目录，
+> 源码净增 0（16500/16500），全部接入 `project:status` 阻断门禁（现 38/38）。
+
+### 10.1 F4 提示注入防御（`inject:defense`，6/6 green）
+- 产物：`examples/prompt-injection-redteam.ts` → `data/evidence/prompt-injection-redteam.json`。
+- 结构性主防线：不可信内容（工具结果/文件）包成 `<untrusted>` 数据块，定界符转义使数据无法冒充指令（D 对照验证逃逸被转义）。
+- 纵深检测：7 类指令几何（忽略前文/角色伪装/模板标记/指令定界符/越权动词/提示泄漏/任务替换）+ base64 载荷解码再检。
+- 真实治理接线：`PermissionPolicy`（danger→Ask）+ `ApprovalManager`(autoApprove=false) 升级授权，`onRequest→resolve(deny)` 模拟人工拒绝，留 `approval.request/approval.resolved` 审计；展示文本经 `redact`。
+- 可证伪：A 注入必拦 / B 正常零误报 / C deny 生效阻断执行 / C2 审计留痕 / D 逃逸转义 / S1 脱敏。
+- **实测发现**：D1 payload 同时含 `rm -rf /`，`PermissionPolicy` 高危命令检测与几何检测形成双重防线。
+
+### 10.2 F5 judgePromotion 接线（`promotion:live`，7/7 green）
+- 产物：`examples/evolve-live-gate.ts` → `data/evidence/evolve-live-gate.json`。
+- 直接 import 真实 `judgePromotion`，喂真实三段账本 SHA256（train/holdout/ood 互异）。
+- 可证伪：正例晋升 / OOD 退化阻断 / reward-hacking 标记 / 静默缺格拒绝 / 任务漂移拒绝 / OOD 污染拒绝 / 三段不互异拒绝。
+- **诚实边界**：这是"判据接线验证器"，证明判据可用且可证伪；真正把 `runEvolve` 内联判据替换为调用 `judgePromotion` 需改 `src`（受预算约束，未做，留给授权）。
+
+### 10.3 F6 provider=mock 判据回填（`guard:backfill`，8/8 green）
+- 产物：`examples/tb21-batch-guard.py` → `data/evidence/tb21-batch-guard.json`。
+- 判据优先级：机器字段（`provider=mock` / `"provider":"mock"`）> provider_error > 旧中文终答标记。
+- 可证伪：A 组仅机器字段泄漏（旧判据盲区）必拦 / B 旧标记兼容 / C provider_error / D 干净零误报。
+- **诚实边界**：wrapper/判据库形式，未改冻结的 `tb21-batch.py` 本体；回填路径是评测流水线判定前调用 `is_polluted()`。
+
+### 10.4 F3 真系统计数器（`energy:meter`，8/8 green）
+- 产物：`examples/energy-meter.ts` → `data/evidence/energy-meter.json`。
+- 真实数据源（本环境已探测可用）：`/proc/self/status` VmRSS、`/sys/fs/cgroup/cpu.stat` usage_usec、`memory.current`。
+- 可证伪：VmRSS 有限正数 / 分配后单调不减 / cgroup CPU 忙等后单调增 / **无 usage 字段标 unmeasured（不造数）** / 有 usage 采信 / 一致不误报告警 / 真偏差告警。
+- 实测快照：RSS≈125MB、cgroupMem≈1798MB、cpu≈1.4e8μs。替换 whitebox 的构造值 4200/1500。
+
+### 10.5 F2 独立判分（`grade:independent`，5/5 green）
+- 产物：`examples/independent-grader.ts` → `data/evidence/independent-grader.json`。
+- 不 import `eval-grade.ts`（源码级独立），从官方 verifier rc 独立推导 reward（rc=0→1），与落盘逐条比对：9/9 一致。
+- 可证伪：逐条一致率列出 / 篡改一条必检出 / 口径边界可复算 / **产出重判数据可得性审计** / 不 import 判分器。
+- **一手缺口暴露**：结果行无 workspace 快照、无终答文本 → "对 agent 产出真正重判"物理不可做，如实判 not-proven，不伪造 workspace 充数。要让 V2 成立，评测流水线需逐 trial 留存 workspace 与终答 hash。
+
+### 10.6 真机项流程闭环（`hw:runbook`，4/4 process-closed-not-executed）
+- 产物：`examples/mac-local/real-hardware-runbook.ts` → `docs/MAC-REAL-HARDWARE-RUNBOOK.md` + `examples/mac-local/real-hardware-verify.sh` + `data/evidence/mac-real-readiness.json`。
+- 固化 6 个真机待回填字段（断网任务集通过率 / MLX tokens/s / 峰值统一内存 / 每任务能耗 / 量化损失 / 原生 tool_calls）+ 判据 + 测量工具 + 阈值。
+- 脚本含断网确认 + 无 key + 系统测量 + unmeasured 四要素；与 adapter 推荐配置（7B Q4 5.97G / stream:false / n_ctx≥4096）对齐。
+- **诚实边界**：本沙箱无 Apple Silicon/MLX/powermetrics，只证"流程闭环完整"，不证任何真机能力；真机能力须在 Mac 上按 runbook 执行并独立复核后回填。
+
+### 10.7 GitHub 定时评测核实（用户问询）
+- 事实：`bench-external.yml` state=active、cron `17 */6 * * *` 正确，但 **run 历史 = 0，从未触发**；手动 dispatch 返回 403（PAT 无 Actions 写权限）。
+- 判断：配置在、未被证实能跑。非代码可在此修复（GitHub 侧调度 + PAT 权限）。下次自动机会北京时间 14:17；网页手动触发入口：`https://github.com/moda1216/bro2/actions/workflows/bench-external.yml`。F1/F7 依赖的全量样本因此仍未累积（维持 9/267）。
+
+### 10.8 本轮验证与边界
+- 新工具 6 个全绿（6+7+8+8+5+4=38 项可证伪对照）+ 真机流程自检 4/4。
+- `project:status` **38/38 阻断门禁 + 2/2 信息项**；预算 16500/16500 净增 0。
+- **F1/F7 未实现**（依赖全量样本，cron 未触发，维持 9/267 partial）。
+- **恒定边界不变**：`verdict=not-proven`、`L4=not-achieved`；本轮是"加厚验证/约束/闭环"，不是能力水位提升；不写 external-results.json、不改冻结判分器与评测集。

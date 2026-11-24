@@ -1,0 +1,114 @@
+{
+  "generatedAt": "2026-11-24T02:54:21.375Z",
+  "purpose": "真机项流程闭环：固化契约/判据/回填 schema，本沙箱只证流程完整",
+  "environment": "本沙箱无 Apple Silicon/MLX/powermetrics（uname 为 x86_64 Linux）",
+  "artifacts": {
+    "runbook": "docs/MAC-REAL-HARDWARE-RUNBOOK.md",
+    "script": "examples/mac-local/real-hardware-verify.sh",
+    "readyEvidence": "data/evidence/mac-real-readiness.json"
+  },
+  "pendingFields": [
+    {
+      "field": "offline_task_set_pass",
+      "criterion": "断网+无 key 跑通完整任务集（至少 SOUND 子集）",
+      "tool": "agentos run --offline --no-key",
+      "threshold": "reward=1 逐条记录",
+      "source": "真机执行"
+    },
+    {
+      "field": "mlx_tokens_per_sec",
+      "criterion": "MLX 7B Q4_K_M 生成吞吐",
+      "tool": "mlx_lm 内置计时 / time",
+      "threshold": "> 0 且记录 p50",
+      "source": "真机执行"
+    },
+    {
+      "field": "peak_unified_memory_gb",
+      "criterion": "峰值统一内存（不 swap）",
+      "tool": "vm_stat / powermetrics",
+      "threshold": "≤ 20GB usable（预留 4G）",
+      "source": "真机执行"
+    },
+    {
+      "field": "energy_joules_per_task",
+      "criterion": "每任务能耗",
+      "tool": "powermetrics --samplers cpu_power",
+      "threshold": "记录实测值，无则不编造",
+      "source": "真机执行"
+    },
+    {
+      "field": "quantization_loss",
+      "criterion": "Q4 相对 F16 的通过率损失",
+      "tool": "同任务集双精度对照",
+      "threshold": "逐任务记录 Δ",
+      "source": "真机执行"
+    },
+    {
+      "field": "tool_calls_native",
+      "criterion": "本地模型原生 tool_calls（非文本模拟）",
+      "tool": "preflight 2 调用",
+      "threshold": "finish_reason=tool_calls",
+      "source": "真机执行"
+    }
+  ],
+  "checks": [
+    {
+      "name": "流程闭环三件套齐全",
+      "pass": true,
+      "evidence": {
+        "runbook": "docs/MAC-REAL-HARDWARE-RUNBOOK.md",
+        "script": "examples/mac-local/real-hardware-verify.sh"
+      }
+    },
+    {
+      "name": "回填契约覆盖 6 个真机缺口字段",
+      "pass": true,
+      "evidence": {
+        "fields": [
+          "offline_task_set_pass",
+          "mlx_tokens_per_sec",
+          "peak_unified_memory_gb",
+          "energy_joules_per_task",
+          "quantization_loss",
+          "tool_calls_native"
+        ]
+      }
+    },
+    {
+      "name": "脚本含断网+无 key+系统测量+unmeasured 四要素",
+      "pass": true,
+      "evidence": {
+        "offline": true,
+        "nokey": true,
+        "measurement": true
+      }
+    },
+    {
+      "name": "adapter 推荐配置已被 runbook 引用（流程对齐）",
+      "pass": true,
+      "evidence": {
+        "alignedWithAdapter": true
+      }
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "verdict": "process-closed-not-executed"
+  },
+  "honest": {
+    "scope": "流程闭环（契约+脚本+回填 schema+自检），不执行真机",
+    "notProven": [
+      "offline_task_set_pass",
+      "mlx_tokens_per_sec",
+      "peak_unified_memory_gb",
+      "energy_joules_per_task",
+      "quantization_loss",
+      "tool_calls_native"
+    ],
+    "note": "真机能力须在 Apple Silicon Mac 上按 runbook 执行并回填，经独立方复核后方可更新 verdict。本沙箱不伪造真机数据。",
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "generatedAt": "2026-11-24T02:54:20.781Z",
+  "purpose": "F5：把真实 judgePromotion 接进 evolve 活循环，喂真实三段账本冻结指纹",
+  "wiring": {
+    "function": "src/observability/eval-grade.ts::judgePromotion",
+    "ledgers": {
+      "dev": {
+        "file": "data/evolve/train.jsonl",
+        "sha256": "f88015fc3a0e91fda5ee86a1aa3605269ca748fe9e129d4287cd22cd56b3788f"
+      },
+      "holdout": {
+        "file": "data/evolve/holdout.jsonl",
+        "sha256": "baa98a6cda9bed04ae0f189907c308da618efd435636c0b862299ed2fcab9758"
+      },
+      "ood": {
+        "file": "data/evolve/ood.jsonl",
+        "sha256": "1161b1dbb06ee469974fd08e2347ad709521a2ade475461514f0814147bee5af"
+      }
+    },
+    "previouslyUnwired": "lessons.jsonl: runEvolve 用内联 2 段、从没调用 judgePromotion、无 OOD 段"
+  },
+  "checks": [
+    {
+      "name": "A 正例：dev↑ 且 holdout/OOD 不退化 → promoted",
+      "pass": true,
+      "evidence": {
+        "promoted": true,
+        "deltas": {
+          "dev": 0.12,
+          "holdout": 0.050000000000000044,
+          "ood": 0.020000000000000018
+        },
+        "reasons": []
+      }
+    },
+    {
+      "name": "B OOD 退化 → blockedByOod 且拒绝晋升",
+      "pass": true,
+      "evidence": {
+        "promoted": false,
+        "blockedByOod": true,
+        "deltas": {
+          "dev": 0.12,
+          "holdout": 0.050000000000000044,
+          "ood": -0.09999999999999998
+        }
+      }
+    },
+    {
+      "name": "C 自报增益>0 但无行为提升 → rewardHackingBlocked",
+      "pass": true,
+      "evidence": {
+        "promoted": false,
+        "rewardHackingBlocked": true,
+        "note": "自报增益只进审计，不参与 promoted 判定"
+      }
+    },
+    {
+      "name": "D 三段静默缺格 → 拒绝（不用 0 冒充缺失）",
+      "pass": true,
+      "evidence": {
+        "promoted": false,
+        "reasons": [
+          "holdout 段静默缺格：没有真实评测结果"
+        ]
+      }
+    },
+    {
+      "name": "E 任务集漂移（OOD before/after 不一致）→ 拒绝",
+      "pass": true,
+      "evidence": {
+        "promoted": false,
+        "reasons": [
+          "ood 段任务集在编辑前后被改动：对比失效（防调难度刷分）"
+        ]
+      }
+    },
+    {
+      "name": "F OOD 出现在搜索轨迹 → 拒绝（完全只读）",
+      "pass": true,
+      "evidence": {
+        "promoted": false,
+        "reasons": [
+          "OOD 任务集出现在搜索轨迹中：违反完全只读，晋升阻断"
+        ]
+      }
+    },
+    {
+      "name": "G dev/holdout 指纹不互异 → 拒绝（留出失效）",
+      "pass": true,
+      "evidence": {
+        "promoted": false,
+        "reasons": [
+          "三段任务集指纹不互异：dev/holdout/OOD 未真正留出"
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0,
+    "verdict": "promotion-wired"
+  },
+  "honest": {
+    "scope": "证明真实 judgePromotion 判据在真实三段指纹上按预期决策，含 6 类反例对照",
+    "notProven": [
+      "真实训练产出（本沙箱无 GPU/LoRA）",
+      "runEvolve 主循环已改为调用本工具（需接线到 src，属源码改动，受预算约束未做）",
+      "统计显著性（见 F2/V3）"
+    ],
+    "note": "本工具是『判据接线验证器』：证明判据可用且可证伪；真正把 runEvolve 内联判据替换为调用 judgePromotion 需改 src，属源码净增决策，留待授权。",
+    "verdictBoundary": "not-proven",
+    "l4": "not-achieved"
+  }
+}
