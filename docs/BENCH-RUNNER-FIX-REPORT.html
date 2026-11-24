@@ -73,14 +73,23 @@
   <div class="card">
     <h2>当前状态与诚实边界</h2>
     <table>
-      <tr><th>远程 main</th><td><code>4d35f93</code>（已含全部修复）</td></tr>
-      <tr><th>有效评测进度</th><td><strong>9/267</strong>（1 分 / 8 分，reward=0 的失败题是有效证据，全部保留）</td></tr>
-      <tr><th>第二轮验证</th><td><code>#45324696365</code> · workflow_dispatch · head <code>2648887</code> · limit=3 · <span class="warn">in_progress（结果尚未回填）</span></td></tr>
-      <tr><th>cron 定时</th><td><span class="warn">仍未自动触发过</span>。手动 dispatch 已可用；需在修改 cron 后观察下个窗口是否激活。</td></tr>
+      <tr><th>远程 main</th><td><code>2b497ef</code>（含全部修复 + 两轮诊断证据）</td></tr>
+      <tr><th>有效评测进度</th><td><strong>9/267</strong>（1 分 / 8 分，reward=0 的失败题是有效证据，全部保留）——自 11-17 起未变</td></tr>
+      <tr><th>cron 定时</th><td><span class="ok">已激活！</span>首条 <code>event=schedule</code> run <code>#45370930811</code>（10:02 UTC，head <code>823f7d07</code>）出现——改 cron 后重新注册生效。之前 71 次 run 全是 push。</td></tr>
+      <tr><th>recon 修复</th><td><span class="ok">生效！</span>第二轮手动 run <code>#45324696365</code> 日志不再有 no-image，task 能 prepare 成功并开跑 trial。</td></tr>
+      <tr><th>cron 当前 run</th><td><code>#45370930811</code> · <span class="warn">in_progress</span> · 第 9 步评测执行中，结果未出。</td></tr>
     </table>
     <div class="note">
-      ① 首轮 89 条 no-image 是基础设施失败，不是模型能力失败，已剔除。② 本轮修复不产出任何能力结论，verdict 恒为 not-proven。③ 第二轮 dispatch 结果未出，本报告不预判成败；待其完成后再回填真实进度。
+      <strong>第二轮暴露的新障碍（诚实边界）：</strong>虽 cron 与 recon 都修好，但①端点 <code>ovh HTTP=200</code> 却在 trial 内 <code>reward=None steps=3</code>（provider_error，防污染红线正确判 error 不计分）；②多数 <code>alexgshaw/*:20251031</code> 官方镜像在 runner 上 docker pull 失败（本地缓存曾遮蔽此问题）。两者共同导致有效 trial 不增加，进度停滞 9/267。这不是能力退步，是外部端点与镜像障碍。本轮无新有效 trial，verdict 恒为 not-proven。
     </div>
+  </div>
+
+  <div class="card">
+    <h2>第二轮跟踪（2026-11-24 18:30）</h2>
+    <table>
+      <tr><th>刷新方式</th><td>随时运行 <code>python3 examples/bench-run-check.py</code>（只读，查 run 状态 / cron 激活 / 有效进度）。</td></tr>
+      <tr><th>下一步判断</th><td>待 cron run 完成后：若仍 reward=None，需换端点或排查 bro2 容器内 provider 调用；若镜像仍 pull 失败，需预构建/换镜像源。两者都属外部依赖，不伪造进度。</td></tr>
+    </table>
   </div>
 
 </div>
