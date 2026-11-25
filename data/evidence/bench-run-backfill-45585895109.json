@@ -1,0 +1,51 @@
+{
+  "id": "bench-run-backfill-45585895109",
+  "run_id": "45585895109",
+  "backfilled_at": "2026-11-25T09:51:38.445291+00:00",
+  "run": {
+    "status": "completed",
+    "conclusion": "success",
+    "event": "workflow_dispatch",
+    "head_sha": "d9c28bac958acd0799def142b1198eea91ce907c",
+    "created_at": "2026-11-25T09:29:31Z",
+    "updated_at": "2026-11-25T09:38:52Z"
+  },
+  "results": {
+    "total": 58,
+    "ok": 12,
+    "error": 46,
+    "reward_sum": 4,
+    "reward_n": 12,
+    "by_model": {
+      "legacy(ovh/gpt-oss-120b)": {
+        "trials": 9,
+        "reward_sum": 1,
+        "reward_n": 9
+      },
+      "nemotron-3.5-super-vl (kilo-auto/free)": {
+        "trials": 3,
+        "reward_sum": 3,
+        "reward_n": 3
+      }
+    },
+    "provider_tagged_rows": 3,
+    "file_sha": "f4b4093463afed2bd4a61eb4a57afbb28aa8d54a"
+  },
+  "honesty": {
+    "verdict": "not-proven",
+    "l4": "not-achieved",
+    "model_grouping": "按 respModel/provider 分组；kilo/nemotron 3条全reward=1自跑数据，不对标120b榜单26.217",
+    "infra_failures": "46条 prepare-fail 为GitHub runner镜像pull失败(基础设施)，不计reward、进度只数status=ok",
+    "note": "只读事实源回填；未改评分器/未放宽判分/未伪造trial"
+  },
+  "progress_delta": {
+    "before": 9,
+    "after_ok": 12,
+    "new_trials": 3,
+    "new_trial_detail": [
+      "break-filter-js-from-html r3 reward=1 (kilo)",
+      "modernize-scientific-stack r1 reward=1 (kilo)",
+      "modernize-scientific-stack r2 reward=1 (kilo)"
+    ]
+  }
+}
