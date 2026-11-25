@@ -1,6 +1,4 @@
-/**
- * L7 交互层 · REST + SSE API（node:http，零依赖）
- */
+// L7 交互层 · REST + SSE API（node:http，零依赖）
 import { createServer } from "node:http";
 import type { Server, IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
@@ -85,7 +83,6 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
 
   if (method === "OPTIONS") { json(res, 204, {}); return; }
 
-  // ---- 静态 ----
   if (path === "/" || path === "/index.html") {
     const p = join(WEB_DIR, "index.html");
     if (!existsSync(p)) { json(res, 404, { error: "Web UI 文件缺失" }); return; }
@@ -96,7 +93,6 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
   }
   if (path === "/favicon.ico") { res.writeHead(204); res.end(); return; }
 
-  // ---- 状态 ----
   if (path === "/api/status" && method === "GET") {
     json(res, 200, {
       name: os.name,
@@ -111,14 +107,11 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
       plugins: { loaded: os.runtime.pluginNames(), available: Object.keys(os.runtime.get<Record<string, unknown>>("pluginCatalog") ?? {}) },
       hooks: os.runtime.hooks.count(),
       metrics: os.tracer.snapshot(),
-      // 已通过门禁的演进状态是否真的作用到运行时（评测器显式关闭该通道）
       evolution: {
         loopDetectionThreshold: os.config.budget.loopDetectionThreshold,
         compactTokens: os.config.budget.compactTokens ?? null,
         stateFile: "data/evolve/state.json",
-        // 已通过双门禁并真正作用到运行时的行为策略
         policy: policySnapshot(os.policy),
-        // 已通过冻结 fitness 晋升并作用于下一次 evolve 的元状态
         meta: loadMetaState(os.root),
       },
       sessionCount: os.sessions.list().length,
@@ -126,7 +119,6 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     return;
   }
 
-  // ---- 会话 ----
   if (path === "/api/sessions" && method === "GET") {
     json(res, 200, { sessions: os.sessions.list().slice(0, 60) });
     return;
@@ -147,7 +139,6 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     return;
   }
 
-  // ---- 轨迹 / 指标 / 工具 ----
   if (path === "/api/trace" && method === "GET") {
     const id = url.searchParams.get("session") ?? "";
     const s = os.getSession(id);
@@ -161,8 +152,19 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     json(res, 200, { metrics: os.tracer.snapshot(), recent: os.tracer.recent(60) });
     return;
   }
+  // 白盒 REPLAY：只读 evidence，标注非实时，不与实时事件混同计分
+  if (path === "/api/whitebox/replay" && method === "GET") {
+    let events: Record<string, unknown>[] = [];
+    try {
+      const p = join(os.root, "data/evidence/whitebox-panel.json");
+      const d = JSON.parse(readFileSync(p, "utf8")) as { timeline?: Array<Record<string, unknown>> };
+      events = (d.timeline ?? []).filter((e) => e.lane === "模型进化" || e.lane === "harness 进化")
+        .map((e, i) => ({ seq: 900 + i, type: e.type, lane: e.lane, label: e.label, decision: e.decision, payload: { source: "whitebox-panel.json", note: "evidence 回放·非实时" } }));
+    } catch { /* evidence 缺失则为空，不伪造 */ }
+    json(res, 200, { source: "replay", events, honest: "evidence 回放，非实时，不冒充真实执行" });
+    return;
+  }
 
-  // ---- 审批 ----
   if (path === "/api/approvals" && method === "GET") {
     json(res, 200, { approvals: os.approvals.list() });
     return;
@@ -226,7 +228,6 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     const dispose = os.runtime.bus.on("*", (e: Event) => {
       if (e.sessionId === sessionId) sseSend(res, "event", e);
     });
-    // 保活心跳，避免代理断开
     const heartbeat = setInterval(() => {
       if (!res.writableEnded) res.write(": ping\n\n");
     }, 15000);

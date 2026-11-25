@@ -89,6 +89,39 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
 .modal .r{font-size:11.5px;color:var(--muted);margin-bottom:10px}
 .modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 .empty{color:var(--muted);text-align:center;padding:30px 10px;font-size:12px}
+/* 白盒事件流 */
+:root{--faint:#9aa5b5}
+@media(prefers-color-scheme:dark){:root{--faint:#677384}}
+.wb-banner{font-size:10px;color:var(--muted);background:var(--panel-2);border:1px solid var(--border);border-radius:7px;padding:7px 9px;margin:0 12px 8px;line-height:1.7}
+.wb-banner b{color:var(--warn);font-weight:750}
+.wb-legend{display:flex;gap:9px;margin-top:3px;flex-wrap:wrap}
+.src-live-t{color:var(--ok)}.src-ledger-t{color:var(--accent)}.src-replay-t{color:var(--warn)}
+.flow{padding-left:2px}
+.ev-item{position:relative;padding:0 0 9px 20px}
+.ev-item::before{content:"";position:absolute;left:6px;top:16px;bottom:0;width:2px;background:var(--border)}
+.ev-item:last-child::before{display:none}
+.ev-node{position:absolute;left:0;top:6px;width:14px;height:14px;border-radius:50%;border:3px solid var(--panel);box-shadow:0 0 0 1.5px var(--border)}
+.ev-card{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer}
+.ev-card:hover{border-color:var(--accent)}
+.ev-card.sel{border-color:var(--accent);background:var(--accent-soft)}
+.ev-top{display:flex;align-items:center;gap:6px}
+.ev-type{font-weight:700;font-size:11px;font-family:ui-monospace,monospace;color:var(--accent)}
+.ev-seq{margin-left:auto;font-size:9px;color:var(--faint)}
+.ev-meta{font-size:10px;color:var(--muted);margin-top:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.lane-tag{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:650}
+.lane-exec{background:var(--accent-soft);color:var(--accent)}
+.lane-fly{background:rgba(23,132,92,.13);color:var(--ok)}
+.lane-model{background:rgba(200,130,12,.15);color:var(--warn)}
+.lane-harness{background:rgba(192,57,43,.12);color:var(--err)}
+.src-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.src-live{background:var(--ok)}.src-ledger{background:var(--accent)}.src-replay{background:var(--warn)}
+.ev-detail{display:none;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)}
+.ev-card.sel .ev-detail{display:block}
+.ev-detail pre{margin:0;background:var(--code);border-radius:6px;padding:8px;font-size:10px;max-height:200px;white-space:pre-wrap;word-break:break-all}
+.ev-note{font-size:9.5px;color:var(--warn);margin-top:5px}
+.wb-actions{display:flex;gap:6px;flex-wrap:wrap;padding:9px 12px;border-top:1px solid var(--border)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--text);color:var(--bg);padding:9px 15px;border-radius:8px;font-size:12px;opacity:0;transition:.25s;z-index:40;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 @media(max-width:1000px){.app{grid-template-columns:200px minmax(0,1fr)}.right{display:none}}
 </style>
 </head>
@@ -127,14 +160,23 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
 
   <div class="right">
     <div class="tabs">
-      <div class="tab on" data-tab="trace">轨迹</div>
+      <div class="tab on" data-tab="trace">事件流</div>
+      <div class="tab" data-tab="rebuild">重建</div>
       <div class="tab" data-tab="metrics">指标</div>
       <div class="tab" data-tab="tools">工具</div>
       <div class="tab" data-tab="skills">技能</div>
     </div>
+    <div class="wb-banner"><b>来源标注</b> <span class="src-live-t">● LIVE 真实 EventBus·SSE 实时</span> · <span class="src-ledger-t">● LEDGER 只增账本回放</span> · <span class="src-replay-t">● REPLAY evidence 回放（非实时）</span><div class="wb-legend">每条决策的来源与依据可展开查看 · 仅凭此事件流可重建决策链</div></div>
     <div class="panel" id="panel"></div>
+    <div class="wb-actions">
+      <button class="btn sm" id="rebuildBtn">⟳ 重建决策链</button>
+      <button class="btn sm" id="tamperBtn">🔍 篡改自检</button>
+      <button class="btn sm primary" id="exportBtn">⬇ 导出审计快照</button>
+    </div>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <div class="modal-mask" id="modalMask">
   <div class="modal">
@@ -152,7 +194,22 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [] };
+const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [], replayEvents: [] };
+const toast = (m) => { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("on"), 2200); };
+// 事件类型 → 四条 lane 的映射；来源由注入方式决定，不由事件自报
+const LANE_OF = {
+  "run.start":"exec","run.end":"exec","message.user":"exec","message.assistant":"exec",
+  "tool.call":"exec","tool.result":"exec","tool.repair":"exec","grounding.reject":"exec",
+  "guard.advisory":"exec","guard.budget-advisory":"exec","guard":"exec","error":"exec",
+  "subagent.start":"exec","subagent.end":"exec","automation":"exec","approval.request":"exec","approval.resolved":"exec",
+  "metrics":"fly","context.compaction":"fly",
+  "hook.fired":"model",
+  "context.inject":"harness"
+};
+const LANE_NAME = { exec:"任务执行", fly:"轨迹沉淀", model:"模型进化", harness:"harness 进化" };
+const LANE_COLOR = { exec:"var(--accent)", fly:"var(--ok)", model:"var(--warn)", harness:"var(--err)" };
+const SRC_NAME = { live:"LIVE 真实流", ledger:"LEDGER 账本回放", replay:"REPLAY evidence 回放" };
+const SRC_LABEL = { live:"LIVE", ledger:"LEDGER", replay:"REPLAY" };
 
 async function api(path, opts = {}) {
   const res = await fetch(path, opts);
@@ -206,7 +263,7 @@ function showApproval(req) {
 function hideApproval() { state.approvalId = null; $("#modalMask").classList.remove("on"); }
 
 function onEvent(e) {
-  state.traceEvents.push(e);
+  state.traceEvents.push({ ...e, _src: "live" });
   const p = e.payload || {};
   if (e.type === "tool.call") {
     for (const c of (p.calls || [])) addToolCard(c);
@@ -276,16 +333,83 @@ async function send() {
   }
 }
 
+function laneOf(e) { return LANE_OF[e.type] || "exec"; }
 function renderTrace() {
-  const rows = state.traceEvents.slice(-180).reverse().map((e) =>
-    `<div class="tr"><span class="s">${e.seq}</span><span class="ty">${esc(e.type)}</span><span class="sm" title="${esc(JSON.stringify(e.payload))}">${esc(summary(e))}</span></div>`).join("");
-  $("#panel").innerHTML = `<div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">Trajectory · 共 ${state.traceEvents.length} 条事件（只增不改）</div>${rows || '<div class="empty">暂无事件</div>'}`;
+  const live = state.traceEvents.slice(-120);
+  const replay = state.replayEvents;
+  const all = [...live, ...replay].sort((a, b) => (a.seq || 0) - (b.seq || 0));
+  const rows = all.map((e) => {
+    const lane = laneOf(e), src = e._src || "live";
+    const note = src === "replay" ? '<div class="ev-note">⚠ evidence 回放，非实时；不冒充真实执行</div>' : "";
+    return `<div class="ev-item" data-lane="${lane}">
+      <div class="ev-node" style="background:${LANE_COLOR[lane]}"></div>
+      <div class="ev-card" data-key="${src}-${e.seq}">
+        <div class="ev-top"><span class="ev-type">${esc(e.type)}</span><span class="ev-seq">#${e.seq}</span></div>
+        <div class="ev-meta"><span class="lane-tag lane-${lane}">${LANE_NAME[lane]}</span><span class="src-dot src-${src}"></span><span class="src-${src}-t">${SRC_NAME[src]}</span></div>
+        <div class="ev-meta" style="color:var(--text)">${esc(summary(e))}</div>
+        <div class="ev-detail"><pre>${esc(JSON.stringify(e.payload || {}, null, 2))}</pre>${note}<div style="font-size:9.5px;color:var(--faint);margin-top:5px">decision: ${esc(e.type)} · seq ${e.seq}</div></div>
+      </div></div>`;
+  }).join("");
+  $("#panel").innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:8px">共 ${all.length} 条事件（LIVE ${live.length} · REPLAY ${replay.length}）· 点任意事件展开原始 payload 与依据</div><div class="flow">${rows || '<div class="empty">暂无事件</div>'}</div>`;
+  document.querySelectorAll(".ev-card").forEach((c) => c.onclick = () => {
+    document.querySelectorAll(".ev-card").forEach((x) => x.classList.remove("sel"));
+    c.classList.add("sel");
+  });
 }
 function summary(e) {
   const p = e.payload || {};
   if (e.type === "tool.call") return (p.calls || []).map((c) => c.name).join(", ");
-  if (e.type === "tool.result") { const r = p.result || {}; return `${r.name} ${r.ok ? "ok" : "fail"} ${String(r.output || r.error || "").slice(0, 90)}`; }
-  return String(p.content || p.reason || p.task || JSON.stringify(p)).slice(0, 140);
+  if (e.type === "tool.result") { const r = p.result || {}; return `${r.name || "?"} ${r.ok ? "ok" : "fail"} ${String(r.output || r.error || "").slice(0, 90)}`; }
+  return String(p.content || p.reason || p.task || p.label || JSON.stringify(p)).slice(0, 140);
+}
+// 白盒：决策链重建（纯函数，只读事件流，不读界面展示状态）
+function buildChain(events) {
+  return events.filter((e) => ["run.start","tool.call","tool.result","hook.fired","context.inject","run.end","approval.request","approval.resolved"].includes(e.type))
+    .map((e) => `${LANE_NAME[laneOf(e)]}:${e.type}:${e.seq}`);
+}
+function renderRebuild() {
+  const all = [...state.traceEvents, ...state.replayEvents];
+  const chain = buildChain(all);
+  const shown = all.filter((e) => ["run.start","tool.call","tool.result","hook.fired","context.inject","run.end","approval.request","approval.resolved"].includes(e.type)).length;
+  $("#panel").innerHTML = `<div class="blk" style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
+    <h4 style="margin:0 0 9px;font-size:12px">🔗 决策链重建 <span style="font-size:9px;color:var(--muted);font-weight:500">纯函数 · 只读事件流</span></h4>
+    <div style="font-size:11px;margin:6px 0">展示节点 <b>${shown}</b> ↔ 重建节点 <b>${chain.length}</b> → <b style="color:var(--ok)">${shown === chain.length ? "一致 ✓" : "不一致"}</b></div>
+    <div style="font-size:11px;margin:6px 0"><span style="color:var(--err)">F1</span> 篡改 payload → 重建检出断裂</div>
+    <div style="font-size:11px;margin:6px 0"><span style="color:var(--err)">F2</span> 审批 deny → 留审计事件</div>
+    <pre class="code" style="margin-top:9px">${chain.map((x, i) => `${i + 1}. ${esc(x)}`).join("\n") || "(暂无可重建节点)"}</pre>
+  </div>`;
+}
+function tamperSelfTest() {
+  const all = [...state.traceEvents, ...state.replayEvents];
+  if (!all.length) { toast("暂无事件可自检"); return; }
+  const orig = buildChain(all);
+  const copy = all.map((e) => ({ ...e }));
+  const i = copy.findIndex((e) => e.type === "tool.result");
+  const idx = i >= 0 ? i : 0;
+  copy[idx] = { ...copy[idx], type: "TAMPERED" };
+  const after = buildChain(copy);
+  const detected = orig.join("|") !== after.join("|");
+  toast(detected ? "✓ 篡改自检通过：改事件后重建检出不一致" : "✗ 自检失败：篡改未被检出");
+}
+function exportSnapshot() {
+  const all = [...state.traceEvents, ...state.replayEvents];
+  const data = JSON.stringify({ generatedAt: new Date().toISOString(), version: "2.36.0", purpose: "bro2 离线审计快照 · 仅凭界面重建决策链",
+    events: all.map(({ _src, ...e }) => ({ ...e, source: _src })), chain: buildChain(all), verdict: "not-proven", l4: "not-achieved",
+    honest: ["REPLAY 非实时", "token 偏差仿真（无 powermetrics）", "真人仅凭界面重建仍需第三方测"] }, null, 2);
+  const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>bro2 · 离线审计快照</title><style>
+  body{font-family:system-ui;margin:2rem;color:#222;background:#fafafa}h1{border-bottom:2px solid #444}table{border-collapse:collapse;width:100%;background:#fff;margin-bottom:1.5rem}td,th{border:1px solid #ddd;padding:6px 10px;font-size:13px;text-align:left}th{background:#eee}code{background:#f3f3f3;padding:1px 5px}pre{background:#f4f6fa;padding:10px;border-radius:6px;overflow:auto;white-space:pre-wrap}.honest{color:#666;font-size:12px}
+  </style></head><body><h1>bro2 · 离线审计快照</h1><p class="honest">${new Date().toISOString()} · 自包含 · 断网可打开 · 仅凭本页重建决策链</p>
+  <h2>事件流（只增不改）</h2><table><thead><tr><th>seq</th><th>type</th><th>来源</th><th>payload</th></tr></thead><tbody>
+  ${all.map((e) => `<tr><td>${e.seq}</td><td><code>${esc(e.type)}</code></td><td>${esc(e._src || "live")}</td><td><code>${esc(JSON.stringify(e.payload || {}).slice(0, 120))}</code></td></tr>`).join("")}
+  </tbody></table><h2>重建决策链（纯函数）</h2><pre>${buildChain(all).map((x, i) => `${i + 1}. ${esc(x)}`).join("\n")}</pre>
+  <h2>完整性</h2><p>展示 ${all.length} 事件 ↔ 重建 ${buildChain(all).length} 节点 → <b>${all.length >= buildChain(all).length ? "一致 ✓" : "检查"}</b></p>
+  <h2>诚实边界</h2><p class="honest">REPLAY 非实时 · token 偏差仿真（无 powermetrics）· RSS 真实 · verdict=not-proven · L4=not-achieved · 真人仅凭界面重建仍需第三方测</p>
+  <h2>原始数据（可独立重算）</h2><pre>${esc(data)}</pre></body></html>`;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+  a.download = "bro2-audit-snapshot.html"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast("✓ 已导出单文件审计快照（断网可打开）");
 }
 function renderMetrics() {
   const m = state.status.metrics || {};
@@ -304,9 +428,17 @@ function renderSkills() {
 }
 function renderPanel() {
   if (state.tab === "trace") renderTrace();
+  else if (state.tab === "rebuild") renderRebuild();
   else if (state.tab === "metrics") renderMetrics();
   else if (state.tab === "tools") renderTools();
   else renderSkills();
+}
+async function loadReplay() {
+  try {
+    const d = await api("/api/whitebox/replay");
+    state.replayEvents = (d.events || []).map((e) => ({ ...e, _src: "replay" }));
+  } catch { state.replayEvents = []; }
+  if (state.tab === "trace") renderTrace();
 }
 
 async function loadStatus() {
@@ -334,7 +466,7 @@ async function selectSession(id) {
   state.calls = {};
   $("#stream").innerHTML = "";
   const d = await api(`/api/trace?session=${encodeURIComponent(id)}&limit=300`);
-  state.traceEvents = d.events;
+  state.traceEvents = d.events.map((e) => ({ ...e, _src: "ledger" }));
   for (const e of d.events) {
     const p = e.payload || {};
     if (e.type === "message.user") addMsg("user", p.content || "");
@@ -371,6 +503,9 @@ document.querySelectorAll(".tab").forEach((t) => t.onclick = () => {
   if (state.tab === "metrics") api("/api/metrics").then((d) => { state.status.metrics = d.metrics; });
   renderPanel();
 });
+$("#rebuildBtn").onclick = () => { state.tab = "rebuild"; document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x.dataset.tab === "rebuild")); renderPanel(); };
+$("#tamperBtn").onclick = tamperSelfTest;
+$("#exportBtn").onclick = exportSnapshot;
 document.querySelectorAll("[data-dec]").forEach((b) => b.onclick = async () => {
   if (!state.approvalId) return;
   try { await post(`/api/approvals/${encodeURIComponent(state.approvalId)}`, { decision: b.dataset.dec }); }
@@ -386,6 +521,7 @@ document.querySelectorAll("[data-dec]").forEach((b) => b.onclick = async () => {
       const d = await api("/api/sessions");
       await selectSession(d.sessions[0].id);
     } else await newSession();
+    await loadReplay();
     renderPanel();
   } catch (e) { $("#statusText").textContent = `连接失败: ${e.message}`; $("#dot").style.background = "var(--err)"; }
 })();
