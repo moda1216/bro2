@@ -39,10 +39,15 @@ TASKS_FILE = "/tmp/tb21-tasks.json"
 RECON_FILE = os.path.join(EXT, "tb21-recon-rows.json")
 RECON_FILE_LEGACY = "/tmp/tb21-recon-rows.json"
 
-# 每题预算：受 ovhcloud 2 req/min 限制，放宽墙钟（同 v2.33）。
-# 冒烟实测：gpt-oss-120b 在 2.1 复杂题（ars）上 32 步耗尽 247k tokens，240k 不够；
-# 抬高到 400k（约 55 步）+ 90 分钟墙钟，让复杂题有完成机会。这是 adapter 公平性配置，
-# 不改评分器、不放宽判分，仅避免因脚手架预算不足产生假阴性。
+# 评测 provider：2026-11-25 strict 多步压力实测，kilo(kilo-auto/free) 5步/14s 全成功，
+# pollinations 多步撞 402/死循环、llm7 与 ovh 真实长任务 429。选 kilo 作主力。
+# 诚实标注：kilo 实际响应模型为 nemotron-3.5-super-vl(随网关漂移)，非 120b 榜单锚点，
+# 本批结果只作 bro2@20b级 自跑数据，不对标公开榜 gpt-oss-120b 的 26.217 分。
+PROVIDER = "kilo"
+MODEL_LABEL = "nemotron-3.5-super-vl (kilo-auto/free)"
+COMPARABLE_TO_LEADERBOARD = False
+
+# 每题预算：抬高墙钟给复杂题完成机会（adapter 公平性配置，不改评分器/不放宽判分）。
 BUDGET = {"maxSeconds": 5400, "maxSteps": 60, "maxTokens": 400000}
 
 
@@ -168,7 +173,7 @@ def prepare(task: str, img: str) -> str | None:
     throttle_sha = hashlib.sha256(open(THROTTLE, "rb").read()).hexdigest()[:16]
     batch_sha = hashlib.sha256(open(os.path.abspath(__file__), "rb").read()).hexdigest()[:16]
     cli_sha = hashlib.sha256(open(os.path.join(ROOT, "bin", "agentos.ts"), "rb").read()).hexdigest()[:16]
-    fp = f"{throttle_sha}-{batch_sha}-{cli_sha}"
+    fp = f"{throttle_sha}-{batch_sha}-{cli_sha}-{PROVIDER}"
     if image_exists(tag):
         cp = run(["docker", "run", "--rm", tag, "python3", "-c",
                   "import json,os;"
@@ -272,15 +277,17 @@ def run_trial(task: str, repeat: int, tag: str) -> dict:
 
     bro2_rc, reward, steps, tokens = None, None, None, None
     try:
-        # bro2 在容器内跑（workspace=/app，ovhcloud 节流）
+        # bro2 在容器内跑（workspace=/app）。必须带 --strict：provider 失败直接报
+        # provider_error，禁止 router 静默降级到 mock 产出假终答（2026-11-25 机制修复）。
+        cmd = (
+            f'cd /bro2 && AGENTOS_LIVE_PROVIDER={PROVIDER} '
+            'node --experimental-strip-types --no-warnings bin/agentos.ts run '
+            f'--model {PROVIDER} --task "$(cat /app/instruction.md)" '
+            '--preset standard --auto-approve --quiet --strict'
+        )
         with open(logf, "w") as lf:
             p = subprocess.Popen(
-                ["docker", "exec", cid, "bash", "-lc",
-                 'cd /bro2 && AGENTOS_LIVE_PROVIDER=ovhcloud '
-                 'NODE_OPTIONS="--import /bro2/ovh-throttle.mjs" '
-                 'node --experimental-strip-types --no-warnings bin/agentos.ts run '
-                 '--model ovhcloud --task "$(cat /app/instruction.md)" '
-                 '--preset standard --auto-approve --quiet'],
+                ["docker", "exec", cid, "bash", "-lc", cmd],
                 stdout=lf, stderr=subprocess.STDOUT, text=True,
             )
             try:
@@ -319,6 +326,8 @@ def run_trial(task: str, repeat: int, tag: str) -> dict:
         "reward": reward, "verifyNote": vnote, "steps": steps, "tokens": tokens,
         "bro2_rc": bro2_rc, "wallSeconds": round(time.time() - t0, 1),
         "log": os.path.relpath(logf, ROOT), "ts": now(),
+        "provider": PROVIDER, "respModel": MODEL_LABEL,
+        "comparableToLeaderboard": COMPARABLE_TO_LEADERBOARD,
     }
 
 
@@ -401,7 +410,7 @@ def main() -> None:
             if args.limit and new >= args.limit:
                 print(f"  达到 limit={args.limit}，本会话停止（可 resume）")
                 return
-            print(f"  [{task}] repeat {r}/{args.repeat} 开跑（ovhcloud 节流，约 15-40min）...", flush=True)
+            print(f"  [{task}] repeat {r}/{args.repeat} 开跑（{PROVIDER} --strict）...", flush=True)
             row = run_trial(task, r, tag)
             row["sanity"] = gate_note
             row["image"] = img

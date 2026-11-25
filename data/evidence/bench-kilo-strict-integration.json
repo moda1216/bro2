@@ -1,0 +1,55 @@
+{
+  "id": "bench-kilo-strict-integration",
+  "title": "外部评测接入 --strict 并切换主力端点 kilo 的验证证据",
+  "date": "2026-11-25",
+  "verdict": "integrated-and-smoke-verified",
+  "endpoint_selection": {
+    "stress_test": "strict 模式多步任务(5步工具调用)实测",
+    "results": [
+      { "name": "kilo", "model": "nvidia/nemotron-3.5-super-vl:free", "stoppedBy": "completed", "steps": 5, "tools": 5, "secs": 14, "isMock": false, "providerErr": false, "chosen": true },
+      { "name": "pollinations", "stoppedBy": "guard", "steps": 4, "secs": 99, "note": "触发死循环 guard；配置 note 记载 1 reply/45s per IP，多步必撞 402" },
+      { "name": "llm7", "note": "strict 真实长任务立即 429 配额耗尽（前一轮实测）" },
+      { "name": "ovhcloud", "note": "8/8 全 429 共享 IP 配额耗尽（前一轮实测）" }
+    ],
+    "container_reachability": "容器内 wget POST kilo → HTTP 200，响应 model=nvidia/nemotron-3.5-super-vl:free，与诚实标注一致",
+    "config_alignment": "agentos.config.json 中 kilo priority=10 本就是设计的多步主力，选择一致"
+  },
+  "changes": {
+    "examples/tb21-batch.py": [
+      "PROVIDER=kilo，容器命令 AGENTOS_LIVE_PROVIDER=kilo --model kilo",
+      "命令加 --strict：provider 失败明确 provider_error，禁止静默降级 mock",
+      "去掉 ovh-throttle NODE_OPTIONS 注入(对 kilo 无意义，且节流仅针对 ovh host)",
+      "镜像指纹 fp 加 -PROVIDER，避免复用旧 ovh wrapper 镜像",
+      "成功结果行带 provider/respModel/comparableToLeaderboard=false 身份字段，便于按模型分组统计"
+    ],
+    ".github/workflows/bench-external.yml": [
+      "端点健康检查 ovhcloud/gpt-oss-120b → kilo/kilo-auto/free(带 tool_calls)",
+      "头部注释与完成度摘要标注 kilo/nemotron-3.5-super-vl 自跑数据、不对标 120b 榜单 26.217"
+    ]
+  },
+  "smoke_test": {
+    "task": "break-filter-js-from-html r3 (未完成 trial，缓存镜像)",
+    "command": "python3 examples/tb21-batch.py --task break-filter-js-from-html --repeat 3 --limit 1",
+    "observed": [
+      "prepare 成功(fp 变化触发 wrapper 重建)",
+      "运行中容器命令确认为 AGENTOS_LIVE_PROVIDER=kilo ... --model kilo ... --strict",
+      "bro2 日志显示真实解题过程：分析 XSS filter bypass、尝试 data URL/meta refresh/svg animate 多种 payload、推理 Chrome 行为——是真实 agent loop，无 mock 假终答",
+      "trial 在 21 分钟时被人设的 20 分钟 timeout 中断(context canceled)，未落盘；这是技术题本身耗时，非 bug"
+    ],
+    "data_integrity": "结果文件保持 9 行未变，残留容器已清理，无污染",
+    "conclusion": "核心机制已验证：kilo+strict 在容器内真实驱动解题、不降级 mock。完整 trial 由 CI job(6h 上限)承担。"
+  },
+  "gates": { "blocking": "38/38", "informational": "2/2", "budget": "源码行未动(仅 examples/ 豁免目录 + workflow)" },
+  "honesty": {
+    "model_identity": "kilo 响应模型 nemotron-3.5-super-vl(随网关可能漂移)，非 120b 榜单锚点；逐行 respModel 标注，统计按模型分组",
+    "comparable": false,
+    "verdict": "not-proven",
+    "l4": "not-achieved",
+    "boundaries": [
+      "本证据证明端点可用性 + strict 接入 + 容器内真实解题，不是能力结论",
+      "完整 89×3 trial 的 reward 尚待 CI 跑出，不预判成绩",
+      "未改评分器、未放宽判分、未伪造任何 trial"
+    ]
+  },
+  "next": "提交推送 → dispatch 一轮 CI 评测(limit=6) → 确认真实 trial 落盘(带 provider=kilo/respModel) → 回填真实进度"
+}

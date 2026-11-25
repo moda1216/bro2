@@ -8,14 +8,18 @@ name: bro2 · 外部真实评测（Terminal-Bench 2.1 · 89×3 常驻）
 #   - 不写 external-results.json、不改评分器、不改 src、不改 verdict/L4；
 #   - 只驱动测量，逐 trial 原子落盘到 tb21-full-results.jsonl；
 #   - 每个 trial 经官方 per-task 镜像 + 官方 verifier 判分；
-#   - mock/provider_error 一律判 error、不计 reward（由 batch.py 保证）。
+#   - mock/provider_error 一律判 error、不计 reward（由 batch.py 保证）；
+#   - batch.py 带 --strict：provider 失败明确报错，禁止静默降级 mock（2026-11-25 机制修复）。
+#
+# provider=kilo(kilo-auto/free)，实测多步稳定；响应模型 nemotron-3.5-super-vl 非 120b 锚点，
+# 本批为 bro2@该模型自跑数据，不对标公开榜 gpt-oss-120b 26.217 分（逐行标注 respModel）。
 #
 # 断点续跑：batch.py 天然跳过已完成的 (task,repeat)，每个 job 只跑 --limit 个新 trial，
 # 结果 commit 回 main 才持久——GitHub 仓库是跨会话的唯一事实源。
 # ---------------------------------------------------------------------------
 on:
   schedule:
-    # 每 6 小时一次（UTC）：单个 job 受 ovhcloud 2 req/min 约束，--limit 6 约 3-4h，留余量
+    # 每 6 小时一次（UTC）：kilo 多步约 3s/题，--limit 6 通常 <30min，留足余量
     - cron: "17 */6 * * *"
   workflow_dispatch:
     inputs:
@@ -68,16 +72,16 @@ jobs:
           echo "count=$n" >> "$GITHUB_OUTPUT"
           echo "评测前有效完成: $n / 267"
 
-      - name: 端点健康检查（ovhcloud / gpt-oss-120b 免 key）
+      - name: 端点健康检查（kilo / kilo-auto/free 免 key，带 tool_calls）
         run: |
-          code=$(curl -sS -o /tmp/ovh-probe.json -w '%{http_code}' \
-            -X POST "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions" \
+          code=$(curl -sS -o /tmp/kilo-probe.json -w '%{http_code}' \
+            -X POST "https://api.kilo.ai/api/gateway/v1/chat/completions" \
             -H 'Content-Type: application/json' \
-            -d '{"model":"gpt-oss-120b","messages":[{"role":"user","content":"ping"}],"max_tokens":4}' \
+            -d '{"model":"kilo-auto/free","messages":[{"role":"user","content":"ping"}],"tools":[{"type":"function","function":{"name":"noop","parameters":{"type":"object","properties":{}}}}],"max_tokens":8}' \
             || echo 000)
-          echo "ovh HTTP=$code"
+          echo "kilo HTTP=$code"
           if [ "$code" != "200" ]; then
-            echo "::warning::ovhcloud 端点当前不可用（HTTP=$code）；本轮 batch 可能整批 provider_error，不计分。"
+            echo "::warning::kilo 端点当前不可用（HTTP=$code）；本轮 batch 可能整批 provider_error，不计分。"
           fi
 
       - name: 运行批量评测（断点续跑，限本轮 trial 数）
@@ -117,4 +121,4 @@ jobs:
         env:
           AFTER: ${{ steps.after.outputs.count }}
         run: |
-          echo "::notice::外部评测进度 $AFTER/267（verdict=not-proven，partial≠榜单分数）"
+          echo "::notice::外部评测进度 $AFTER/267（provider=kilo/nemotron-3.5-super-vl 自跑数据，不对标 120b 榜单；verdict=not-proven，partial≠榜单分数）"
