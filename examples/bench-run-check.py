@@ -79,6 +79,15 @@ def main() -> int:
         err = [r for r in rows if r.get("status") == "error"]
         rewards = [r["reward"] for r in ok if r.get("reward") is not None]
         print(f"结果文件: 总 {len(rows)} 行 | 有效 ok {len(ok)} | error {len(err)} | reward {sum(rewards)}/{len(rewards)}")
+        # 诚实标注：kilo 接入后逐行带 provider/respModel，必须按模型分组，不得与 120b 榜单混为一谈。
+        by_model: dict[str, list] = {}
+        for r in ok:
+            key = r.get("respModel") or r.get("provider") or "legacy(ovh/gpt-oss-120b, 无身份字段)"
+            by_model.setdefault(key, []).append(r.get("reward"))
+        for key, rs in by_model.items():
+            scored = [x for x in rs if x is not None]
+            print(f"  模型组 [{key}]: {len(rs)} trial | reward {sum(scored)}/{len(scored)}"
+                  f"{'  <== 不对标120b榜单' if 'legacy' not in key else '  <== 120b榜单锚点(历史9条)'}")
     except Exception as e:
         print(f"结果文件读取失败: {type(e).__name__}: {e}")
     print("verdict=not-proven（本工具只读，不产出能力结论）")
