@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>外部评测进度回填报告 · 12/267</title>
+<style>
+  :root{--bg:#0f1419;--card:#1a2129;--line:#2b3540;--fg:#e6edf3;--dim:#8b98a5;--ok:#3fb950;--bad:#f85149;--warn:#d29922;--acc:#58a6ff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.65 -apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;padding:32px 20px}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 6px}
+  .sub{color:var(--dim);margin-bottom:28px;font-size:14px}
+  h2{font-size:18px;margin:30px 0 12px;padding-left:10px;border-left:3px solid var(--acc)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:12px 0}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--dim);font-weight:600;width:170px;white-space:nowrap}
+  tr:last-child td,tr:last-child th{border-bottom:none}
+  code{background:#0b0f13;border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:13px;color:var(--acc)}
+  .ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}.warn{color:var(--warn);font-weight:600}
+  .pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:12px;font-weight:600;margin-right:6px}
+  .p-ok{background:#12331c;color:var(--ok);border:1px solid #1f5c30}
+  .p-warn{background:#3a2e14;color:var(--warn);border:1px solid #6e571f}
+  .note{background:#1c2233;border:1px solid #2f3b57;border-radius:8px;padding:12px 16px;color:#b9c7d9;font-size:13px;margin-top:14px}
+  .big{font-size:34px;font-weight:700;color:var(--acc)}
+  .foot{color:var(--dim);font-size:12px;text-align:center;margin-top:36px;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>外部评测进度回填报告</h1>
+  <div class="sub">bro2 · Terminal-Bench 2.1 89×3 · 2026-11-25 · 回填 run <code>45585895109</code> · 远程 main <code>9be688d</code></div>
+
+  <h2>一、进度:终于真正推进</h2>
+  <div class="card" style="text-align:center">
+    <div class="big">12 / 267</div>
+    <div style="color:var(--dim);font-size:13px">有效 trial(status=ok) · 4.5% · 较上轮 9/267 <span class="ok">+3</span></div>
+  </div>
+  <div class="card">
+    <table>
+      <tr><th>新增 3 个 trial</th><td><span class="pill p-ok">全部 reward=1</span>
+        <code>break-filter-js-from-html r3</code> · <code>modernize-scientific-stack r1</code> · <code>modernize-scientific-stack r2</code><br>
+        均由 kilo/nemotron-3.5-super-vl 驱动,耗时 17-25 秒/题。</td></tr>
+      <tr><th>身份标注</th><td>3 条全部带 <code>provider=kilo</code>、<code>respModel=nemotron-3.5-super-vl</code>、<code>comparableToLeaderboard=false</code>——诚实字段逐行生效。</td></tr>
+      <tr><th>run 状态</th><td><code>45585895109</code> · workflow_dispatch · head <code>d9c28ba</code> · <b class="ok">completed success</b>,第 9-12 步全 success,workflow 自动回写 commit <code>cbe424e</code>。</td></tr>
+    </table>
+  </div>
+
+  <h2>二、按模型分组(诚实红线)</h2>
+  <div class="card">
+    <table>
+      <tr><th>legacy 120b 锚点</th><td>9 trial · reward <b>1/9</b> · ovh/gpt-oss-120b 历史数据(无 provider 字段)——<b>唯一对标公开榜的组</b>。</td></tr>
+      <tr><th>kilo 自跑组</th><td>3 trial · reward <b class="ok">3/3</b> · nemotron-3.5-super-vl——<b class="warn">不对标 120b 榜单 26.217 分</b>,独立分组统计。</td></tr>
+    </table>
+    <div class="note">合计 reward 4/12 只是数字拼接,<b>不具备跨模型可比性</b>。checker 已按 respModel 分组显示,杜绝把 20b 级自跑数据冒充榜单成绩。</div>
+  </div>
+
+  <h2>三、46 条 prepare-fail:外部基础设施障碍</h2>
+  <div class="card">
+    <p>本轮结果文件共 58 行 = 12 ok + <b class="warn">46 error</b>。46 条全是 <code>prepare-fail</code>(无 provider 字段),集中在 09:31-09:38,每 4-15 秒一条——是 GitHub runner 上 <b>批量镜像/文件拉取失败</b>,不是模型能力失败、不计 reward。</p>
+    <table>
+      <tr><th>本地对照</th><td>同样的任务(<code>build-cython-ext</code>):本地拉 5 个 task 文件全 HTTP 200、镜像 <code>docker pull</code> 成功——prepare 完全能成功。</td></tr>
+      <tr><th>结论</th><td>失败是 GitHub runner 出口 IP 对 raw.githubusercontent.com / DockerHub 的匿名限流,属外部环境障碍;本地与 runner 环境差异导致。</td></tr>
+      <tr><th>处理</th><td>保留这些 error 行(记录哪些任务因基础设施失败),不计分、不虚增进度;checker 只数 status=ok。</td></tr>
+    </table>
+  </div>
+
+  <h2>四、后台轮询已设 + 自动回填闭环</h2>
+  <div class="card">
+    <table>
+      <tr><th>脚本</th><td><code>examples/bench-poll-backfill.py</code>(幂等可复跑):run 终结后读远端结果、按模型分组、写证据、rebase+commit+push。</td></tr>
+      <tr><th>结果</th><td>脚本自检 <code>--once</code> 时 run 刚好 success → 已读回写结果、生成证据 <code>bench-run-backfill-45585895109.json</code> 并推送。</td></tr>
+      <tr><th>健壮性</th><td>评测本体在 GitHub Actions,不依赖本地沙箱;即使轮询进程因沙箱休眠中断,结果仍由 workflow 自动回写 main,重跑脚本即可补齐证据。</td></tr>
+      <tr><th>cron</th><td>最近 10 次 run 中 schedule 事件 <b class="ok">3 次</b>,定时调度持续激活。</td></tr>
+    </table>
+  </div>
+
+  <h2>五、诚实边界</h2>
+  <div class="card">
+    <div class="note">
+      · 有效进度 <b>12/267</b>,verdict 恒为 <b>not-proven</b>、L4=<b>not-achieved</b>。<br>
+      · kilo 3 条满分是真实判分结果(经官方 verifier),但仅代表该模型自跑,<b>不构成本系统能力结论</b>。<br>
+      · 未改评分器、未放宽判分、未伪造任何 trial;46 条基础设施失败如实保留、不计分。<br>
+      · 剩余障碍:runner 对镜像/文件的匿名限流导致大面积 prepare-fail,需换 runner 网络或预置镜像才能覆盖更多题。
+    </div>
+  </div>
+
+  <div class="foot">证据:data/evidence/bench-run-backfill-45585895109.json · checker:examples/bench-run-check.py · push 链 735eef5 → c83e631 → 9be688d</div>
+</div>
+</body>
+</html>
