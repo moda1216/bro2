@@ -7,3 +7,52 @@
 {"task": "bn-fit-modify", "repeat": 3, "status": "ok", "reward": 0, "verifyNote": "rc=2", "steps": 20, "tokens": 215669, "bro2_rc": 0, "wallSeconds": 634.5, "log": "../../tmp/tb21-logs/bn-fit-modify-r3.log", "ts": "2026-11-17T10:49:52.555438Z", "sanity": "empty-reward=0 (rc=2)", "image": "alexgshaw/bn-fit-modify:20251031"}
 {"task": "break-filter-js-from-html", "repeat": 1, "status": "ok", "reward": 0, "verifyNote": "rc=1", "steps": 10, "tokens": 34242, "bro2_rc": 0, "wallSeconds": 368.7, "log": "../../tmp/tb21-logs/break-filter-js-from-html-r1.log", "ts": "2026-11-20T07:28:21.759268Z", "sanity": "cached", "image": "alexgshaw/break-filter-js-from-html:20251031"}
 {"task": "break-filter-js-from-html", "repeat": 2, "status": "ok", "reward": 0, "verifyNote": "rc=1", "steps": 14, "tokens": 50111, "bro2_rc": 0, "wallSeconds": 433.9, "log": "../../tmp/tb21-logs/break-filter-js-from-html-r2.log", "ts": "2026-11-20T07:36:49.262244Z", "sanity": "cached", "image": "alexgshaw/break-filter-js-from-html:20251031"}
+{"task": "break-filter-js-from-html", "repeat": 3, "status": "ok", "reward": 1, "verifyNote": "rc=0", "steps": 9, "tokens": 47013, "bro2_rc": 0, "wallSeconds": 24.8, "log": "../../../../../tmp/tb21-logs/break-filter-js-from-html-r3.log", "ts": "2026-11-25T09:31:21.407108Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/break-filter-js-from-html:20251031"}
+{"task": "build-cython-ext", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:31:33.759961Z"}
+{"task": "build-pmars", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:31:37.389583Z"}
+{"task": "build-pov-ray", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:31:44.211148Z"}
+{"task": "caffe-cifar-10", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:31:52.342846Z"}
+{"task": "cancel-async-tasks", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:31:55.849726Z"}
+{"task": "chess-best-move", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:32:04.287353Z"}
+{"task": "circuit-fibsqrt", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:32:11.434731Z"}
+{"task": "cobol-modernization", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:32:18.753336Z"}
+{"task": "code-from-image", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:32:22.539807Z"}
+{"task": "compile-compcert", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:32:24.334761Z"}
+{"task": "configure-git-webserver", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:32:27.038857Z"}
+{"task": "constraints-scheduling", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:32:29.840596Z"}
+{"task": "count-dataset-tokens", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:32:33.778310Z"}
+{"task": "crack-7z-hash", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:32:47.840320Z"}
+{"task": "custom-memory-heap-crash", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:33:38.380119Z"}
+{"task": "db-wal-recovery", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:33:45.523461Z"}
+{"task": "distribution-search", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:33:53.401368Z"}
+{"task": "dna-assembly", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:33:54.660032Z"}
+{"task": "dna-insert", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:33:55.803242Z"}
+{"task": "extract-elf", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:34:11.862214Z"}
+{"task": "extract-moves-from-video", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:34:13.299606Z"}
+{"task": "feal-differential-cryptanalysis", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:34:16.664009Z"}
+{"task": "feal-linear-cryptanalysis", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:34:24.252190Z"}
+{"task": "filter-js-from-html", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:34:39.068855Z"}
+{"task": "financial-document-processor", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:34:40.865591Z"}
+{"task": "fix-code-vulnerability", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:34:49.731341Z"}
+{"task": "fix-git", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:34:55.926151Z"}
+{"task": "fix-ocaml-gc", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:35:09.739359Z"}
+{"task": "gcode-to-text", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:35:13.981476Z"}
+{"task": "git-leak-recovery", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:35:18.012596Z"}
+{"task": "git-multibranch", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:35:30.521850Z"}
+{"task": "gpt2-codegolf", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:35:41.810832Z"}
+{"task": "headless-terminal", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:35:46.487945Z"}
+{"task": "hf-model-inference", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:36:05.264102Z"}
+{"task": "install-windows-3.11", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:36:26.401518Z"}
+{"task": "kv-store-grpc", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:36:29.991036Z"}
+{"task": "large-scale-text-editing", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:36:35.759898Z"}
+{"task": "largest-eigenval", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:36:40.104356Z"}
+{"task": "llm-inference-batching-scheduler", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:36:43.960140Z"}
+{"task": "log-summary-date-ranges", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:36:48.238380Z"}
+{"task": "mailman", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:36:55.070928Z"}
+{"task": "make-doom-for-mips", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:37:02.770025Z"}
+{"task": "make-mips-interpreter", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:37:25.944427Z"}
+{"task": "mcmc-sampling-stan", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:37:35.933518Z"}
+{"task": "merge-diff-arc-agi-task", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:37:37.814561Z"}
+{"task": "model-extraction-relu-logits", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:37:43.155181Z"}
+{"task": "modernize-scientific-stack", "repeat": 1, "status": "ok", "reward": 1, "verifyNote": "rc=0", "steps": 7, "tokens": 38897, "bro2_rc": 0, "wallSeconds": 19.3, "log": "../../../../../tmp/tb21-logs/modernize-scientific-stack-r1.log", "ts": "2026-11-25T09:38:29.875018Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/modernize-scientific-stack:20251031"}
+{"task": "modernize-scientific-stack", "repeat": 2, "status": "ok", "reward": 1, "verifyNote": "rc=0", "steps": 6, "tokens": 33589, "bro2_rc": 0, "wallSeconds": 16.9, "log": "../../../../../tmp/tb21-logs/modernize-scientific-stack-r2.log", "ts": "2026-11-25T09:38:46.791945Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/modernize-scientific-stack:20251031"}
