@@ -56,3 +56,55 @@
 {"task": "model-extraction-relu-logits", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T09:37:43.155181Z"}
 {"task": "modernize-scientific-stack", "repeat": 1, "status": "ok", "reward": 1, "verifyNote": "rc=0", "steps": 7, "tokens": 38897, "bro2_rc": 0, "wallSeconds": 19.3, "log": "../../../../../tmp/tb21-logs/modernize-scientific-stack-r1.log", "ts": "2026-11-25T09:38:29.875018Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/modernize-scientific-stack:20251031"}
 {"task": "modernize-scientific-stack", "repeat": 2, "status": "ok", "reward": 1, "verifyNote": "rc=0", "steps": 6, "tokens": 33589, "bro2_rc": 0, "wallSeconds": 16.9, "log": "../../../../../tmp/tb21-logs/modernize-scientific-stack-r2.log", "ts": "2026-11-25T09:38:46.791945Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/modernize-scientific-stack:20251031"}
+{"task": "build-cython-ext", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:49:31.647650Z"}
+{"task": "build-pmars", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:49:36.344271Z"}
+{"task": "build-pov-ray", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:49:44.222210Z"}
+{"task": "caffe-cifar-10", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:49:54.365045Z"}
+{"task": "cancel-async-tasks", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:49:59.234042Z"}
+{"task": "chess-best-move", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:50:09.675043Z"}
+{"task": "circuit-fibsqrt", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:50:18.946767Z"}
+{"task": "cobol-modernization", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:50:28.173531Z"}
+{"task": "code-from-image", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:50:33.263815Z"}
+{"task": "compile-compcert", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:50:35.447801Z"}
+{"task": "configure-git-webserver", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:50:39.579290Z"}
+{"task": "constraints-scheduling", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:50:43.585398Z"}
+{"task": "count-dataset-tokens", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:50:48.493893Z"}
+{"task": "crack-7z-hash", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:50:59.915330Z"}
+{"task": "custom-memory-heap-crash", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:51:48.685223Z"}
+{"task": "db-wal-recovery", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:51:57.631847Z"}
+{"task": "distribution-search", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:52:05.938346Z"}
+{"task": "dna-assembly", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:52:08.172987Z"}
+{"task": "dna-insert", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:52:10.739995Z"}
+{"task": "extract-elf", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:52:28.385806Z"}
+{"task": "extract-moves-from-video", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:52:30.872746Z"}
+{"task": "feal-differential-cryptanalysis", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:52:35.385775Z"}
+{"task": "feal-linear-cryptanalysis", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:52:42.769550Z"}
+{"task": "filter-js-from-html", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:53:00.387478Z"}
+{"task": "financial-document-processor", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:53:03.492593Z"}
+{"task": "fix-code-vulnerability", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:53:13.437191Z"}
+{"task": "fix-git", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:53:22.949114Z"}
+{"task": "fix-ocaml-gc", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:53:39.566581Z"}
+{"task": "gcode-to-text", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:53:44.726439Z"}
+{"task": "git-leak-recovery", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:53:49.339126Z"}
+{"task": "git-multibranch", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:54:00.447865Z"}
+{"task": "gpt2-codegolf", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:54:14.440118Z"}
+{"task": "headless-terminal", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:54:20.201134Z"}
+{"task": "hf-model-inference", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:54:38.528951Z"}
+{"task": "install-windows-3.11", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:55:01.919042Z"}
+{"task": "kv-store-grpc", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:55:06.857127Z"}
+{"task": "large-scale-text-editing", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:55:13.226492Z"}
+{"task": "largest-eigenval", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:55:18.617552Z"}
+{"task": "llm-inference-batching-scheduler", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:55:23.630905Z"}
+{"task": "log-summary-date-ranges", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:55:28.867494Z"}
+{"task": "mailman", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:55:36.409699Z"}
+{"task": "make-doom-for-mips", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:55:45.408496Z"}
+{"task": "make-mips-interpreter", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:56:08.719017Z"}
+{"task": "mcmc-sampling-stan", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:56:19.194895Z"}
+{"task": "merge-diff-arc-agi-task", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:56:21.264223Z"}
+{"task": "model-extraction-relu-logits", "status": "error", "err": "prepare-fail", "ts": "2026-11-25T21:56:26.818071Z"}
+{"task": "modernize-scientific-stack", "repeat": 3, "status": "ok", "reward": 1, "verifyNote": "rc=0", "steps": 10, "tokens": 72165, "bro2_rc": 0, "wallSeconds": 28.8, "log": "../../../../../tmp/tb21-logs/modernize-scientific-stack-r3.log", "ts": "2026-11-25T21:57:25.873093Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/modernize-scientific-stack:20251031"}
+{"task": "mteb-leaderboard", "repeat": 1, "status": "ok", "reward": 0, "verifyNote": "rc=1", "steps": 19, "tokens": 431281, "bro2_rc": 1, "wallSeconds": 68.4, "log": "../../../../../tmp/tb21-logs/mteb-leaderboard-r1.log", "ts": "2026-11-25T21:59:13.462111Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/mteb-leaderboard:20260430"}
+{"task": "mteb-leaderboard", "repeat": 2, "status": "ok", "reward": 0, "verifyNote": "rc=1", "steps": 22, "tokens": 426350, "bro2_rc": 1, "wallSeconds": 74.6, "log": "../../../../../tmp/tb21-logs/mteb-leaderboard-r2.log", "ts": "2026-11-25T22:00:28.111503Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/mteb-leaderboard:20260430"}
+{"task": "mteb-leaderboard", "repeat": 3, "status": "ok", "reward": 0, "verifyNote": "rc=1", "steps": 20, "tokens": 438494, "bro2_rc": 1, "wallSeconds": 80.0, "log": "../../../../../tmp/tb21-logs/mteb-leaderboard-r3.log", "ts": "2026-11-25T22:01:48.124891Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/mteb-leaderboard:20260430"}
+{"task": "mteb-retrieve", "repeat": 1, "status": "ok", "reward": 0, "verifyNote": "rc=1", "steps": 17, "tokens": 131604, "bro2_rc": 0, "wallSeconds": 110.3, "log": "../../../../../tmp/tb21-logs/mteb-retrieve-r1.log", "ts": "2026-11-25T22:04:17.123614Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/mteb-retrieve:20260430"}
+{"task": "mteb-retrieve", "repeat": 2, "status": "ok", "reward": 0, "verifyNote": "rc=1", "steps": 7, "tokens": 47488, "bro2_rc": 0, "wallSeconds": 37.1, "log": "../../../../../tmp/tb21-logs/mteb-retrieve-r2.log", "ts": "2026-11-25T22:04:54.266839Z", "provider": "kilo", "respModel": "nemotron-3.5-super-vl (kilo-auto/free)", "comparableToLeaderboard": false, "sanity": "empty-reward=0 (rc=1)", "image": "alexgshaw/mteb-retrieve:20260430"}
