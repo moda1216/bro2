@@ -1,4 +1,3 @@
-// L7 交互层 · REST + SSE API（node:http，零依赖）
 import { createServer } from "node:http";
 import type { Server, IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
@@ -12,6 +11,7 @@ import { loadMetaState } from "../rsi/shadow.ts";
 import type { AgentOS } from "../index.ts";
 
 const WEB_DIR = join(dirname(fileURLToPath(import.meta.url)), "web");
+const activeRuns = new Set<string>(); // 进程内此刻正在执行的会话，供全局任务总览读取
 
 export interface ServerOptions {
   host: string;
@@ -35,11 +35,8 @@ async function bodyJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   for await (const c of req) chunks.push(Buffer.from(c));
   const text = Buffer.concat(chunks).toString("utf8");
   if (!text) return {};
-  try {
-    return JSON.parse(text) as Record<string, unknown>;
-  } catch {
-    throw new Error("请求体不是合法 JSON");
-  }
+  try { return JSON.parse(text) as Record<string, unknown>; }
+  catch { throw new Error("请求体不是合法 JSON"); }
 }
 
 function sseInit(res: ServerResponse): void {
@@ -55,11 +52,7 @@ function sseInit(res: ServerResponse): void {
 
 function sseSend(res: ServerResponse, event: string, data: unknown): void {
   if (res.writableEnded || res.destroyed) return;
-  try {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-  } catch {
-    // 客户端断开
-  }
+  try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch { /* 客户端断开 */ }
 }
 
 export async function startServer(os: AgentOS, options: ServerOptions): Promise<Server> {
@@ -120,7 +113,16 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
   }
 
   if (path === "/api/sessions" && method === "GET") {
-    json(res, 200, { sessions: os.sessions.list().slice(0, 60) });
+    const sessions = os.sessions.list().slice(0, 60).map((m) => ({ ...m, running: activeRuns.has(m.id) }));
+    json(res, 200, { sessions, runningCount: activeRuns.size });
+    return;
+  }
+  if (path === "/api/events/stream" && method === "GET") {
+    sseInit(res);
+    sseSend(res, "snapshot", { active: [...activeRuns] });
+    const off = os.runtime.bus.on("*", (e: Event) => sseSend(res, "event", e));
+    const hb = setInterval(() => { sseSend(res, "running-snapshot", { active: [...activeRuns] }); }, 2000);
+    res.on("close", () => { clearInterval(hb); off(); });
     return;
   }
   if (path === "/api/sessions" && method === "POST") {
@@ -152,7 +154,6 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     json(res, 200, { metrics: os.tracer.snapshot(), recent: os.tracer.recent(60) });
     return;
   }
-  // 白盒 REPLAY：只读 evidence，标注非实时，不与实时事件混同计分
   if (path === "/api/whitebox/replay" && method === "GET") {
     let events: Record<string, unknown>[] = [];
     try {
@@ -178,7 +179,6 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     return;
   }
 
-  // ---- 插件 / 连接器 ----
   if (path === "/api/plugins" && method === "POST") {
     const b = await bodyJson(req);
     const catalog = os.runtime.get<Record<string, { name: string; setup: (r: unknown) => void }>>("pluginCatalog") ?? {};
@@ -205,7 +205,6 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     return;
   }
 
-  // ---- 模型切换 ----
   if (path === "/api/model" && method === "POST") {
     const b = await bodyJson(req);
     try { os.router.setDefault(String(b.name ?? "")); json(res, 200, { ok: true, model: os.router.defaultName }); }
@@ -213,7 +212,6 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     return;
   }
 
-  // ---- 对话（SSE 流式）----
   if (path === "/api/chat" && method === "POST") {
     const b = await bodyJson(req);
     const text = String(b.text ?? "").trim();
@@ -228,15 +226,17 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     const dispose = os.runtime.bus.on("*", (e: Event) => {
       if (e.sessionId === sessionId) sseSend(res, "event", e);
     });
-    const heartbeat = setInterval(() => {
-      if (!res.writableEnded) res.write(": ping\n\n");
-    }, 15000);
+    const heartbeat = setInterval(() => { if (!res.writableEnded) res.write(": ping\n\n"); }, 15000);
+    activeRuns.add(sessionId);
+    sseSend(res, "running", { sessionId, running: true });
     os.run(sessionId, text, {
       onChunk: (c) => sseSend(res, "chunk", c),
     })
       .then((r) => sseSend(res, "done", r))
       .catch((err) => sseSend(res, "error", { error: err instanceof Error ? err.message : String(err) }))
       .finally(() => {
+        activeRuns.delete(sessionId);
+        sseSend(res, "running", { sessionId, running: false });
         clearInterval(heartbeat);
         dispose();
         if (!res.writableEnded) res.end();

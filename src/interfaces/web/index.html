@@ -41,6 +41,13 @@ aside{background:var(--panel);border-right:1px solid var(--border);display:flex;
 .sess.active{background:var(--accent-soft);border-color:var(--accent)}
 .sess .t{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sess .m{font-size:10px;color:var(--muted);margin-top:2px}
+.sess .run{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:5px;box-shadow:0 0 0 3px rgba(23,132,92,.18);animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.wb-scope{display:flex;gap:0;margin:0 12px 8px;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.wb-scope button{flex:1;border:0;background:transparent;color:var(--muted);font-size:10.5px;padding:6px;cursor:pointer}
+.wb-scope button.on{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.ev-task{font-size:9.5px;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:1px 5px}
+.global-count{font-size:10px;color:var(--ok);font-weight:650}
 main{display:flex;flex-direction:column;min-width:0;min-height:0}
 #stream{flex:1;overflow:auto;padding:18px 22px;scroll-behavior:smooth}
 .msg{margin-bottom:16px;max-width:860px}
@@ -137,7 +144,7 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
   </header>
 
   <aside>
-    <div class="side-title">会话</div>
+    <div class="side-title">任务总览 <span class="global-count" id="runCount"></span></div>
     <div class="side-actions">
       <button class="btn primary" id="newBtn">＋ 新建</button>
       <button class="btn" id="forkBtn">分叉</button>
@@ -166,7 +173,8 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
       <div class="tab" data-tab="tools">工具</div>
       <div class="tab" data-tab="skills">技能</div>
     </div>
-    <div class="wb-banner"><b>来源标注</b> <span class="src-live-t">● LIVE 真实 EventBus·SSE 实时</span> · <span class="src-ledger-t">● LEDGER 只增账本回放</span> · <span class="src-replay-t">● REPLAY evidence 回放（非实时）</span><div class="wb-legend">每条决策的来源与依据可展开查看 · 仅凭此事件流可重建决策链</div></div>
+    <div class="wb-scope"><button class="on" data-scope="all">🌐 全局事件流（所有任务）</button><button data-scope="focus">🎯 聚焦当前任务</button></div>
+    <div class="wb-banner"><b>来源标注</b> <span class="src-live-t">● LIVE 真实 EventBus·SSE 实时</span> · <span class="src-ledger-t">● LEDGER 只增账本回放</span> · <span class="src-replay-t">● REPLAY evidence 回放（非实时）</span><div class="wb-legend">全局视野监控本进程所有任务 · 每条带来源与任务标签 · 仅凭此流可重建决策链</div></div>
     <div class="panel" id="panel"></div>
     <div class="wb-actions">
       <button class="btn sm" id="rebuildBtn">⟳ 重建决策链</button>
@@ -194,7 +202,7 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [], replayEvents: [] };
+const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [], replayEvents: [], globalEvents: [], running: new Set(), scope: "all", sessionTitles: {}, ledgerMaxSeq: {} };
 const toast = (m) => { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("on"), 2200); };
 // 事件类型 → 四条 lane 的映射；来源由注入方式决定，不由事件自报
 const LANE_OF = {
@@ -335,22 +343,25 @@ async function send() {
 
 function laneOf(e) { return LANE_OF[e.type] || "exec"; }
 function renderTrace() {
-  const live = state.traceEvents.slice(-120);
+  const global = state.globalEvents.slice(-160);
+  const live = state.scope === "all" ? global : state.traceEvents.slice(-120);
   const replay = state.replayEvents;
   const all = [...live, ...replay].sort((a, b) => (a.seq || 0) - (b.seq || 0));
+  const taskTag = (e) => state.scope === "all" && e._task ? `<span class="ev-task" title="${esc(e._task)}">${esc((state.sessionTitles[e._task] || e._task).slice(0, 18))}</span>` : "";
   const rows = all.map((e) => {
     const lane = laneOf(e), src = e._src || "live";
     const note = src === "replay" ? '<div class="ev-note">⚠ evidence 回放，非实时；不冒充真实执行</div>' : "";
     return `<div class="ev-item" data-lane="${lane}">
       <div class="ev-node" style="background:${LANE_COLOR[lane]}"></div>
       <div class="ev-card" data-key="${src}-${e.seq}">
-        <div class="ev-top"><span class="ev-type">${esc(e.type)}</span><span class="ev-seq">#${e.seq}</span></div>
+        <div class="ev-top">${taskTag(e)}<span class="ev-type">${esc(e.type)}</span><span class="ev-seq">#${e.seq}</span></div>
         <div class="ev-meta"><span class="lane-tag lane-${lane}">${LANE_NAME[lane]}</span><span class="src-dot src-${src}"></span><span class="src-${src}-t">${SRC_NAME[src]}</span></div>
         <div class="ev-meta" style="color:var(--text)">${esc(summary(e))}</div>
-        <div class="ev-detail"><pre>${esc(JSON.stringify(e.payload || {}, null, 2))}</pre>${note}<div style="font-size:9.5px;color:var(--faint);margin-top:5px">decision: ${esc(e.type)} · seq ${e.seq}</div></div>
+        <div class="ev-detail"><pre>${esc(JSON.stringify(e.payload || {}, null, 2))}</pre>${note}<div style="font-size:9.5px;color:var(--faint);margin-top:5px">decision: ${esc(e.type)} · seq ${e.seq}${e._task ? " · session " + esc(e._task.slice(0, 10)) : ""}</div></div>
       </div></div>`;
   }).join("");
-  $("#panel").innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:8px">共 ${all.length} 条事件（LIVE ${live.length} · REPLAY ${replay.length}）· 点任意事件展开原始 payload 与依据</div><div class="flow">${rows || '<div class="empty">暂无事件</div>'}</div>`;
+  const view = state.scope === "all" ? "全局（所有任务）" : "聚焦当前任务";
+  $("#panel").innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:8px">${view} · 共 ${all.length} 条（LIVE ${live.length} · REPLAY ${replay.length} · 运行中 ${state.running.size}）· 点任意事件展开 payload 与依据</div><div class="flow">${rows || '<div class="empty">暂无事件 · 发起任务后实时流入</div>'}</div>`;
   document.querySelectorAll(".ev-card").forEach((c) => c.onclick = () => {
     document.querySelectorAll(".ev-card").forEach((x) => x.classList.remove("sel"));
     c.classList.add("sel");
@@ -441,6 +452,40 @@ async function loadReplay() {
   if (state.tab === "trace") renderTrace();
 }
 
+async function loadGlobalHistory() {
+  const d = await api("/api/sessions");
+  await Promise.all(d.sessions.slice(0, 8).map(async (s) => {
+    try {
+      const t = await api(`/api/trace?session=${encodeURIComponent(s.id)}&limit=12`);
+      for (const e of t.events) {
+        state.globalEvents.push({ ...e, _src: "ledger", _task: s.id });
+        state.ledgerMaxSeq[s.id] = Math.max(state.ledgerMaxSeq[s.id] || 0, e.seq || 0);
+      }
+    } catch {}
+  }));
+  if (state.tab === "trace") renderTrace();
+}
+function connectGlobalStream() {
+  const es = new EventSource("/api/events/stream");
+  es.addEventListener("snapshot", (m) => { applyRunning(JSON.parse(m.data).active || []); });
+  es.addEventListener("running-snapshot", (m) => { applyRunning(JSON.parse(m.data).active || []); });
+  es.addEventListener("event", (m) => {
+    const e = JSON.parse(m.data);
+    if ((e.seq || 0) <= (state.ledgerMaxSeq[e.sessionId] || 0)) return;
+    state.globalEvents.push({ ...e, _src: "live", _task: e.sessionId || "" });
+    state.ledgerMaxSeq[e.sessionId] = e.seq || 0;
+    if (state.globalEvents.length > 400) state.globalEvents.shift();
+    if (state.tab === "trace") renderTrace();
+  });
+  es.onerror = () => { $("#dot").style.background = "var(--warn)"; };
+}
+function applyRunning(active) {
+  state.running = new Set(active);
+  $("#runCount").textContent = active.length ? `● ${active.length} 运行中` : "";
+  loadSessions();
+  if (state.tab === "trace") renderTrace();
+}
+
 async function loadStatus() {
   state.status = await api("/api/status");
   const ps = $("#presetSel");
@@ -455,8 +500,9 @@ async function loadStatus() {
 async function loadSessions() {
   const d = await api("/api/sessions");
   const box = $("#sessions");
+  for (const s of d.sessions) state.sessionTitles[s.id] = s.title;
   box.innerHTML = d.sessions.length ? d.sessions.map((s) =>
-    `<div class="sess ${s.id === state.sessionId ? "active" : ""}" data-id="${esc(s.id)}"><div class="t">${esc(s.title)}</div><div class="m">${esc(s.preset)} · ${esc(s.status)} · ${esc(String(s.updatedAt).slice(5, 16))}</div></div>`).join("") : '<div class="empty">暂无会话</div>';
+    `<div class="sess ${s.id === state.sessionId ? "active" : ""}" data-id="${esc(s.id)}"><div class="t">${state.running.has(s.id) ? '<span class="run"></span>' : ""}${esc(s.title)}</div><div class="m">${esc(s.preset)} · ${state.running.has(s.id) ? "运行中" : esc(s.status)} · ${esc(String(s.updatedAt).slice(5, 16))}</div></div>`).join("") : '<div class="empty">暂无会话</div>';
   box.querySelectorAll(".sess").forEach((el) => el.onclick = () => selectSession(el.dataset.id));
 }
 
@@ -503,6 +549,12 @@ document.querySelectorAll(".tab").forEach((t) => t.onclick = () => {
   if (state.tab === "metrics") api("/api/metrics").then((d) => { state.status.metrics = d.metrics; });
   renderPanel();
 });
+document.querySelectorAll(".wb-scope button").forEach((b) => b.onclick = () => {
+  document.querySelectorAll(".wb-scope button").forEach((x) => x.classList.remove("on"));
+  b.classList.add("on"); state.scope = b.dataset.scope; state.tab = "trace";
+  document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x.dataset.tab === "trace"));
+  renderPanel();
+});
 $("#rebuildBtn").onclick = () => { state.tab = "rebuild"; document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x.dataset.tab === "rebuild")); renderPanel(); };
 $("#tamperBtn").onclick = tamperSelfTest;
 $("#exportBtn").onclick = exportSnapshot;
@@ -517,6 +569,8 @@ document.querySelectorAll("[data-dec]").forEach((b) => b.onclick = async () => {
   try {
     await loadStatus();
     await loadSessions();
+    await loadGlobalHistory();
+    connectGlobalStream();
     if (state.status.sessionCount > 0) {
       const d = await api("/api/sessions");
       await selectSession(d.sessions[0].id);
