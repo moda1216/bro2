@@ -342,26 +342,37 @@ async function send() {
 }
 
 function laneOf(e) { return LANE_OF[e.type] || "exec"; }
+// 时间线排序：有 ts 的按时间正序；无 ts 的 REPLAY 回放固定置底（非实时，不冒充历史）
+function byTimeline(a, b) {
+  const at = a.ts || "", bt = b.ts || "";
+  if (!at && !bt) return (a.seq || 0) - (b.seq || 0);
+  if (!at) return 1;
+  if (!bt) return -1;
+  return at.localeCompare(bt) || (a.seq || 0) - (b.seq || 0);
+}
 function renderTrace() {
-  const global = state.globalEvents.slice(-160);
-  const live = state.scope === "all" ? global : state.traceEvents.slice(-120);
+  const live = state.scope === "all" ? state.globalEvents : state.traceEvents.slice(-120);
   const replay = state.replayEvents;
-  const all = [...live, ...replay].sort((a, b) => (a.seq || 0) - (b.seq || 0));
+  const all = [...live, ...replay].sort(byTimeline);
   const taskTag = (e) => state.scope === "all" && e._task ? `<span class="ev-task" title="${esc(e._task)}">${esc((state.sessionTitles[e._task] || e._task).slice(0, 18))}</span>` : "";
   const rows = all.map((e) => {
     const lane = laneOf(e), src = e._src || "live";
     const note = src === "replay" ? '<div class="ev-note">⚠ evidence 回放，非实时；不冒充真实执行</div>' : "";
     return `<div class="ev-item" data-lane="${lane}">
       <div class="ev-node" style="background:${LANE_COLOR[lane]}"></div>
-      <div class="ev-card" data-key="${src}-${e.seq}">
+      <div class="ev-card" data-key="${esc(e._task || "")}-${src}-${e.seq}">
         <div class="ev-top">${taskTag(e)}<span class="ev-type">${esc(e.type)}</span><span class="ev-seq">#${e.seq}</span></div>
         <div class="ev-meta"><span class="lane-tag lane-${lane}">${LANE_NAME[lane]}</span><span class="src-dot src-${src}"></span><span class="src-${src}-t">${SRC_NAME[src]}</span></div>
         <div class="ev-meta" style="color:var(--text)">${esc(summary(e))}</div>
         <div class="ev-detail"><pre>${esc(JSON.stringify(e.payload || {}, null, 2))}</pre>${note}<div style="font-size:9.5px;color:var(--faint);margin-top:5px">decision: ${esc(e.type)} · seq ${e.seq}${e._task ? " · session " + esc(e._task.slice(0, 10)) : ""}</div></div>
       </div></div>`;
   }).join("");
-  const view = state.scope === "all" ? "全局（所有任务）" : "聚焦当前任务";
-  $("#panel").innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:8px">${view} · 共 ${all.length} 条（LIVE ${live.length} · REPLAY ${replay.length} · 运行中 ${state.running.size}）· 点任意事件展开 payload 与依据</div><div class="flow">${rows || '<div class="empty">暂无事件 · 发起任务后实时流入</div>'}</div>`;
+  const view = state.scope === "all" ? "🔍 全量历史时间线（所有任务 · 按时间排序）" : "🎯 聚焦当前任务";
+  const tsList = all.map((e) => e.ts).filter(Boolean).sort();
+  const span = tsList.length > 1 ? `${String(tsList[0]).slice(0, 10)} → ${String(tsList[tsList.length - 1]).slice(0, 10)}` : "—";
+  const ledgers = live.filter((e) => (e._src || "live") === "ledger").length;
+  const lives = live.length - ledgers;
+  $("#panel").innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:8px">${view}<br/>共 <b style="color:var(--text)">${all.length}</b> 条（LIVE ${lives} · LEDGER ${ledgers} · REPLAY ${replay.length} · 运行中 ${state.running.size}）· 跨度 ${esc(span)} · 点任意事件展开 payload 与依据</div><div class="flow">${rows || '<div class="empty">暂无事件 · 发起任务后实时流入</div>'}</div>`;
   document.querySelectorAll(".ev-card").forEach((c) => c.onclick = () => {
     document.querySelectorAll(".ev-card").forEach((x) => x.classList.remove("sel"));
     c.classList.add("sel");
@@ -454,15 +465,16 @@ async function loadReplay() {
 
 async function loadGlobalHistory() {
   const d = await api("/api/sessions");
-  await Promise.all(d.sessions.slice(0, 8).map(async (s) => {
+  await Promise.all(d.sessions.map(async (s) => {
     try {
-      const t = await api(`/api/trace?session=${encodeURIComponent(s.id)}&limit=12`);
+      const t = await api(`/api/trace?session=${encodeURIComponent(s.id)}&limit=5000`);
       for (const e of t.events) {
         state.globalEvents.push({ ...e, _src: "ledger", _task: s.id });
         state.ledgerMaxSeq[s.id] = Math.max(state.ledgerMaxSeq[s.id] || 0, e.seq || 0);
       }
     } catch {}
   }));
+  state.globalEvents.sort(byTimeline);
   if (state.tab === "trace") renderTrace();
 }
 function connectGlobalStream() {
@@ -474,7 +486,7 @@ function connectGlobalStream() {
     if ((e.seq || 0) <= (state.ledgerMaxSeq[e.sessionId] || 0)) return;
     state.globalEvents.push({ ...e, _src: "live", _task: e.sessionId || "" });
     state.ledgerMaxSeq[e.sessionId] = e.seq || 0;
-    if (state.globalEvents.length > 400) state.globalEvents.shift();
+    state.globalEvents.sort(byTimeline);
     if (state.tab === "trace") renderTrace();
   });
   es.onerror = () => { $("#dot").style.background = "var(--warn)"; };
