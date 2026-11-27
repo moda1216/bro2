@@ -119,10 +119,14 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
   }
   if (path === "/api/events/stream" && method === "GET") {
     sseInit(res);
-    sseSend(res, "snapshot", { active: [...activeRuns] });
+    sseSend(res, "snapshot", { active: [...activeRuns], clusterSeq: os.orchestrator.seq() });
     const off = os.runtime.bus.on("*", (e: Event) => sseSend(res, "event", e));
+    let cursor = os.orchestrator.seq();
     const hb = setInterval(() => { sseSend(res, "running-snapshot", { active: [...activeRuns] }); }, 2000);
-    res.on("close", () => { clearInterval(hb); off(); });
+    const tail = setInterval(() => {
+      for (const e of os.orchestrator.eventsSince(cursor)) { cursor = Math.max(cursor, e.seq ?? 0); sseSend(res, "event", e); }
+    }, 1000);
+    res.on("close", () => { clearInterval(hb); clearInterval(tail); off(); });
     return;
   }
   if (path === "/api/sessions" && method === "POST") {
@@ -171,11 +175,13 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     const str = (k: string): string => String(b[k] ?? "").trim();
     if (path === "/api/maf" && method === "GET") { json(res, 200, os.maf.list()); return; }
     if (path === "/api/maf/audit" && method === "GET") { json(res, 200, { audit: os.maf.auditTrail(), orchestration: os.orchestrator.audit() }); return; }
+    if (path === "/api/maf/cluster" && method === "GET") { json(res, 200, os.orchestrator.cluster()); return; }
     if (path === "/api/maf/events" && method === "GET") {
       const cursor = Math.max(0, Number(url.searchParams.get("cursor") ?? 0) || 0), limit = Math.min(500, Math.max(1, Number(url.searchParams.get("limit") ?? 200) || 200));
       const all = os.sessions.list().flatMap((m) => os.getSession(m.id)?.trajectory.events() ?? []);
       const systemPath = join(os.root, "data", "system.jsonl");
       if (existsSync(systemPath)) for (const line of readFileSync(systemPath, "utf8").split("\n")) { try { const e = JSON.parse(line) as Event; if (e.seq && e.ts) all.push(e); } catch { /* 残缺末行忽略 */ } }
+      all.push(...os.orchestrator.events());
       all.sort((a, b) => String(a.ts).localeCompare(String(b.ts)) || a.seq - b.seq);
       json(res, 200, { total: all.length, cursor, events: all.slice(cursor, cursor + limit), nextCursor: cursor + limit < all.length ? cursor + limit : null });
       return;

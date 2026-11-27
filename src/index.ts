@@ -45,20 +45,14 @@ import type { BehaviorPolicy } from "./runtime/policy.ts";
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Agent 身份名：单一常量来源，config.name 可覆盖。 */
 export const AGENT_NAME = "bro2";
 
 export interface AgentOSOptions {
   root?: string;
-  /** 覆盖配置（浅层合并到各节）。 */
   config?: Partial<RuntimeConfig>;
-  /** 注入确定性 Mock 脚本，用于演示与测试。 */
   mockScript?: MockScript;
-  /** headless / CI：自动批准高危操作。 */
   autoApprove?: boolean;
-  /** 完全替换默认模型（测试用）。 */
   providerOverride?: LLMProvider;
-  /** 默认加载的插件。 */
   plugins?: string[];
   evolvedState?: boolean;
 }
@@ -80,9 +74,7 @@ export interface AgentOS {
   plans: PlanManager;
   tracer: Tracer;
   router: ProviderRouter;
-  /** 当前生效的行为策略（含已落地的演进结果），供状态接口与评测断言。 */
   policy: BehaviorPolicy;
-  /** 已注册的模型实例，供 doctor / eval 直接探测能力（模型无关）。 */
   providers: Map<string, LLMProvider>;
   scheduler: AutomationScheduler;
   maf: Foundry;
@@ -124,21 +116,17 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
         if (evolved.budget && typeof evolved.budget === "object") {
           config.budget = { ...config.budget, ...evolved.budget } as RuntimeConfig["budget"];
         }
-        // 已通过门禁的策略改进同时落地到运行时（评测器用 evolvedState:false 隔离）
         if (evolved.policy && typeof evolved.policy === "object") {
           config.policy = { ...(config.policy ?? {}), ...evolved.policy } as Partial<BehaviorPolicy>;
         }
       } catch {
-        // 演进状态损坏时静默回退到基准配置，不阻塞启动
       }
     }
   }
   if (options.config) config = deepMerge(config, options.config);
   if (process.env.AGENTOS_MODEL) config.model.default = process.env.AGENTOS_MODEL;
-  // 严格白名单解析：任何非法值回退保守默认，绝不把配置污染带进内核。
   const policy: BehaviorPolicy = parsePolicy(config.policy);
 
-  // 路径全部相对项目根解析，避免 cwd 漂移
   const abs = (p: string): string => resolve(root, p);
   const storageDir = abs(config.storage.dir);
   const workspace = abs(config.permission.workspace);
@@ -150,7 +138,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     mkdirSync(p, { recursive: true });
   }
 
-  // ---- 内核 ----
   const runtime = new Runtime(config);
   const registry = new ToolRegistry();
   const sessions = new SessionManager(join(storageDir, "sessions"));
@@ -162,7 +149,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     return (s ? s.trajectory : globalTraj).append(draft);
   };
 
-  // ---- 治理 ----
   const permissions = new PermissionPolicy({
     level: config.permission.level,
     workspace,
@@ -183,23 +169,17 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     ...(config.budget.budgetAdvisoryRatio !== undefined ? { budgetAdvisoryRatio: config.budget.budgetAdvisoryRatio } : {}),
   });
 
-  // ---- 认知与记忆 ----
   const presets = new PresetRegistry(join(root, "presets"));
   const skills = new SkillRegistry([join(root, "skills")]);
   const plans = new PlanManager();
   const memory = new MemoryStore(join(storageDir, "memory"));
   const contextBuilder = new ContextBuilder();
-  // 压缩阈值必须低于 Guards 的 token 硬熔断，且可独立配置：
-  // 若共用同一数值，压缩永远来不及生效（累计 usage 先触顶）。
   const budget = new BudgetManager(
     config.budget.compactTokens ?? Math.floor(config.budget.maxTokens * 0.6),
     8,
     policy.compaction,
   );
 
-  // ---- 模型 ----
-  // 全部 provider 走同一个 OpenAICompat 适配器：云端 API、vLLM、LM Studio、
-  // 本地 Ollama 只是 baseUrl / 认证策略不同，内核不感知差异。
   const router = new ProviderRouter(config.model.default);
   if (config.model.retry) router.setRetry(config.model.retry);
   if (config.model.emptyGuard === false) router.setEmptyGuard(false);
@@ -208,12 +188,10 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
   router.register("mock", mock);
   providers.set("mock", mock);
 
-  // 把配置中的 ${VAR} 占位符按环境变量展开（如 model: "${OPENROUTER_MODEL}"）
   const expand = (v: unknown): string => {
     if (typeof v !== "string") return "";
     return v.replace(/\$\{([^}]+)\}/g, (_m, name: string) => process.env[name] ?? "");
   };
-  // ollama / openai 保留历史 env 覆盖（OLLAMA_* / OPENAI_*），其余 provider 直接读配置
   const envBaseFor = (name: string, cfg: Record<string, unknown>): string => {
     if (name === "ollama") return process.env.OLLAMA_BASE_URL ?? expand(cfg.baseUrl);
     if (name === "openai") return process.env.OPENAI_BASE_URL ?? expand(cfg.baseUrl);
@@ -244,8 +222,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     });
   };
 
-  // 第一遍：所有 OpenAI 兼容 provider（云端 API / vLLM / Ollama / 免费 LLM API 等），
-  // 内核不感知差异，统一走 OpenAICompat 适配器。
   const deferred: Array<{ name: string; cfg: Record<string, unknown> }> = [];
   for (const [name, raw] of Object.entries(config.model.providers ?? {})) {
     if (name === "mock") continue;
@@ -255,18 +231,13 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
       router.register(name, p);
       providers.set(name, p);
     } else if (cfg.type === "cached" || cfg.type === "hybrid" || cfg.type === "keyless") {
-      // 依赖其它已注册 provider，留待后续遍装配
       deferred.push({ name, cfg });
     }
   }
 
-  // 第二遍：构建只依赖第一遍 openai provider 的组合层（cached / keyless）。
-  // keyless 必须早于 hybrid 装配——hybrid.remote 可指向 keyless（免 Key 网状 +
-  // 本地协同的双层叠加），二者顺序固定，不再依赖 config 书写顺序。
   const buildKeyless = (name: string, cfg: Record<string, unknown>): void => {
     const backends: KeylessBackend[] = [];
 
-    // 1) 显式引用的上游（引用其它已注册 provider；未配置/未注册的自动跳过，不阻塞装配）
     const referenced = Array.isArray(cfg.backends) ? (cfg.backends as unknown[]) : [];
     for (const ref of referenced) {
       const refName = typeof ref === "string" ? ref : (ref as Record<string, unknown>)?.["name"] as string | undefined;
@@ -279,7 +250,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
       const meta = typeof ref === "object" && ref ? (ref as Record<string, unknown>) : {};
       const upstreamCfg = (config.model.providers as Record<string, Record<string, unknown>> | undefined)?.[refName];
       const configured = !(p instanceof Object) || (p as { configured?: boolean }).configured !== false;
-      // 未配置的 openai 上游（如 env 未填的 harness 插件端点）跳过，保证网状健康
       if (configured === false) {
         console.warn(`[keyless] 上游 "${refName}" 未配置（缺 baseUrl/model），已跳过`);
         continue;
@@ -292,7 +262,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
       });
     }
 
-    // 2) 自动发现：纳入所有「无 Key 且非本地」的已注册 openai provider（去重、排除自身/已引用）
     if (cfg.autoDiscoverKeyless === true) {
       const isLocal = (u: string) => /^(https?:\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1)/i.test(u);
       for (const [pn, p] of providers) {
@@ -316,12 +285,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     if (backends.length === 0) {
       console.warn(`[keyless] 聚合器 "${name}" 没有任何可用上游，运行时将拒绝请求`);
     }
-    // v2.12.0 · 跨会话端点经验接线：从只增账本折叠历史成败，注入聚合器排序先验；
-    // 每次上游调用的成败再回写同一账本，形成「越用越稳、重启不清零」的闭环。
-    // 经验只影响 score() 排序，不绕过冷却/限流/能力过滤；失效/样本不足自动归零回退完整探测。
-    // 边界：**opt-in**（useEndpointExperience === true 才接线）。默认关闭可保证确定性评测 /
-    // CI 不写被跟踪的账本、不制造假 diff、不携带本机状态；账本路径可由 experienceFile 覆盖，
-    // 便于确定性门禁用隔离临时账本验证闭环。缺省时先验为空 → 与 v2.11.0 行为一致。
     let endpointPrior: Record<string, number> | undefined;
     let onEndpointOutcome: ((n: string, ok: boolean) => void) | undefined;
     if (cfg.useEndpointExperience === true) {
@@ -337,7 +300,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
           );
         };
       } catch {
-        // 账本不可读（只读文件系统/权限）时静默降级为无经验，绝不阻塞装配。
         endpointPrior = undefined;
         onEndpointOutcome = undefined;
       }
@@ -371,7 +333,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     }
   }
 
-  // 第三遍：构建 hybrid（可引用以上任意 provider，含 keyless 网状 / cached / openai）。
   for (const { name, cfg } of deferred) {
     if (cfg.type !== "hybrid") continue;
     const remote = providers.get(String(cfg.remote ?? ""));
@@ -397,7 +358,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     providers.set("override", options.providerOverride);
   }
 
-  // ---- 工具运行时 ----
   const toolRuntime = new ToolRuntime({
     registry,
     hooks: runtime.hooks,
@@ -411,7 +371,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
 
   const tracer = new Tracer(runtime.bus);
 
-  // ---- 协作层（spawn 通过闭包复用主循环，避免循环依赖）----
   let loopRef: AgentLoop | undefined;
   const spawn: SpawnFn = async (presetName: string, task: string, ctx: SpawnContext): Promise<string> => {
     if (!loopRef) throw new Error("AgentLoop 尚未初始化");
@@ -455,7 +414,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
   }, 30000, record);
   orchestrator.start();
 
-  // ---- 注册服务（全部可替换）----
   const services: Array<[string, unknown]> = [
     ["registry", registry],
     ["toolRuntime", toolRuntime],
@@ -484,7 +442,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
 
   registerBuiltinTools(runtime, registry);
 
-  // 默认加载只读审计插件（演示可逆副作用），其余由 plugin_install 热插拔
   for (const name of options.plugins ?? ["tool-audit"]) {
     const def = BUILTIN_PLUGINS[name];
     if (def) void runtime.loadPlugin(def).catch(() => undefined);

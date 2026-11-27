@@ -26,27 +26,18 @@ import {
 } from "node:fs";
 import { dirname } from "node:path";
 
-/** 判定加速所需的最少可用轮数。低于此值一律 insufficient-data。 */
 export const MIN_SAMPLES = 6;
-/** 前后半比较的最小相对变化，抑制噪声被当成趋势。 */
 export const TREND_EPSILON = 0.05;
 
 export interface AttemptRecord {
   seq: number;
   ts: string;
-  /** 本轮实际探测的候选数（复利的直接成本）。 */
   attempts: number;
-  /** 本轮命中的经验条数。 */
   experienceHits: number;
-  /** 是否首批探测即命中有效编辑。 */
   firstTryHit: boolean;
-  /** 行为对比成立的接受数（非自报分数）。 */
   improvement: number;
-  /** 因经验裁剪而未探测的候选数。 */
   probesAvoided: number;
-  /** 经验不灵、回退探测了 deferred 候选。 */
   usedFallback: boolean;
-  /** 本轮协议违规数；>0 则本轮不计入趋势。 */
   protocolViolations: number;
 }
 
@@ -60,7 +51,6 @@ export interface VelocitySnapshot {
   avgProbesAvoided: number;
   improvementPerAttempt: number;
   reuseRate: number;
-  /** 前半 vs 后半的单位探测改进量，供人工复核趋势是否真实。 */
   firstHalfIPA: number;
   secondHalfIPA: number;
   trend: VelocityTrend;
@@ -92,21 +82,12 @@ function atomicAppend(path: string, line: string): void {
 
 const mean = (xs: number[]): number => xs.length === 0 ? 0 : xs.reduce((a, b) => a + b, 0) / xs.length;
 
-/** 加权单位探测改进量：Σimprovement / Σattempts，避免空轮除零。 */
 function improvementPerAttempt(rows: AttemptRecord[]): number {
   const attempts = rows.reduce((a, r) => a + r.attempts, 0);
   if (attempts === 0) return 0;
   return rows.reduce((a, r) => a + r.improvement, 0) / attempts;
 }
 
-/**
- * 冻结尺子的**唯一实现**。输入一批 attempt 记录，输出快照。
- *
- * v2.2.0 从 `VelocityLedger.snapshot()` 提炼出来的动机：水位看板需要对
- * 「截至第 N 轮」做前缀投影。若看板自己复制一份判定逻辑，就会出现两套尺子、
- * 加速结论可被悄悄改写——这直接破坏防自确认循环。因此判定只保留在这里，
- * Ledger 与看板都调用本函数，谁都不许改口径。
- */
 export function velocitySnapshotFrom(records: readonly AttemptRecord[]): VelocitySnapshot {
   const all = records;
   const usable = all.filter((r) => r.protocolViolations === 0);
@@ -141,7 +122,6 @@ export function velocitySnapshotFrom(records: readonly AttemptRecord[]): Velocit
   const firstHit = mean(first.map((r) => (r.firstTryHit ? 1 : 0)));
   const secondHit = mean(second.map((r) => (r.firstTryHit ? 1 : 0)));
 
-  // 加速需同时满足：单位探测改进量上升、探测次数不上升、首轮命中率不下降
   const accelerating =
     secondIPA > firstIPA * (1 + TREND_EPSILON)
     && secondAttempts <= firstAttempts
@@ -168,7 +148,6 @@ export function velocitySnapshotFrom(records: readonly AttemptRecord[]): Velocit
   };
 }
 
-/** 复利速度只增账本。跨会话累积，快照由本模块的冻结尺子计算。 */
 export class VelocityLedger {
   readonly path: string;
   private seq = 0;
@@ -191,19 +170,16 @@ export class VelocityLedger {
       try {
         out.push(JSON.parse(line) as AttemptRecord);
       } catch {
-        // 单条损坏不影响账本整体可读
       }
     }
     return out;
   }
 
-  /** 实例视图：判定完全委托给冻结尺子的唯一实现。 */
   snapshot(): VelocitySnapshot {
     return velocitySnapshotFrom(this.records());
   }
 }
 
-/** 默认路径：与经验库同目录。 */
 export function velocityPath(root: string): string {
   return `${root.replace(/\/$/, "")}/data/rsi/velocity.jsonl`;
 }

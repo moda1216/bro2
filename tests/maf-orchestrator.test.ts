@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Orchestrator } from "../src/maf/orchestrator.ts";
@@ -16,11 +16,18 @@ test("持久 DAG 依赖、并发上限、幂等重放与审计", async () => {
 test("进程崩溃后过期租约恢复，已提交副作用不重复", async () => {
   const root = mkdtempSync(join(tmpdir(), "maf-recover-")); let executions = 0;
   const executor = async (n: { id: string }): Promise<string> => { executions += 1; return `done:${n.id}`; };
-  const one = new Orchestrator(root, executor, 5), t = one.submit({ name: "故障恢复", nodes: [{ id: "a", task: "A" }, { id: "b", task: "B", deps: ["a"] }] });
-  const path = join(root, "data", "maf", "orchestrator.json"), state = JSON.parse(readFileSync(path, "utf8"));
-  state.commits["故障恢复:a"] = "done:a"; state.tasks[0].nodes[0].status = "succeeded"; state.tasks[0].nodes[0].result = "done:a";
-  state.tasks[0].nodes[1].status = "running"; state.tasks[0].nodes[1].attempts = 1; state.tasks[0].nodes[1].leaseUntil = new Date(Date.now() - 1000).toISOString(); state.tasks[0].status = "running"; writeFileSync(path, JSON.stringify(state));
-  const two = new Orchestrator(root, executor, 5), recovered = two.get(t.id)!;
+  const one = new Orchestrator(root, executor, 500), t = one.submit({ name: "故障恢复", nodes: [{ id: "a", task: "A" }, { id: "b", task: "B", deps: ["a"] }] });
+  const ledger = join(root, "data", "maf", "cluster.jsonl");
+  const recs = readFileSync(ledger, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { seq: number; op: string; ts: string; by: string });
+  const submitSeq = recs.find((r) => r.op === "task.submit")!.seq;
+  const at = (deltaMs: number): string => new Date(Date.now() + deltaMs).toISOString();
+  const mk = (op: string, nodeId: string, token: string, extra: Record<string, unknown> = {}): string => JSON.stringify({ seq: 0, ts: at(op === "claim" && nodeId === "b" ? -5000 : 0), by: "dead-worker", op, taskId: t.id, nodeId, token, ...extra });
+  appendFileSync(ledger, [
+    mk("claim", "a", "ta", { baseSeq: submitSeq, leaseUntil: at(60000) }),
+    mk("commit", "a", "ta", { result: "done:a" }),
+    mk("claim", "b", "tb", { baseSeq: submitSeq, leaseUntil: at(-4000) }),
+  ].map((s, i) => { const r = JSON.parse(s) as Record<string, unknown>; r.seq = recs.length + i; return JSON.stringify(r); }).join("\n") + "\n");
+  const two = new Orchestrator(root, executor, 500), recovered = two.get(t.id)!;
   assert.equal(recovered.nodes[1].status, "pending"); assert.ok(two.audit().some((a) => a.action === "lease.recover"));
   const done = await two.run(t.id); assert.equal(done.status, "succeeded"); assert.equal(executions, 1); assert.equal(done.nodes[0].result, "done:a");
 });

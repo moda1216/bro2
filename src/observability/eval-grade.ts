@@ -18,7 +18,6 @@ import type { RuntimeConfig } from "../kernel/runtime.ts";
 import { ApprovalDecision } from "../governance/approval.ts";
 import type { EvalRunMetrics, EvalTask } from "./eval.ts";
 
-// ---------------------------------------------------------------- 指标抽取
 
 export interface Extracted {
   toolCalls: number;
@@ -72,7 +71,6 @@ export function extract(events: readonly Event[]): Extracted {
         const r = e.payload.result as ToolResult | undefined;
         if (r) {
           answered.add(r.callId);
-          // 记录"实际执行"的工具名：repair 策略会修正拼错的调用名
           out.toolNames.add(r.name);
           if (!r.ok) out.toolErrors += 1;
         }
@@ -107,14 +105,10 @@ export function extract(events: readonly Event[]): Extracted {
         break;
     }
   }
-  // 协议正确性硬指标：每个 tool_call 必须有配对的 tool 结果消息
   for (const id of requested) if (!answered.has(id)) out.protocolViolations += 1;
   return out;
 }
 
-// ---------------------------------------------------------------- 外部真值 oracle（v2.20.0）
-// 独立于 harness 行为的正确性判分：grading 只看 agent 的实际产出（终答 / 工作区文件）
-// 与 reference 是否一致，绝不读 harness 内部行为指标——把「自指评分」变成「外部可证伪评分」。
 
 export interface OracleContext {
   answer: string;
@@ -124,17 +118,13 @@ export interface OracleContext {
   task: EvalTask;
 }
 
-/** 返回 null = 通过；返回字符串 = 失败原因。oracle 只读 agent 实际产出，不读 harness 行为指标。 */
 export type Oracle = (ctx: OracleContext) => string | null;
 
 const ORACLES: Record<string, Oracle> = {
-  // 终答（不区分大小写）包含 reference 即视为命中
   "answer-matches-reference": ({ answer, reference }) =>
     !reference ? "oracle 缺少 reference" : answer.toLowerCase().includes(reference.toLowerCase()) ? null : `终答未包含真值参考 "${reference}"`,
-  // 终答与 reference 精确相等
   "answer-equals-reference": ({ answer, reference }) =>
     !reference ? "oracle 缺少 reference" : answer.trim() === reference.trim() ? null : "终答与真值参考不一致",
-  // 工作区文件（路径在 expect 中）包含 reference
   "file-contains-reference": ({ workspace, reference, expect }) => {
     if (!expect) return "file-contains-reference 需要 expect 指定文件路径";
     if (!reference) return "oracle 缺少 reference";
@@ -144,7 +134,6 @@ const ORACLES: Record<string, Oracle> = {
   },
 };
 
-/** 注册自定义外部 oracle（扩展评测面用）。key 冲突时后者覆盖。 */
 export function registerOracle(id: string, fn: Oracle): void {
   ORACLES[id] = fn;
 }
@@ -153,7 +142,6 @@ export function listOracles(): string[] {
   return Object.keys(ORACLES);
 }
 
-// ---------------------------------------------------------------- 评分
 
 export function grade(task: EvalTask, run: RunResult, ex: Extracted, workspace: string): string[] {
   const reasons: string[] = [];
@@ -199,7 +187,6 @@ export function grade(task: EvalTask, run: RunResult, ex: Extracted, workspace: 
   if (task.expectCompactionEvidence && ex.compactionEvidence === 0) reasons.push("压缩未优先保留工具证据（salience 策略未生效）");
   if (task.expectNoLoopAdvisory && ex.loopAdvisories > 0) reasons.push("治理不变量被破坏：死循环被软警告绕过");
   if (task.expectNoRepair && ex.repairs > 0) reasons.push("治理不变量被破坏：无关工具被模糊修复");
-  // 外部真值 oracle：独立于 harness 行为的正确性判分（防自指评分）。
   if (task.oracle) {
     const oracle = ORACLES[task.oracle.id];
     if (!oracle) reasons.push(`未知 oracle: ${task.oracle.id}`);
@@ -208,7 +195,6 @@ export function grade(task: EvalTask, run: RunResult, ex: Extracted, workspace: 
       if (msg) reasons.push(`外部 oracle ${task.oracle.id} 判定失败：${msg}`);
     }
   }
-  // 所有任务共享的零容忍正确性断言
   if (ex.protocolViolations > 0) reasons.push(`存在 ${ex.protocolViolations} 个未配对 tool_call（协议违规）`);
   if (!run.answer) reasons.push("终答为空");
   return reasons;
@@ -227,7 +213,6 @@ export function faultConfig(task: EvalTask, tmp: string): Partial<RuntimeConfig>
   return patch as unknown as Partial<RuntimeConfig>;
 }
 
-/** ablation 配置合并：policy/budget 可覆盖，隔离路径强制由评测器最后钉死。 */
 export function mergeConfigForEval(
   base: Partial<RuntimeConfig>,
   override?: Partial<RuntimeConfig>,
@@ -245,7 +230,6 @@ export function mergeConfigForEval(
   } as Partial<RuntimeConfig>;
 }
 
-/** 失败兜底：用于环境准备异常等「还没跑到模型」的情况，字段口径与正常结果一致。 */
 export function emptyRun(task: EvalTask, repeat: number, reasons: string[]): EvalRunMetrics {
   return {
     taskId: task.id, category: task.category, repeat, ok: false, reasons, stoppedBy: "error",
@@ -255,16 +239,8 @@ export function emptyRun(task: EvalTask, repeat: number, reasons: string[]): Eva
   };
 }
 
-// ---------------------------------------------------------------- 故障恢复对照判定（v2.9.0）
 
-/**
- * 把 v2.7/v2.8 依赖真实端点的「机制开/关决定成败」变成**离线可复算的判定**。
- * 只认三样东西：唯一变量、注入真实性（防哑弹）、机制计数器 + 行为对比；
- * **没有任何自报增益字段参与判定**（沿用 live-contrast 的防 reward hacking 红线）。
- * 判定的是「恢复机制是否仍有效」，不是模型能力分数；不改变 leadership.verdict。
- */
 export type ContrastMechanism = "retry" | "empty-guard" | "repair";
-/** pass：机制开关决定成败；efficiency：两侧都完成，只改变纠错成本（v2.8 的 repair 结论） */
 export type ContrastEffect = "pass" | "efficiency";
 
 export interface ContrastSpec {
@@ -272,13 +248,10 @@ export interface ContrastSpec {
   mechanism: ContrastMechanism;
   effect: ContrastEffect;
   times: number;
-  /** 唯一变量在 on/off 两侧的取值（必须不同） */
   variableOn: unknown;
   variableOff: unknown;
-  /** 剔除唯一变量后的公共配置哈希，on/off 必须一致 */
   sharedHashOn: string;
   sharedHashOff: string;
-  /** 同一份任务的哈希，on/off 必须一致 */
   taskHashOn: string;
   taskHashOff: string;
 }
@@ -320,15 +293,12 @@ const contrastSide = (r: EvalRunMetrics): ContrastSide => ({
 export function judgeContrast(spec: ContrastSpec, on: EvalRunMetrics, off: EvalRunMetrics): ContrastVerdict {
   const reasons: string[] = [];
 
-  // 1) 唯一变量：任何额外差异都会让 on/off 的因果归属失效。
   if (spec.sharedHashOn !== spec.sharedHashOff) reasons.push("公共配置哈希不一致：on/off 不是唯一变量");
   if (spec.taskHashOn !== spec.taskHashOff) reasons.push("任务定义哈希不一致：on/off 不是同一任务");
   if (JSON.stringify(spec.variableOn) === JSON.stringify(spec.variableOff)) {
     reasons.push("唯一变量取值相同：未形成对照");
   }
 
-  // 2) 注入真实性：哑弹故障（v2.7 教训）判为不可用，不是「机制无效」。
-  //    机制关侧常因提前终止而只注入 1 次，这是预期的，故只要求 >= 1。
   if (on.faultsInjected < 1 || off.faultsInjected < 1) {
     reasons.push(`故障是哑弹（on=${on.faultsInjected}, off=${off.faultsInjected}）：至少一侧未实际注入`);
   }
@@ -336,7 +306,6 @@ export function judgeContrast(spec: ContrastSpec, on: EvalRunMetrics, off: EvalR
     reasons.push(`机制开侧注入未打完（${on.faultsInjected}/${spec.times}）：恢复结论不可信`);
   }
 
-  // 3) 机制计数器必须真的动过（on 非零 / off 归零），否则差异只是波动。
   if (spec.mechanism === "retry") {
     if (on.providerRetries < spec.times) reasons.push(`机制开侧重试计数 ${on.providerRetries} < ${spec.times}`);
     if (off.providerRetries !== 0) reasons.push(`机制关侧仍有 ${off.providerRetries} 次路由重试`);
@@ -352,7 +321,6 @@ export function judgeContrast(spec: ContrastSpec, on: EvalRunMetrics, off: EvalR
     }
   }
 
-  // 4) 行为对比：只认客观终局，不认任何自报分数/增益。
   if (spec.effect === "pass") {
     if (!on.ok || on.answer.trim() === "") reasons.push("机制开侧未完成任务或终答为空");
     if (off.ok && off.answer.trim() !== "") reasons.push("机制关侧同样完成：差异不存在");
@@ -360,7 +328,6 @@ export function judgeContrast(spec: ContrastSpec, on: EvalRunMetrics, off: EvalR
     reasons.push("效率级对照两侧都应完成（差异只在机制计数，不在通过率）");
   }
 
-  // 5) 治理不变量：协议违规一律拒绝。
   if (on.protocolViolations > 0 || off.protocolViolations > 0) {
     reasons.push("存在未配对 tool_call（协议违规）");
   }
@@ -372,30 +339,21 @@ export function judgeContrast(spec: ContrastSpec, on: EvalRunMetrics, off: EvalR
   };
 }
 
-// ---------------------------------------------------------------- 三段晋升判据（v2.11.0）
 
-/** 阶段 C 前置闸门：编辑能否晋升只看三段真实行为分数 + 冻结指纹；**自报增益绝不参与**（live-contrast 红线）。 */
-/** 治理不变量：协议违规 0 · 完整性 tripwire · OOD 完全只读 · 未启用 harness 内部「真值验证器」（自确认循环）。v2.22.0 起允许 agent 不可见 reference 的「外部真值 oracle」作独立佐证，但只进审计、绝不影响 promoted。 */
 export interface PromotionScores { dev: number; holdout: number; ood: number }
 
 export interface PromotionSpec {
   id: string;
-  /** 编辑前 / 后三段通过率，来自 runEval 行为判定（∈[0,1]，非自报分数）。 */
   before: PromotionScores;
   after: PromotionScores;
-  /** 三段任务集的冻结指纹，各段 [before, after] 两份；三段之间必须互不相同（留出隔离）。 */
   hashes: { dev: [string, string]; holdout: [string, string]; ood: [string, string] };
-  /** 搜索阶段实际接触过的任务集哈希（来自账本 / 轨迹）；命中 OOD 即视为污染。 */
   searchTouchedHashes: string[];
-  /** 三段是否真实评测产出；任一 false 为静默缺格，一律拒绝（防用 0 冒充缺失）。 */
   available: { dev: boolean; holdout: boolean; ood: boolean };
   protocolViolationsAfter: number;
   integrityOk: boolean;
   usedGroundTruthVerifier: boolean; // harness 内部真值验证器：读自身行为自我确认 → 拒绝晋升（自确认循环）
   usedExternalOracle?: boolean; // 外部真值 oracle（agent 不可见 reference）作独立佐证；只进审计、不影响 promoted
-  /** 允许的不退化容差，默认 0（严格）；作战计划护栏口径为 0.02（2pp）。 */
   tolerance?: number;
-  /** 候选自报增益：只进审计与 rewardHacking 标记，绝不参与 promoted 判定。 */
   selfReportedGain?: number;
   cost?: { remoteBefore: number; remoteAfter: number }; // 可选成本目标（远程调用数，越大越贵）；提供时晋升不得使其上升（P0.5-c：remoteAvoided↑ 且分数不降才纳入）。确定性评测域暂无成本信号，留待 hybrid 评测接入。
 }
@@ -405,7 +363,6 @@ export interface PromotionVerdict {
   promoted: boolean;
   reasons: string[];
   deltas: PromotionScores;
-  /** OOD 退化是否构成阻断（供 journal 复核「退化即自动阻断」）。 */
   blockedByOod: boolean;
   rewardHackingBlocked: boolean;
   externalOracleCorroborated: boolean; // 外部真值 oracle 独立佐证标记；只进审计、不参与 promoted 判定
@@ -423,7 +380,6 @@ export function judgePromotion(spec: PromotionSpec): PromotionVerdict {
     ood: spec.after.ood - spec.before.ood,
   };
 
-  // 1) 缺格 / 数值范围：静默缺格与用 NaN/0 冒充缺失一律拒绝（矩阵门禁同源口径）。
   for (const s of SLICES) {
     if (!spec.available[s]) reasons.push(`${s} 段静默缺格：没有真实评测结果`);
     if (!finite(spec.before[s]) || !finite(spec.after[s])) {
@@ -431,11 +387,9 @@ export function judgePromotion(spec: PromotionSpec): PromotionVerdict {
     }
   }
 
-  // 2) 完整性 tripwire：闭环不可信 / 启用了真值验证器（自确认循环），拒绝。
   if (!spec.integrityOk) reasons.push("完整性 tripwire 失败：闭环不可信");
   if (spec.usedGroundTruthVerifier) reasons.push("启用了真值验证器：自确认循环，拒绝晋升");
 
-  // 3) 冻结尺子：各段 before/after 任务集必须同一份；三段之间必须互不相同（留出隔离）。
   for (const s of SLICES) {
     if (spec.hashes[s][0] !== spec.hashes[s][1]) {
       reasons.push(`${s} 段任务集在编辑前后被改动：对比失效（防调难度刷分）`);
@@ -444,28 +398,23 @@ export function judgePromotion(spec: PromotionSpec): PromotionVerdict {
   const uniq = new Set(SLICES.map((s) => spec.hashes[s][0]));
   if (uniq.size !== 3) reasons.push("三段任务集指纹不互异：dev/holdout/OOD 未真正留出");
 
-  // 4) OOD 完全只读：搜索阶段绝不能接触 OOD 任务集（作战计划 H2 / 阶段 C 前置）。
   const oodHashes = spec.hashes.ood;
   if (spec.searchTouchedHashes.some((h) => oodHashes.includes(h))) {
     reasons.push("OOD 任务集出现在搜索轨迹中：违反完全只读，晋升阻断");
   }
 
-  // 5) 三段行为判据：dev 严格提升、holdout/OOD 不退化（退化即自动阻断）。
   if (!(deltas.dev > 0)) reasons.push(`dev 未严格提升（Δ=${deltas.dev.toFixed(4)}）`);
   if (deltas.holdout < -tol) reasons.push(`holdout 退化 ${deltas.holdout.toFixed(4)} 超过容差 ${tol}`);
   const oodRegressed = deltas.ood < -tol;
   if (oodRegressed) reasons.push(`OOD 退化 ${deltas.ood.toFixed(4)} 超过容差 ${tol}：退化即阻断`);
 
-  // 6) 治理不变量：协议违规零容忍。
   if (spec.protocolViolationsAfter > 0) {
     reasons.push(`编辑后存在 ${spec.protocolViolationsAfter} 个协议违规`);
   }
 
-  // 7) 成本目标（可选，P0.5-c）：能力不降的前提下，远程调用不得上升（remoteAvoided↑ 才纳入）。
   if (spec.cost && spec.cost.remoteAfter > spec.cost.remoteBefore) reasons.push(`远程调用未不降反升（${spec.cost.remoteBefore}→${spec.cost.remoteAfter}）：成本退化`);
 
   const promoted = reasons.length === 0;
-  // 自报增益只进审计：有自报、行为却未过判据 → 标记 reward hacking（不改变 promoted）。
   const rewardHackingBlocked = (spec.selfReportedGain ?? 0) > 0 && !promoted;
   return {
     id: spec.id, promoted, reasons, deltas,

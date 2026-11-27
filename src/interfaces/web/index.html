@@ -204,7 +204,7 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [], replayEvents: [], globalEvents: [], running: new Set(), scope: "all", sessionTitles: {}, ledgerMaxSeq: {}, maf: null, mafTasks: [], mafAudit: [] };
+const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [], replayEvents: [], globalEvents: [], running: new Set(), scope: "all", sessionTitles: {}, ledgerMaxSeq: {}, maf: null, mafTasks: [], mafAudit: [], mafCluster: null };
 const toast = (m) => { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("on"), 2200); };
 // 事件类型 → 四条 lane 的映射；来源由注入方式决定，不由事件自报
 const LANE_OF = {
@@ -357,13 +357,14 @@ function renderTrace() {
   const replay = state.replayEvents;
   const all = [...live, ...replay].sort(byTimeline);
   const taskTag = (e) => state.scope === "all" && e._task ? `<span class="ev-task" title="${esc(e._task)}">${esc((state.sessionTitles[e._task] || e._task).slice(0, 18))}</span>` : "";
+  const nodeTag = (e) => e.instanceId ? `<span class="ev-task" style="color:var(--warn)" title="产生该事件的实际进程实例（跨实例共享账本）">实例 ${esc(String(e.instanceId).slice(0, 8))}</span>` : "";
   const rows = all.map((e) => {
     const lane = laneOf(e), src = e._src || "live";
     const note = src === "replay" ? '<div class="ev-note">⚠ evidence 回放，非实时；不冒充真实执行</div>' : "";
     return `<div class="ev-item" data-lane="${lane}">
       <div class="ev-node" style="background:${LANE_COLOR[lane]}"></div>
       <div class="ev-card" data-key="${esc(e._task || "")}-${src}-${e.seq}">
-        <div class="ev-top">${taskTag(e)}<span class="ev-type">${esc(e.type)}</span><span class="ev-seq">#${e.seq}</span></div>
+        <div class="ev-top">${taskTag(e)}${nodeTag(e)}<span class="ev-type">${esc(e.type)}</span><span class="ev-seq">#${e.seq}</span></div>
         <div class="ev-meta"><span class="lane-tag lane-${lane}">${LANE_NAME[lane]}</span><span class="src-dot src-${src}"></span><span class="src-${src}-t">${SRC_NAME[src]}</span></div>
         <div class="ev-meta" style="color:var(--text)">${esc(summary(e))}</div>
         <div class="ev-detail"><pre>${esc(JSON.stringify(e.payload || {}, null, 2))}</pre>${note}<div style="font-size:9.5px;color:var(--faint);margin-top:5px">decision: ${esc(e.type)} · seq ${e.seq}${e._task ? " · session " + esc(e._task.slice(0, 10)) : ""}</div></div>
@@ -373,8 +374,8 @@ function renderTrace() {
   const tsList = all.map((e) => e.ts).filter(Boolean).sort();
   const span = tsList.length > 1 ? `${String(tsList[0]).slice(0, 10)} → ${String(tsList[tsList.length - 1]).slice(0, 10)}` : "—";
   const ledgers = live.filter((e) => (e._src || "live") === "ledger").length;
-  const lives = live.length - ledgers;
-  $("#panel").innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:8px">${view}<br/>共 <b style="color:var(--text)">${all.length}</b> 条（LIVE ${lives} · LEDGER ${ledgers} · REPLAY ${replay.length} · 运行中 ${state.running.size}）· 跨度 ${esc(span)} · 点任意事件展开 payload 与依据</div><div class="flow">${rows || '<div class="empty">暂无事件 · 发起任务后实时流入</div>'}</div>`;
+  const lives = live.length - ledgers, clusterEv = live.filter((e) => e.instanceId).length;
+  $("#panel").innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:8px">${view}<br/>共 <b style="color:var(--text)">${all.length}</b> 条（LIVE ${lives} · LEDGER ${ledgers} · REPLAY ${replay.length} · 跨实例 ${clusterEv} · 运行中 ${state.running.size}）· 跨度 ${esc(span)} · 点任意事件展开 payload 与依据</div><div class="flow">${rows || '<div class="empty">暂无事件 · 发起任务后实时流入</div>'}</div>`;
   document.querySelectorAll(".ev-card").forEach((c) => c.onclick = () => {
     document.querySelectorAll(".ev-card").forEach((x) => x.classList.remove("sel"));
     c.classList.add("sel");
@@ -451,8 +452,8 @@ function renderSkills() {
   $("#panel").innerHTML = `<div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">技能包 ${(state.status.skills || []).length} 个（渐进披露）</div>${items || '<div class="empty">未安装技能</div>'}`;
 }
 async function loadMaf() {
-  const [foundry, tasks, audit] = await Promise.all([api("/api/maf"), api("/api/maf/tasks"), api("/api/maf/audit")]);
-  state.maf = foundry; state.mafTasks = tasks.tasks || []; state.mafAudit = audit.audit || [];
+  const [foundry, tasks, audit, cluster] = await Promise.all([api("/api/maf"), api("/api/maf/tasks"), api("/api/maf/audit"), api("/api/maf/cluster")]);
+  state.maf = foundry; state.mafTasks = tasks.tasks || []; state.mafAudit = audit.audit || []; state.mafCluster = cluster;
   if (state.tab === "maf") renderMaf();
 }
 async function mafPost(path, body, ok = "操作完成") {
@@ -472,6 +473,7 @@ async function mafDemo() {
 }
 function renderMaf() {
   const d = state.maf || { scenarios: [], agents: [], blocks: [], evaluations: [], releases: {}, auditCount: 0 };
+  const cl = state.mafCluster || { workers: [], rejects: [], seq: 0, scope: "-", honest: "", instanceId: "-" };
   const agents = [...(d.agents || [])].reverse(), evals = d.evaluations || [];
   const card = (a) => {
     const r = evals.find((x) => x.agentId === a.agentId && x.version === a.version);
@@ -500,6 +502,12 @@ function renderMaf() {
     <div class="maf-actions"><button class="btn primary" data-maf="demo">▶ 一键跑通编程场景闭环</button><button class="btn" data-maf="export">导出 MAF 审计</button></div>
     <textarea id="mafTaskInput" style="width:100%;min-height:38px;margin-top:7px;background:var(--code);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:10.5px" placeholder="运行 TaskAgent 的任务文本…">检查代码格式并给出结论</textarea>
     <div style="font-size:9.5px;color:var(--muted);margin-top:5px">四类判分：可见单测 / 隐藏 Holdout / 历史回放 / 影子双跑。隐藏用例不进入候选生成，也不在此显示。</div></div>
+    <div class="maf-sec"><h4>多实例集群 · 共享账本 / 租约 / fencing</h4>
+      <div><span class="maf-stat">本实例 <code>${esc(cl.instanceId || "-")}</code></span><span class="maf-stat">活跃实例 ${(cl.workers || []).filter((w) => w.alive).length} / 累计 ${esc(cl.totalWorkers ?? (cl.workers || []).length)}</span><span class="maf-stat">账本 seq ${esc(cl.seq || 0)}</span><span class="maf-stat">拒绝写入 ${(cl.rejects || []).length}</span><span class="maf-stat">作用域 ${esc(cl.scope || "-")}</span></div>
+      <div class="maf-grid" style="margin-top:7px">${(cl.workers || []).map((w) => `<div class="maf-card"><b>${esc(w.id)}</b> <span class="maf-badge ${w.alive ? "maf-ok" : "maf-warn"}">${w.alive ? "在线" : "超时"}</span>${w.self ? ' <span class="maf-badge">本实例</span>' : ""}<div>pid ${esc(w.pid)} · 最近心跳 ${esc(w.lastSeen)}</div></div>`).join("") || '<div class="empty">暂无实例</div>'}</div>
+      ${(cl.rejects || []).length ? `<div style="margin-top:7px;font-size:9.5px" class="maf-warn">最近拒绝：${esc((cl.rejects || []).slice(-3).map((r) => `seq${r.seq} ${r.by} ${r.detail}`).join(" | "))}</div>` : ""}
+      <div style="font-size:9.5px;color:var(--muted);margin-top:6px">${esc(cl.honest || "")}</div>
+      <div class="maf-actions"><button class="btn" data-maf="cluster-refresh">刷新集群状态</button></div></div>
     <div class="maf-sec"><h4>Agent 谱系 · 版本 Diff · 晋升证据</h4><div class="maf-grid">${agents.map(card).join("") || '<div class="empty">暂无候选，先跑通示例闭环</div>'}</div></div>
     <div class="maf-sec"><h4>能力成长中心 · Δ 曲线与专项/全局双门禁</h4>
       <svg viewBox="0 0 280 54" style="width:100%;height:54px;background:var(--code);border-radius:6px"><polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="2"/>${growth.map((r, i) => `<circle cx="${8 + i * Math.max(12, 260 / Math.max(1, growth.length - 1))}" cy="${46 - Math.max(-1, Math.min(1, Number(r.delta))) * 38}" r="2" fill="var(--ok)"/>`).join("")}</svg>
@@ -517,6 +525,7 @@ function renderMaf() {
     const act = el.dataset.maf, id = el.dataset.id, ver = el.dataset.ver;
     try {
       if (act === "demo") await mafDemo();
+      else if (act === "cluster-refresh") { await loadMaf(); toast("✓ 集群状态已刷新"); }
       else if (act === "evaluate") await mafPost("/api/maf/evaluate", { agentId: id, version: ver }, "四类评测完成");
       else if (act === "publish") await mafPost("/api/maf/publish", { agentId: id, version: ver, actor: "web-user" }, "原子发布完成");
       else if (act === "publish-limited") await mafPost("/api/maf/publish", { agentId: id, version: ver, actor: "web-user", allowLimitedEvidence: true }, "有限证据影子发布（不宣称显著）");

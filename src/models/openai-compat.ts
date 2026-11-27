@@ -21,24 +21,12 @@ export interface OpenAICompatOptions {
   timeoutMs?: number;
   maxRetries?: number;
   temperature?: number;
-  /** 无 API Key 也视为已配置。本地端点自动开启，也可显式指定。 */
   apiKeyOptional?: boolean;
-  /** 请求 stream_options.include_usage，让端点回传真实 token 统计。默认开启。 */
   includeUsage?: boolean;
-  /** 是否走流式 SSE（默认 true，既有端点行为不变）。llama.cpp server 的
-   * chatml-function-calling 在流式下拒绝自动工具选择，这类端点设 false。 */
   stream?: boolean;
-  /** 单次生成上限。弱模型不设会一直生成到上下文上限，拖垮多步评测；缺省不发。 */
   maxTokens?: number;
-  /** 注入到每个请求（含 probe）的额外请求头。用于 OpenCode Zen 等需要 x-session-id 的无 Key 端点。 */
   extraHeaders?: Record<string, string>;
-  /** 自动生成一个随机 UUID 并作为该请求头名发送（如 "x-session-id"），无 Key 端点据此区分匿名会话。 */
   genSessionHeader?: string;
-  /**
-   * 是否原生支持 function calling。由 `probe()` 的结论或配置显式声明。
-   * 不设置（undefined）视为「未知→假定支持」，避免误跳可用上游；
-   * 显式 false 时，聚合器在带 tools 的请求中跳过该上游。
-   */
   supportsTools?: boolean;
 }
 
@@ -49,24 +37,15 @@ export interface ModelProbeResult {
   endpoint: string;
   model: string;
   reachable: boolean;
-  /** 端点 /v1/models 返回的本机可用模型 */
   models: string[];
-  /** 该模型能否正常应答 */
   modelResponded: boolean;
-  /** 是否返回 OpenAI 风格 SSE 流 */
   streaming: boolean;
-  /** 本次探针所用的响应模式（供预检区分「必须 SSE」与「已显式关闭流式」）。 */
   streamMode: "stream" | "nonstream";
-  /** 流式 + 带 tools 是否真产出 tool_calls delta（补旧探针的门禁盲点）。 */
   streamToolCalls: boolean;
-  /** 是否原生返回 tool_calls（Agent 能正常用工具的硬前提） */
   toolCalling: ToolCallingSupport;
   latencyMs: number;
-  /** 网络/端口层是否可达：拿到任意 HTTP 响应（含 401/403）即为 true。 */
   networkReachable: boolean;
-  /** 端点可达但认证被拒（HTTP 401/403 或明确的 invalid api key 响应）。 */
   authRejected: boolean;
-  /** /models 请求拿到的 HTTP 状态码；网络失败为 null。 */
   httpStatus: number | null;
   warnings: string[];
   suggestions: string[];
@@ -85,7 +64,6 @@ function isLocalEndpoint(url: string): boolean {
   return LOCAL_HOST.test(url);
 }
 
-/** tool_calls.arguments 字符串 → 对象；畸形交给工具层校验并回报模型。 */
 const parseToolArgs = (raw: string): Record<string, unknown> => {
   try {
     const p = JSON.parse(raw || "{}") as unknown;
@@ -172,13 +150,11 @@ export class OpenAICompatProvider implements LLMProvider {
     this.timeoutMs = options.timeoutMs ?? 120000;
     this.maxRetries = options.maxRetries ?? 2;
     this.temperature = options.temperature ?? 0.2;
-    // 本地端点（Ollama / vLLM / LM Studio）默认不认证，无需伪造 API Key
     this.apiKeyOptional = options.apiKeyOptional ?? isLocalEndpoint(this.baseUrl);
     this.includeUsage = options.includeUsage ?? true;
     this.stream = options.stream ?? true;
     this.maxTokens = options.maxTokens;
     this.supportsTools = options.supportsTools;
-    // 注入额外请求头（如 OpenCode Zen 的 x-session-id）；genSessionHeader 自动生成随机会话 ID
     const eh = { ...(options.extraHeaders ?? {}) };
     if (options.genSessionHeader) eh[options.genSessionHeader] = globalThis.crypto.randomUUID();
     this.extraHeaders = eh;
@@ -189,7 +165,6 @@ export class OpenAICompatProvider implements LLMProvider {
     return this.baseUrl.length > 0 && this.model.length > 0 && hasKey;
   }
 
-  /** 供预检门禁输出（不含任何凭据）。 */
   get endpoint(): string {
     return this.baseUrl;
   }
@@ -198,12 +173,10 @@ export class OpenAICompatProvider implements LLMProvider {
     return this.model;
   }
 
-  /** 能力声明：是否原生支持 function calling（undefined = 未声明/未知）。供聚合器做能力感知路由。 */
   get capabilityTools(): boolean | undefined {
     return this.supportsTools;
   }
 
-  /** 供预检判定：本 provider 是否走流式 SSE。 */
   get streamMode(): "stream" | "nonstream" {
     return this.stream ? "stream" : "nonstream";
   }
@@ -277,14 +250,6 @@ export class OpenAICompatProvider implements LLMProvider {
     throw new Error(`模型 ${this.name} 请求失败（已重试 ${this.maxRetries} 次）: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
   }
 
-  /**
-   * 接入前能力探针：确认端点可达、模型存在、SSE 流式可用，
-   * 以及最关键的——该模型是否原生返回 tool_calls。
-   *
-   * 本地小模型最常见的失败模式是「把工具描述当普通文本」，此时
-   * Agent Loop 会因为零 tool_calls 直接给出终答，任务静默失败。
-   * probe 把这个问题在接入阶段就暴露出来。
-   */
   async probe(): Promise<ModelProbeResult> {
     const started = Date.now();
     const result: ModelProbeResult = {
@@ -306,13 +271,11 @@ export class OpenAICompatProvider implements LLMProvider {
       suggestions: [],
     };
 
-    // 1) /v1/models —— 确认端点与模型清单
     try {
       const res = await fetch(`${this.baseUrl}/models`, {
         headers: this.headers(),
         signal: AbortSignal.timeout(8000),
       });
-      // 拿到任意 HTTP 响应即表明网络与端口是通的；401/403 是认证问题而非网络问题。
       result.networkReachable = true;
       result.httpStatus = res.status;
       if (res.status === 401 || res.status === 403) result.authRejected = true;
@@ -327,7 +290,6 @@ export class OpenAICompatProvider implements LLMProvider {
       result.warnings.push(`/models 探测失败: ${err instanceof Error ? err.message : String(err)}`);
     }
 
-    // 2) 非流式带 tools 的最小请求 —— 判断原生 function calling
     const baseMessages = [
       { role: "system", content: "You must call the provided tool to answer. Never reply with plain text." },
       { role: "user", content: "Call probe_ping with value=\"hello-agent-os\"." },
@@ -378,9 +340,6 @@ export class OpenAICompatProvider implements LLMProvider {
       result.warnings.push(`探针请求失败: ${result.rawError}`);
     }
 
-    // 3) 流式探测（仅流式模式）。带 tools 的流式请求才对应 live 评测真正走的路径——
-    //    旧探针把「非流式 tool_calls」与「流式普通应答」分开测，本地端点因此
-    //    preflight PASS 却在 live 里零工具调用。此处同时判定 SSE 与流式工具调用。
     if (this.stream) {
       try {
         const res = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -416,7 +375,6 @@ export class OpenAICompatProvider implements LLMProvider {
       result.warnings.push("已显式配置非流式（stream=false）：跳过 SSE 探测，原生 tool_calls 由第 2 步非流式探针验证");
     }
 
-    // 4) 结论与可操作建议
     if (!result.reachable && !result.networkReachable) {
       result.suggestions.push("确认端点已启动：Ollama 用 `ollama serve`，默认 http://127.0.0.1:11434/v1");
       result.suggestions.push("检查 OLLAMA_BASE_URL / OLLAMA_MODEL 与防火墙设置。");
@@ -428,7 +386,6 @@ export class OpenAICompatProvider implements LLMProvider {
       result.warnings.push(`配置的模型 "${this.model}" 不在端点模型列表中。`);
       result.suggestions.push(`可用模型：${result.models.slice(0, 8).join(", ")}；用 OLLAMA_MODEL 指定其中一个。`);
     }
-    // 端点不可达 / 认证未过时不能对模型能力下结论，避免给出误导性的"换模型"建议
     if (!result.reachable) {
       result.suggestions.push(result.authRejected
         ? "认证未通过，上述能力结论均不成立；先修正凭据再复测。"
@@ -451,7 +408,6 @@ export class OpenAICompatProvider implements LLMProvider {
     };
   }
 
-  /** 非流式响应解析：llama.cpp 流式下拒绝自动工具选择，设 stream=false 走本分支。 */
   private async parseNonStream(res: Response, req: LLMRequest): Promise<Omit<LLMResponse, "model" | "provider">> {
     const started = Date.now();
     const data = (await res.json()) as {
@@ -525,7 +481,6 @@ export class OpenAICompatProvider implements LLMProvider {
           const pending = calls.get(idx) ?? { id: "", name: "", arguments: "" };
           if (typeof dc.id === "string" && dc.id) pending.id = dc.id;
           const fn = (dc.function ?? {}) as Record<string, unknown>;
-          // 部分本地端点会在每个分片重复下发完整 name；跳过完全重复，避免拼成 "calc calc"
           if (typeof fn.name === "string" && fn.name && pending.name !== fn.name) pending.name += fn.name;
           if (typeof fn.arguments === "string") pending.arguments += fn.arguments;
           calls.set(idx, pending);
@@ -553,11 +508,9 @@ export class OpenAICompatProvider implements LLMProvider {
         handleData(line.slice(5).trim());
       }
     }
-    // 兼容末尾无换行的分片
     const tail = buffer.trim();
     if (tail.startsWith("data:")) handleData(tail.slice(5).trim());
 
-    // 按 index 还原并行工具调用的顺序（Map 迭代顺序不可作为语义保证）
     const ordered = [...calls.entries()].sort((a, b) => a[0] - b[0]).map(([, c]) => c);
     const toolCalls: ToolCall[] = [];
     for (const c of ordered) {
@@ -578,7 +531,6 @@ export class OpenAICompatProvider implements LLMProvider {
   }
 }
 
-// 记录每次流开始时间（WeakMap 避免污染响应对象）
 const parseStreamStarted = new WeakMap<object, number>();
 
 export { emptyResponse, isLocalEndpoint };
