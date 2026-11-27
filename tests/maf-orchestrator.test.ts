@@ -36,8 +36,11 @@ test("定时器自动领取到期 DAG，停止后不再触发", async () => {
   const root = mkdtempSync(join(tmpdir(), "maf-timer-")); let n = 0;
   const o = new Orchestrator(root, async () => { n += 1; return "ok"; });
   o.submit({ name: "周期任务", trigger: "interval", intervalMs: 1, nodes: [{ id: "a", task: "A" }] });
-  o.start(10); await new Promise((r) => setTimeout(r, 1150)); o.stop();
-  const after = n; await new Promise((r) => setTimeout(r, 80));
+  o.start(10);
+  for (let i = 0; i < 100 && n === 0; i++) await new Promise((r) => setTimeout(r, 50));
+  o.stop();
+  await new Promise((r) => setTimeout(r, 200));
+  const after = n; await new Promise((r) => setTimeout(r, 150));
   assert.equal(after >= 1, true); assert.equal(n, after);
 });
 test("取消会传播 AbortSignal，循环依赖和未知依赖 fail-closed", async () => {

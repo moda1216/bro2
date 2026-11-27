@@ -97,9 +97,10 @@ function run(g: Gate): { ok: boolean; summary: string; code: number } {
   const out = (r.stdout ?? "") + (r.stderr ?? "");
   const code = r.status ?? (r.error ? 1 : 0);
   const timedOut = r.error?.message?.includes("timeout");
+  const failed = out.split("\n").filter((l) => /^not ok \d+/.test(l.trim())).map((l) => l.trim().slice(0, 160));
   return {
     ok: code === 0 && !timedOut,
-    summary: timedOut ? `超时（>${g.timeoutMs}ms）` : lastMeaningfulLine(out),
+    summary: timedOut ? `超时（>${g.timeoutMs}ms）` : failed.length ? `# fail ${failed.length} :: ${failed.join(" | ")}` : lastMeaningfulLine(out),
     code,
   };
 }

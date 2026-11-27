@@ -43,6 +43,18 @@ function worker(root: string, taskId: string, tag: string, extra: Record<string,
   });
 }
 const callsOf = (root: string): Array<{ tag: string; node: string; at: number }> => readFileSync(join(root, "data", "maf", "calls.jsonl"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as { tag: string; node: string; at: number });
+/** CI 慢机器上进程启动时间不可假设：轮询共享账本直到观察到 claim，而不是固定 sleep。 */
+const waitForClaim = async (root: string, taskId: string, timeoutMs = 15000): Promise<void> => {
+  const until = Date.now() + timeoutMs;
+  while (Date.now() < until) {
+    const hit = readFileSync(join(root, "data", "maf", "cluster.jsonl"), "utf8").split("\n").filter(Boolean).some((l) => {
+      try { const r = JSON.parse(l) as { op: string; taskId?: string }; return r.op === "claim" && r.taskId === taskId; } catch { return false; }
+    });
+    if (hit) return;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  throw new Error("等待 worker 领取租约超时：共享账本中未观察到 claim");
+};
 type ClusterView = { seq: number; workers: Array<{ id: string; alive: boolean; self: boolean }>; rejects: Array<{ seq: number; by: string; op: string; detail: string }>; events: Array<{ seq: number; instanceId: string; runId?: string; correlationId?: string }>; honest: string; instanceId: string };
 
 test("两个真实进程竞争同一 DAG：节点恰好执行一次，账本可串行化", async () => {
@@ -67,8 +79,9 @@ test("冻结进程租约过期被接管，陈旧提交被 fencing 拒绝", async
   const root = mkdtempSync(join(tmpdir(), "maf-fence-"));
   const seed = new Orchestrator(root, async () => "seed");
   const t = seed.submit({ name: "fencing", nodes: [{ id: "a", task: "A", maxAttempts: 3 }] });
-  const frozen = worker(root, t.id, "frozen", { MAF_BLOCK: "1", MAF_BLOCK_MS: "320", MAF_LEASE: "60" });
-  await new Promise((r) => setTimeout(r, 90));
+  const frozen = worker(root, t.id, "frozen", { MAF_BLOCK: "1", MAF_BLOCK_MS: "2500", MAF_LEASE: "60" });
+  await waitForClaim(root, t.id);
+  await new Promise((r) => setTimeout(r, 140));
   const takeover = await worker(root, t.id, "takeover", { MAF_SLEEP: "10", MAF_LEASE: "60" });
   assert.equal(takeover.code, 0, takeover.err);
   const stale = await frozen; assert.equal(stale.code, 0, stale.err);
@@ -84,7 +97,7 @@ test("跨进程取消在提交点生效，已取消任务不再接受提交", as
   const seed = new Orchestrator(root, async () => "seed");
   const t = seed.submit({ name: "跨实例取消", nodes: [{ id: "a", task: "A" }] });
   const running = worker(root, t.id, "runner", { MAF_SLEEP: "180" });
-  await new Promise((r) => setTimeout(r, 60));
+  await waitForClaim(root, t.id);
   const observer = new Orchestrator(root, async () => "observer");
   assert.equal(observer.cancel(t.id).status, "cancelled");
   const r = await running; assert.equal(r.code, 0, r.err);
