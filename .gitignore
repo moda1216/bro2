@@ -16,6 +16,7 @@ data/eval-live-report.json
 data/workspace/
 data/local-llm-stats.json
 data/memory/long-term.json
+data/maf/
 
 # 本地推理模型缓存（大文件，外部下载）
 /root/.cache/bro2-llm/

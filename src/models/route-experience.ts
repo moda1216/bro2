@@ -1,26 +1,3 @@
-/**
- * bro2 · 学习型路由（P0.5-a / P0.5-c 的最小闭环，设计目标 2 的落点）
- *
- * 现状缺口：`cheapToLocalPolicy` 是硬编码启发式（只看 tools / 末条长度），
- * `KeylessAggregator` 的健康态是进程内内存态、重启清零，`InferenceStats`
- * 只是仪表盘——「远程调用省了多少」被观测，但从不回控路由。于是
- * 「越用越省、越用越稳」无法发生。
- *
- * 本模块把这两处静态机制接到共享经验库上：
- *   - `LearnedRoutePolicy` 实现 `RoutePolicy` 接口，**注入** HybridProvider 即可，
- *     对 hybrid.ts 零侵入；请求结构指纹命中「本地足够」的实证经验时直接走本地。
- *   - `observe()` / `endpointOutcome()` 把每次实际结果与上游成败回写为只增
- *     经验，跨会话累积（新建 ExperienceBank 实例即可读到历史）。
- *
- * 冷启动保护：证据不足（样本 < minSamples 或本地成功率 < minLocalSuccessRate）
- * 时回退 `cheapToLocalPolicy`，绝不因"有经验"就贸然压本地。
- *
- * 关键闭环：远程 429/5xx → 本地兜底成功时，同时记「remote: failure」与
- * 「local: success」，下次同等结构的请求可直接本地 —— 容错经验转化为成本优势。
- *
- * 治理：路由经验只影响**先验决策**，不改变任何能力评测判定；端点经验只用于
- * 排序参考，不绕过 KeylessAggregator 的健康评分与故障转移。
- */
 import { cheapToLocalPolicy } from "./hybrid.ts";
 import type { RoutePolicy, RouteDecision } from "./hybrid.ts";
 import type { LLMRequest } from "./base.ts";
@@ -93,14 +70,6 @@ export class LearnedRoutePolicy implements RoutePolicy {
     return decision;
   }
 
-  /**
-   * 回写一次实际调用结果。由调用链在 complete() 返回后显式调用
-   * （保持 hybrid.ts 零侵入；接入 runtime 时挂在调用后钩子即可）。
-   *
-   * @param decision  策略原本的决策
-   * @param ok        这次请求最终是否成功（含兜底后的结果）
-   * @param fallbackUsed 是否触发了远程失败 → 本地降级
-   */
   observe(req: LLMRequest, decision: RouteDecision, ok: boolean, fallbackUsed = false): void {
     const sig = requestSignature(req);
     const meta = {
@@ -175,17 +144,6 @@ export interface EndpointPriorOptions {
   maxBoost?: number;
 }
 
-/**
- * 把只增经验账本折叠成「跨会话端点先验分」，注入 KeylessAggregator.score()。
- *
- * 解决「健康态只在进程内、重启清零」：历史失败多的端点在新进程里也从低分起步，
- * 冷启动第一发不再优先打到已知死端点。治理红线：
- *  - 先验**只影响排序**，不绕过冷却/限流/能力感知的硬过滤（见 keyless.ts:selectBackend）；
- *  - 被 invalidate 的经验一律给 0 分（回退完整探测，绝不硬信经验）；
- *  - 样本不足 / 失效 / 全失败但已失效 → 0 分；缺格不冒充结论。
- *  - 幅度封顶 maxBoost，历史再好也不能凌驾于实时健康信号。
- * 纯函数：输入是经验事件快照，不含 IO，CI 可用构造快照自给自足。
- */
 export function endpointPriorFromExperience(
   entries: readonly ExperienceEntry[],
   opts: EndpointPriorOptions = {},

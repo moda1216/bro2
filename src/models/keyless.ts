@@ -1,26 +1,3 @@
-/**
- * L1 模型层 · 无 Key 远程端点统一聚合器（KeylessAggregator）
- *
- * 设计目标（对标 KeylessAI / Zerogateway 的统一路由器思路）：
- *   把所有「远程、无 API Key」的 LLM 端点聚合为 **一个** OpenAI 兼容接口交给 bro2，
- *   上层（Agent Loop / eval / preflight）只感知一个 provider，无需关心背后是
- *   Pollinations、Kilo Gateway、OpenCode Zen、KeylessAI 网关还是某个 harness 插件模型。
- *
- * 智能管理（区别于「简单随机选一个」）：
- *   1) 健康跟踪（health tracking）：每个上游维护失败计数、冷却截止、限流截止、最近延迟。
- *   2) 限流感知（rate-limit aware）：识别 429 / FreeUsageLimit / Too Many Requests / 5xx，
- *      把该上游标记为「限流冷却」，把请求转发到其它可用上游，而不是反复重试打满额度。
- *   3) 故障转移（failover）：单上游失败时按健康评分自动切到下一个最优上游；
- *      切完仍全失败才抛错（绝不静默返回空响应）。
- *   4) 能力感知（capability aware）：标记「不支持 tool_calls」的上游在带 tools 的请求中
- *      被跳过，避免在真实工具调用任务上踩坑（与 OpenAICompatProvider.probe 的 toolCalling 结论联动）。
- *   5) 评分路由（smart-fallback）：综合优先级、失败惩罚、限流惩罚、延迟偏好打分选最优上游。
- *
- * 该聚合器与 HybridProvider（本地+远程协同降调用）正交：
- *   - Hybrid 解决「远程贵/限流严 × 本地弱」的调用分配问题；
- *   - KeylessAggregator 解决「远程无 Key 端点很多但各自不稳定」的统一与韧性问题。
- *   二者可嵌套：例如 hybrid.remote = keyless（用整个免 Key 网状作为远程强模型来源）。
- */
 import type { LLMProvider, LLMRequest, LLMResponse } from "./base.ts";
 import { EMPTY_STATS, type InferenceStats, type StatsProvider, type CompositeProvider } from "./cache.ts";
 

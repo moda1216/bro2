@@ -1,9 +1,3 @@
-/**
- * Agent OS · 组装根（Composition Root）
- *
- * 所有组件通过 Runtime 依赖注入容器连接，替换任意实现只需换一次注册。
- * 这是「内核极小，一切可替换」的落地点，也是零第三方依赖的启动入口。
- */
 import { readFileSync, existsSync, mkdirSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,6 +34,8 @@ import { Tracer } from "./observability/tracing.ts";
 import { SubAgentRunner } from "./delegation/subagent.ts";
 import type { SpawnFn, SpawnContext } from "./delegation/subagent.ts";
 import { AutomationScheduler } from "./delegation/automation.ts";
+import { Foundry } from "./maf/foundry.ts";
+import { Orchestrator } from "./maf/orchestrator.ts";
 import { registerBuiltinTools } from "./tools/builtins/index.ts";
 import { BUILTIN_PLUGINS } from "./tools/plugin.ts";
 import type { Event, EventDraft } from "./kernel/events.ts";
@@ -64,11 +60,6 @@ export interface AgentOSOptions {
   providerOverride?: LLMProvider;
   /** 默认加载的插件。 */
   plugins?: string[];
-  /**
-   * 是否应用已通过门禁的演进状态（data/evolve/state.json）。默认 true。
-   * 评测器必须显式设为 false：验证器不得受被测系统的运行时演进状态影响，
-   * 否则「改进」可以通过改运行时配置反作用于评测，构成 reward hacking。
-   */
   evolvedState?: boolean;
 }
 
@@ -94,6 +85,8 @@ export interface AgentOS {
   /** 已注册的模型实例，供 doctor / eval 直接探测能力（模型无关）。 */
   providers: Map<string, LLMProvider>;
   scheduler: AutomationScheduler;
+  maf: Foundry;
+  orchestrator: Orchestrator;
   subagents: SubAgentRunner;
   createSession(preset?: string): Session;
   getSession(id: string): Session | undefined;
@@ -120,7 +113,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
   const configPath = join(root, "agentos.config.json");
   const raw = existsSync(configPath) ? JSON.parse(readFileSync(configPath, "utf8")) as unknown : {};
   let config = loadConfig(raw) as RuntimeConfig;
-  // 运行时自动落地「已通过门禁」的演进状态；显式 config 覆盖优先，保证评测隔离。
   if (options.evolvedState !== false) {
     const statePath = join(root, "data", "evolve", "state.json");
     if (existsSync(statePath)) {
@@ -417,7 +409,6 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     parallel: policy.parallel,
   });
 
-  // ---- 可观测性 ----
   const tracer = new Tracer(runtime.bus);
 
   // ---- 协作层（spawn 通过闭包复用主循环，避免循环依赖）----
@@ -447,6 +438,22 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     },
     record,
   });
+  const maf = new Foundry(root);
+  const orchestrator = new Orchestrator(root, async (node, ctx) => {
+    if (!loopRef) throw new Error("AgentLoop 尚未初始化");
+    if (node.agentId) {
+      const a = maf.getAgent(node.agentId, node.agentVersion);
+      if (!a || a.status !== "active") throw new Error("TaskAgent 未注册、被撤权或非 active");
+      if (node.domain && node.domain !== a.domain) throw new Error("跨域误用阻断：任务域与 Agent 实测域不一致");
+    } else if (node.domain) {
+      const routed = maf.activeForDomain(node.domain);
+      if (routed) { node.agentId = routed.agentId; node.agentVersion = routed.version; }
+    }
+    const s = sessions.create("standard", `MAF: ${node.task.slice(0, 24)}`); activeSessions.set(s.id, s);
+    const r = await loopRef.run({ session: s, text: node.task, presetName: "standard", ...(ctx.signal ? { signal: ctx.signal } : {}), extraInject: `MAF run=${ctx.taskId} node=${ctx.nodeId} agent=${node.agentId ?? "general"}@${node.agentVersion ?? "active"} idempotency=${ctx.idempotencyKey}` });
+    return r.answer;
+  }, 30000, record);
+  orchestrator.start();
 
   // ---- 注册服务（全部可替换）----
   const services: Array<[string, unknown]> = [
@@ -466,6 +473,8 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     ["tracer", tracer],
     ["subagents", subagents],
     ["scheduler", scheduler],
+    ["maf", maf],
+    ["orchestrator", orchestrator],
     ["pluginCatalog", BUILTIN_PLUGINS],
     ["policy", policy],
     ["spawn", spawn],
@@ -521,6 +530,8 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     policy,
     providers,
     scheduler,
+    maf,
+    orchestrator,
     subagents,
     createSession(preset = "standard"): Session {
       const s = sessions.create(preset);
@@ -546,6 +557,7 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     },
     spawn,
     async shutdown(): Promise<void> {
+      orchestrator.stop();
       scheduler.stop();
       await runtime.unloadAll();
       tracer.close();

@@ -1,28 +1,3 @@
-/**
- * bro2 · 经验库（P2 · 两大设计目标共享的「复利中枢」）
- *
- * 为什么需要它：现有 RSI 是「每轮重新搜索」——Ledger.stats() 只按算子聚合
- * 成功率，meta 层只有 7 个固定枚举候选，都没有把「这次为什么有效」沉淀成
- * 下次可直接复用的先验。两大设计目标因此缺同一块底座：
- *
- *   目标 1「越用改进越快」：把探测过的有效编辑按失败模式指纹存档，Propose
- *     阶段直接命中 → 收敛所需探测次数随使用递减（复利，见 compound.ts）。
- *   目标 2「越用越省/越稳」：把每次路由与端点的实际结果存档，学习型路由
- *     据此判断「哪类请求本地就够 / 哪个上游靠谱」，跨会话累积
- *     （见 src/models/route-experience.ts）。
- *
- * 治理红线（继承 bro2 RSI，任何经验机制不得绕过）：
- *   1) 经验只影响 Propose 的候选裁剪 / 路由先验，绝不参与接受判定；
- *      判定仍走 behavioralContrast 的全量行为对比（防 reward hacking 复用）。
- *   2) 经验必须带适用条件 `applicableTo`，且可被 `invalidate()` 失效；
- *      OOD 退化时失效而非删除，防止把经验库做成记任务集（防过拟合）。
- *   3) 指纹只由失败模式类别 / 请求结构特征构成，禁止编码任务 id 或答案。
- *   4) 事件式只增账本：原子追加 + fsync + 残缺末行容错，读取时折叠成快照
- *      ——与 Trajectory / Ledger 完全一致的单一事实源约定。
- *
- * 诚实边界：本模块度量的是「搜索成本」与「路由质量」，不是能力分数，
- * 也不改变 leadership.verdict。经验不灵时必须回退完整探测，不得硬信经验。
- */
 import {
   existsSync, readFileSync, mkdirSync, openSync, writeSync, fsyncSync, closeSync,
 } from "node:fs";
@@ -66,10 +41,6 @@ export interface ExperienceEntry {
 
 // ------------------------------------------------------------ 指纹（防记忆任务集）
 
-/**
- * 失败模式指纹：只取**类别 + 量级桶 + 是否调用工具**，绝不编码任务 id / 答案。
- * 开放世界无真值时 `answer` 信号恒为 true，属恒定噪声，故剔除；`other` 同理。
- */
 export function failureSignature(s: RunSummary): string {
   const kinds = failureSignals(s)
     .filter((k) => k !== "answer" && k !== "other")
@@ -79,15 +50,6 @@ export function failureSignature(s: RunSummary): string {
   return `F:${kinds.join("+") || "clean"}|${bucket}|${s.toolCalls === 0 ? "no-tool" : "tooled"}`;
 }
 
-/**
- * 请求特征指纹：只取「任务结构」（是否有工具 / 长度桶 / 轮次桶），不取内容文本。
- *
- * 刻意**不含末条角色**：`cheapToLocalPolicy` 用末条角色判断当前回合并据此走
- * local/remote，若经验指纹也含同一特征，两者视角完全重合，经验就永远无法
- * 覆盖启发式判断、学习型路由也就没有增益。这里让经验站在「这类任务结构
- * 本地是否够用」的视角，与「当前回合」视角正交；是否采信由
- * `minSamples` + `minLocalSuccessRate` 双重冷启动保护把关。
- */
 export function requestSignature(req: LLMRequest): string {
   const hasTools = (req.tools?.length ?? 0) > 0;
   const last = req.messages[req.messages.length - 1];

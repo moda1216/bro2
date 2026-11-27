@@ -1,11 +1,3 @@
-/**
- * bro2 · 对比式 harness 改进（Propose–Probe–Compose，HARNESS² 适配）
- *
- * 把 HARNESS²（arXiv 2610.14224）的「行为对比」做成纯函数原语：不需要真值标签，
- * 只依赖「基线 vs 探测」两轮运行的可观测行为差异，天然防 reward hacking。
- * v2.20.0 合并原 contrast / live-contrast / compound 三件套于一处（导出集合不变）。
- * 关键不变量：候选自报分数提升 `scoreGain` 绝不参与接受判定；本模块不产生能力分数。
- */
 import type { FailureKind } from "./types.ts";
 import type { EvalRunMetrics } from "../observability/eval.ts";
 import { ExperienceBank, failureSignature } from "./experience.ts";
@@ -45,15 +37,6 @@ export interface ContrastResult {
   evidence: string;
 }
 
-/**
- * 给定基线 `a` 与探测轮 `b`，以及要聚焦的失败模式 `focus`，
- * 判断本次 harness 编辑是否产生了**行为对比**。
- *
- * 接受条件（全部满足）：
- *   1) 焦点失败在 b 中消失或显著下降；
- *   2) b 不得引入新的、更糟的失败种类（尤其协议违规必须保持 0）；
- *   3) 必须出现对应的正向行为变化（可观测），而非仅分数上升。
- */
 export function behavioralContrast(
   a: RunSummary,
   b: RunSummary,
@@ -131,11 +114,6 @@ export interface ComposeResult {
   evidence: string[];
 }
 
-/**
- * Compose 步骤：对一批候选，只保留被行为对比支撑的编辑。
- * 对应 HARNESS² "不强加真值、只看行为差异" 的核心主张，也是 bro2 防 reward hacking
- * 的又一道关卡（与 holdout 严格提升互补）。
- */
 export function proposeProbeCompose(baseline: RunSummary, candidates: ProbeCandidate[]): ComposeResult {
   const accepted: ProbeCandidate[] = [];
   const rejected: Array<{ candidate: ProbeCandidate; reason: string }> = [];
@@ -204,10 +182,6 @@ export interface LiveContrastReport {
   integrity: { ok: boolean; reasons: string[] };
 }
 
-/**
- * 一轮 Propose–Probe–Compose：给定配对基线，判定一批候选是否可晋升。
- * 纯函数：行为对比来自 behavioralContrast；scoreGain 只进审计、不进判定。
- */
 export function evaluateLiveCandidates(baseline: RunSummary, candidates: LiveCandidate[]): {
   decisions: LiveDecision[];
   evidence: string[];
@@ -240,10 +214,6 @@ export function evaluateLiveCandidates(baseline: RunSummary, candidates: LiveCan
   return { decisions, evidence, rewardHackingBlocked };
 }
 
-/**
- * 多轮累积验证器：模拟 evolve 主循环反复 Propose→Probe，只累积「行为对比成立」
- * 的晋升，并给出收敛与完整性结论。可离线验证「不靠真值标签也能收敛」。
- */
 export class LiveContrastVerifier {
   private round = 0;
   private readonly allDecisions: LiveDecision[] = [];
@@ -309,11 +279,6 @@ export function baselineFromRuns(runs: EvalRunMetrics[], answerMatches = false):
 /** 经验命中时仍保留的探索候选数，避免经验库过早收敛。 */
 export const EXPLORE_SLOTS = 1;
 
-/**
- * 惰性候选项：只有 `probed` 尚未实跑的提案描述。
- * `probed` 必须由 `CompoundOptions.probe()` 在候选真正进入探测集时生成，
- * 绝不预先填好假摘要——否则「裁剪探测集」只是纸面省成本，属于变相 reward hacking。
- */
 export type PendingCandidate = Omit<LiveCandidate, "probed">;
 
 export interface CompoundOptions {
@@ -352,15 +317,6 @@ export interface CompoundResult {
   signature: string;
 }
 
-/**
- * 一轮「有经验的」Probe。纯编排、无网络；候选的 `probed` 由调用方在配对
- * 条件下实跑得到，本函数不伪造行为摘要。
- *
- * 三条硬保证（见 ROADMAP P2）：
- *   1) 经验只影响**探测哪些候选**，接受仍走 behavioralContrast 全量行为对比；
- *   2) 经验不灵（首批无接受项）必须**回退探测 deferred**，绝不因"有经验"就跳过验证；
- *   3) 经验回写只由「行为对比成立且非 reward hacking」的接受项驱动，失败项同样留痕。
- */
 export function compoundProbe(
   baseline: RunSummary,
   candidates: Array<LiveCandidate | PendingCandidate>,

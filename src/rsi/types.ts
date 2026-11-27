@@ -1,11 +1,3 @@
-/**
- * bro2 · 有界可验证自我改进（Bounded Verifiable Self-Improvement）· 共享类型与常量
- *
- * 设计依据见 RSI.md。三条不可协商的原则：
- *  1) 晋升只认外部可执行断言，不认模型自评；
- *  2) 能力面可改、治理/评测面写保护；
- *  3) 只增账本保留全部候选（含被拒），改进策略由账本实证成败更新（L4 自指）。
- */
 import { createHash } from "node:crypto";
 import { DEFAULT_POLICY, POLICY_KEYS, POLICY_VALUES } from "../runtime/policy.ts";
 import type { BehaviorPolicy } from "../runtime/policy.ts";
@@ -19,12 +11,7 @@ export interface EvolvableState {
     maxConcurrentTools: number;
     toolTimeoutMs: number;
   };
-  /**
-   * 行为策略面：RSI 从这里切换**真实代码分支**，而非只调数字。
-   * 每个值必须是 POLICY_VALUES 白名单内的枚举，由 guardrails 校验。
-   */
   policy: BehaviorPolicy;
-  /** 技能补充指导：影子评测时追加到 SKILL.md，必须通过 de-hardcoding 校验。 */
   skillOverlays: Record<string, string>;
 }
 

@@ -1,17 +1,4 @@
 #!/usr/bin/env node
-/**
- * bench:v2 · 分层任务评测入口（W1）
- * ----------------------------------------------------------
- *   npm run bench:v2                                  全层确定性回归（l1）
- *   npm run bench:v2 -- --layer l2                    只跑 l2（默认跳过 live 任务）
- *   npm run bench:v2 -- --layer l2 --mode live        真实模型跑 l2（先过 live 预检）
- *   npm run bench:v2 -- --layer l2 --mode live --sample 3 --repeat 2
- *   npm run bench:v2 -- --json | --save data/bench/x.json
- *
- * 边界：本入口**只做装载与执行编排**，判分与指标抽取完全复用
- * observability/eval.ts（唯一口径）；live 预检复用 models/live-gate.ts（唯一门禁）。
- * live 分数是**测量**，不是发布门禁——只有协议违规（未配对 tool_call）才判失败。
- */
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -38,12 +25,9 @@ function has(name: string): boolean {
   return argv.includes(`--${name}`);
 }
 
-// fault:check（第 18 道门禁）：确定性故障对照复用本入口的评测装配，独立早退。
-// 与 live 证据互补：live 证明「真实端点下机制有价值」，这里证明「可离线复算且改坏必红」。
 if (has("fault-contrast")) {
   process.exit(await runFaultContrast(ROOT));
 }
-// promotion:check（第 19 道门禁）：三段晋升判据的确定性回归，独立早退。
 if (has("promotion-contrast")) {
   process.exit(await runPromotionContrast(ROOT));
 }
@@ -60,13 +44,9 @@ const live = mode === "live";
 const k = Math.max(1, Number(flag("repeat") ?? flag("k") ?? 1) || 1);
 const sampleN = flag("sample") ? Math.max(1, Number(flag("sample")) || 1) : 0;
 const only = flag("only"); // 支持逗号分隔多任务
-/** 同模型、同任务，换 harness 预设——这是「harness 差异」对照的唯一变量。 */
 const presetName = flag("preset");
-/** 消融开关：关闭路由层瞬时重试（故障任务的唯一变量） */
 const noRetry = has("no-retry");
-/** 消融开关：关闭空/半截响应守卫（empty-response 故障的唯一变量） */
 const noEmptyGuard = has("no-empty-guard");
-/** 消融开关：畸形参数策略 fail（默认 repair 见 agentos.config.json / policy） */
 const policyArg = flag("policy"); // 形如 malformedArgs=fail
 
 const selected: TaskLayer[] = layerArg === "all"

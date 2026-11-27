@@ -83,6 +83,7 @@ textarea:focus{border-color:var(--accent)}
 .tr .s{color:var(--muted);min-width:26px;font-family:ui-monospace,monospace}
 .tr .ty{font-weight:650;min-width:104px;font-family:ui-monospace,monospace;color:var(--accent)}
 .tr .sm{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.maf-sec{border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:9px;background:var(--panel-2)}.maf-sec h4{margin:0 0 8px;font-size:12px}.maf-grid{display:grid;grid-template-columns:1fr;gap:8px}.maf-card{border:1px solid var(--border);border-radius:7px;padding:8px;background:var(--panel);font-size:10.5px;overflow-wrap:anywhere;min-width:0}.maf-card b{font-family:ui-monospace,monospace;font-size:10.5px}.maf-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.maf-actions .btn{font-size:9.5px;padding:3px 7px}.maf-stat{display:inline-block;margin-right:9px;color:var(--muted)}.maf-badge{padding:1px 5px;border-radius:4px;background:var(--code);font-size:9px}.maf-ok{color:var(--ok)}.maf-warn{color:var(--warn)}.maf-err{color:var(--err)}
 .rowitem{padding:8px 9px;border:1px solid var(--border);border-radius:7px;margin-bottom:6px;background:var(--panel-2)}
 .rowitem b{font-family:ui-monospace,monospace;font-size:11px}
 .rowitem p{margin:3px 0 0;font-size:10.5px;color:var(--muted)}
@@ -168,6 +169,7 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
   <div class="right">
     <div class="tabs">
       <div class="tab on" data-tab="trace">事件流</div>
+      <div class="tab" data-tab="maf">MAF 工作台</div>
       <div class="tab" data-tab="rebuild">重建</div>
       <div class="tab" data-tab="metrics">指标</div>
       <div class="tab" data-tab="tools">工具</div>
@@ -202,7 +204,7 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [], replayEvents: [], globalEvents: [], running: new Set(), scope: "all", sessionTitles: {}, ledgerMaxSeq: {} };
+const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [], replayEvents: [], globalEvents: [], running: new Set(), scope: "all", sessionTitles: {}, ledgerMaxSeq: {}, maf: null, mafTasks: [], mafAudit: [] };
 const toast = (m) => { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("on"), 2200); };
 // 事件类型 → 四条 lane 的映射；来源由注入方式决定，不由事件自报
 const LANE_OF = {
@@ -448,8 +450,99 @@ function renderSkills() {
   const items = (state.status.skills || []).map((s) => `<div class="rowitem"><b>${esc(s.name)}</b><p>${esc(s.description)}</p><p style="color:var(--accent)">${(s.tags || []).join(" · ")}</p></div>`).join("");
   $("#panel").innerHTML = `<div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">技能包 ${(state.status.skills || []).length} 个（渐进披露）</div>${items || '<div class="empty">未安装技能</div>'}`;
 }
+async function loadMaf() {
+  const [foundry, tasks, audit] = await Promise.all([api("/api/maf"), api("/api/maf/tasks"), api("/api/maf/audit")]);
+  state.maf = foundry; state.mafTasks = tasks.tasks || []; state.mafAudit = audit.audit || [];
+  if (state.tab === "maf") renderMaf();
+}
+async function mafPost(path, body, ok = "操作完成") {
+  const out = await post(path, body); toast(`✓ ${ok}`); await loadMaf(); return out;
+}
+async function mafDemo() {
+  const mk = (suite) => Array.from({ length: 16 }, (_, i) => i % 2 === 0
+    ? { id: `${suite}-${i}`, input: `  Hello${i};  `, expected: `Hello${i};` }
+    : { id: `${suite}-${i}`, input: `Hello${i}`, expected: `Hello${i};` });
+  const cases = { visible: mk("visible"), hidden: mk("hidden"), replay: mk("replay"), shadow: mk("shadow") };
+  const s = (await post("/api/maf/scenarios", { name: "代码格式修复", domain: "programming", cases, permissions: ["read"] })).scenario;
+  const root = (await post("/api/maf/candidates", { scenarioId: s.id, blocks: ["identity"], reason: "冻结通用基线", permissions: ["read"], actor: "web-user" })).agent;
+  const candidate = (await post("/api/maf/candidates", { scenarioId: s.id, agentId: root.agentId, parentVersion: root.version, blocks: ["semicolon"], reason: "定位首尾空白与分号失效，替换 Block 组合", permissions: ["read"], actor: "web-user" })).agent;
+  const report = (await post("/api/maf/evaluate", { agentId: candidate.agentId, version: candidate.version })).report;
+  if (report.decision === "active-eligible") await post("/api/maf/publish", { agentId: candidate.agentId, version: candidate.version, actor: "web-user" });
+  await loadMaf(); toast(`✓ 闭环完成：64 配对样本 · ${report.decision} · 功效 ${report.power}`);
+}
+function renderMaf() {
+  const d = state.maf || { scenarios: [], agents: [], blocks: [], evaluations: [], releases: {}, auditCount: 0 };
+  const agents = [...(d.agents || [])].reverse(), evals = d.evaluations || [];
+  const card = (a) => {
+    const r = evals.find((x) => x.agentId === a.agentId && x.version === a.version);
+    const published = d.releases?.[a.agentId] === a.version, color = a.status === "active" ? "maf-ok" : a.status === "rejected" ? "maf-err" : "maf-warn";
+    return `<div class="maf-card"><b>${esc(a.agentId)}@${esc(a.version)}</b> <span class="maf-badge ${color}">${esc(a.status)}</span>${published ? ' <span class="maf-badge maf-ok">当前发布</span>' : ""}
+      <div style="margin-top:5px;color:var(--muted)">域 ${esc(a.domain)} · 父代 ${esc(a.parentVersion || "genesis")} · Block ${esc((a.genome.blocks || []).join(" → "))}</div>
+      <div style="margin-top:4px">hash <code>${esc(a.snapshotHash.slice(0, 16))}</code> · 理由 ${esc(a.proposalReason)}</div>
+      ${r ? `<div style="margin-top:4px">评测 <b>${esc(r.decision)}</b> · n=${esc(r.pairs)} · Δ=${esc(Number(r.delta).toFixed(3))} · CI=[${esc(r.ci95.map(Number).map((x) => x.toFixed(3)).join(", "))}] · 功效 ${esc(r.power)}</div>` : '<div style="margin-top:4px;color:var(--muted)">尚未评测</div>'}
+      <div class="maf-actions">
+        ${a.status === "draft" ? `<button class="btn" data-maf="evaluate" data-id="${esc(a.agentId)}" data-ver="${esc(a.version)}">沙箱评测</button>` : ""}
+        ${a.status === "shadow" && r?.decision === "active-eligible" ? `<button class="btn primary" data-maf="publish" data-id="${esc(a.agentId)}" data-ver="${esc(a.version)}">发布</button>` : ""}
+        ${a.status === "shadow" && r?.decision === "shadow-eligible" ? `<button class="btn" data-maf="publish-limited" data-id="${esc(a.agentId)}" data-ver="${esc(a.version)}">人工影子发布</button>` : ""}
+        ${["active", "retired"].includes(a.status) ? `<button class="btn" data-maf="rollback" data-id="${esc(a.agentId)}" data-ver="${esc(a.version)}">回滚到此快照</button>` : ""}
+        ${a.status === "active" ? `<button class="btn" data-maf="revoke" data-id="${esc(a.agentId)}">撤权</button><button class="btn primary" data-maf="run-agent" data-id="${esc(a.agentId)}" data-ver="${esc(a.version)}" data-domain="${esc(a.domain)}">运行任务</button>` : ""}
+        ${r ? `<button class="btn" data-maf="distill" data-id="${esc(a.agentId)}" data-ver="${esc(a.version)}">蒸馏能力</button>` : ""}
+        <button class="btn" data-maf="reproduce" data-id="${esc(a.agentId)}" data-ver="${esc(a.version)}">复现清单</button>
+      </div></div>`;
+  };
+  const growth = evals.slice().sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  const points = growth.map((r, i) => `${8 + i * Math.max(12, 260 / Math.max(1, growth.length - 1))},${46 - Math.max(-1, Math.min(1, Number(r.delta))) * 38}`).join(" ");
+  const independent = growth.filter((r) => r.decision === "active-eligible" && r.power === "sufficient");
+  const transfer = independent[0], global = independent.find((r) => r.agentId !== transfer?.agentId);
+  const shared = (d.blocks || []).filter((b) => String(b.id).startsWith("distilled-"));
+  $("#panel").innerHTML = `<div class="maf-sec"><h4>MAF · 生成与进化控制台</h4>
+    <div><span class="maf-stat">场景 ${(d.scenarios || []).length}</span><span class="maf-stat">Agent 版本 ${agents.length}</span><span class="maf-stat">Block ${(d.blocks || []).length}</span><span class="maf-stat">评测 ${evals.length}</span><span class="maf-stat">发布 ${Object.keys(d.releases || {}).length}</span><span class="maf-stat">审计 ${esc(d.auditCount)}</span></div>
+    <div class="maf-actions"><button class="btn primary" data-maf="demo">▶ 一键跑通编程场景闭环</button><button class="btn" data-maf="export">导出 MAF 审计</button></div>
+    <textarea id="mafTaskInput" style="width:100%;min-height:38px;margin-top:7px;background:var(--code);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:10.5px" placeholder="运行 TaskAgent 的任务文本…">检查代码格式并给出结论</textarea>
+    <div style="font-size:9.5px;color:var(--muted);margin-top:5px">四类判分：可见单测 / 隐藏 Holdout / 历史回放 / 影子双跑。隐藏用例不进入候选生成，也不在此显示。</div></div>
+    <div class="maf-sec"><h4>Agent 谱系 · 版本 Diff · 晋升证据</h4><div class="maf-grid">${agents.map(card).join("") || '<div class="empty">暂无候选，先跑通示例闭环</div>'}</div></div>
+    <div class="maf-sec"><h4>能力成长中心 · Δ 曲线与专项/全局双门禁</h4>
+      <svg viewBox="0 0 280 54" style="width:100%;height:54px;background:var(--code);border-radius:6px"><polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="2"/>${growth.map((r, i) => `<circle cx="${8 + i * Math.max(12, 260 / Math.max(1, growth.length - 1))}" cy="${46 - Math.max(-1, Math.min(1, Number(r.delta))) * 38}" r="2" fill="var(--ok)"/>`).join("")}</svg>
+      <div style="font-size:9.5px;color:var(--muted);margin-top:5px">有效评测 ${growth.length} 条；正 Δ 不代表可宣称通用能力提升，需专项迁移 + 全局回归独立证据。</div>
+      ${shared.length ? shared.map((b) => `<div class="maf-card" style="margin-top:7px"><b>${esc(b.id)}@${esc(b.version)}</b> <span class="maf-badge">${esc(b.status)}</span><div>实测域 ${esc((b.measuredDomain || []).join(", "))} · 证据 ${esc((b.evidenceRefs || []).join(", "))}</div>
+        ${b.status === "shadow" ? `<div class="maf-actions"><button class="btn" data-maf="promote-block" data-id="${esc(b.id)}" data-transfer="${esc(transfer?.id || "")}" data-global="${esc(global?.id || "")}">双门禁晋升共享能力</button></div>` : ""}</div>`).join("") : '<div class="empty" style="margin-top:7px">暂无共享能力；从已评测专家版本蒸馏</div>'}
+    </div>
+    <div class="maf-sec"><h4>持久任务 DAG · 恢复 / 幂等 / 取消</h4>
+      ${state.mafTasks.length ? state.mafTasks.slice().reverse().map((t) => `<div class="maf-card"><b>${esc(t.name)}</b> <span class="maf-badge">${esc(t.status)}</span> <code>${esc(t.id)}</code>
+        <div>${t.nodes.map((n) => `${esc(n.id)}:${esc(n.status)}×${n.attempts}`).join(" · ")}</div>
+        <div class="maf-actions"><button class="btn" data-maf="run-task" data-id="${esc(t.id)}">运行/恢复</button><button class="btn" data-maf="cancel-task" data-id="${esc(t.id)}">取消</button></div></div>`).join("") : '<div class="empty">暂无持久任务；运行 active TaskAgent 会自动创建</div>'}
+    </div>
+    <div class="maf-sec"><h4>只增治理审计（最近 8 条）</h4><pre class="code">${esc(JSON.stringify(state.mafAudit.slice(-8), null, 2))}</pre></div>`;
+  document.querySelectorAll("[data-maf]").forEach((el) => el.onclick = async () => {
+    const act = el.dataset.maf, id = el.dataset.id, ver = el.dataset.ver;
+    try {
+      if (act === "demo") await mafDemo();
+      else if (act === "evaluate") await mafPost("/api/maf/evaluate", { agentId: id, version: ver }, "四类评测完成");
+      else if (act === "publish") await mafPost("/api/maf/publish", { agentId: id, version: ver, actor: "web-user" }, "原子发布完成");
+      else if (act === "publish-limited") await mafPost("/api/maf/publish", { agentId: id, version: ver, actor: "web-user", allowLimitedEvidence: true }, "有限证据影子发布（不宣称显著）");
+      else if (act === "rollback") await mafPost("/api/maf/rollback", { agentId: id, targetVersion: ver, actor: "web-user" }, "完整快照回滚完成");
+      else if (act === "revoke") await mafPost("/api/maf/revoke", { agentId: id, actor: "web-user" }, "已撤权");
+      else if (act === "distill") await mafPost("/api/maf/distill", { agentId: id, version: ver, actor: "web-user" }, "能力候选已蒸馏为 shadow");
+      else if (act === "promote-block") await mafPost("/api/maf/promote-block", { blockId: id, transferReportId: el.dataset.transfer, globalReportId: el.dataset.global, actor: "web-user" }, "共享能力双门禁已判定");
+      else if (act === "run-agent") {
+        const task = $("#mafTaskInput")?.value || "检查代码格式并给出结论";
+        const created = await post("/api/maf/tasks", { name: `TaskAgent ${id}`, nodes: [{ id: "execute", task, domain: el.dataset.domain, agentId: id, agentVersion: ver, maxAttempts: 3 }] });
+        await post(`/api/maf/tasks/${encodeURIComponent(created.task.id)}/run`, {}); await loadMaf(); toast("✓ TaskAgent 持久任务已完成");
+      } else if (act === "run-task") { await post(`/api/maf/tasks/${encodeURIComponent(id)}/run`, {}); await loadMaf(); toast("✓ 任务运行/恢复完成"); }
+      else if (act === "cancel-task") await mafPost(`/api/maf/tasks/${encodeURIComponent(id)}/cancel`, {}, "取消请求生效");
+      else if (act === "reproduce") window.open(`/api/maf/reproduce/${encodeURIComponent(id)}/${encodeURIComponent(ver)}`, "_blank");
+      else if (act === "export") {
+        const blob = new Blob([JSON.stringify({ foundry: state.maf, tasks: state.mafTasks, orchestration: state.mafAudit }, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = "maf-audit.json"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    } catch (e) { toast(`✗ ${e.message}`); }
+  });
+}
 function renderPanel() {
+  const mafView = state.tab === "maf";
+  document.querySelectorAll(".wb-scope, .wb-banner, .wb-actions").forEach((el) => el.style.display = mafView ? "none" : "");
   if (state.tab === "trace") renderTrace();
+  else if (state.tab === "maf") renderMaf();
   else if (state.tab === "rebuild") renderRebuild();
   else if (state.tab === "metrics") renderMetrics();
   else if (state.tab === "tools") renderTools();
@@ -464,16 +557,16 @@ async function loadReplay() {
 }
 
 async function loadGlobalHistory() {
-  const d = await api("/api/sessions");
-  await Promise.all(d.sessions.map(async (s) => {
-    try {
-      const t = await api(`/api/trace?session=${encodeURIComponent(s.id)}&limit=5000`);
-      for (const e of t.events) {
-        state.globalEvents.push({ ...e, _src: "ledger", _task: s.id });
-        state.ledgerMaxSeq[s.id] = Math.max(state.ledgerMaxSeq[s.id] || 0, e.seq || 0);
-      }
-    } catch {}
-  }));
+  state.globalEvents = []; state.ledgerMaxSeq = {};
+  let cursor = 0, guard = 0;
+  while (cursor !== null && guard < 40) {
+    const d = await api(`/api/maf/events?limit=500&cursor=${cursor}`);
+    for (const e of d.events) {
+      state.globalEvents.push({ ...e, _src: "ledger", _task: e.sessionId });
+      state.ledgerMaxSeq[e.sessionId] = Math.max(state.ledgerMaxSeq[e.sessionId] || 0, e.seq || 0);
+    }
+    cursor = d.nextCursor; guard += 1;
+  }
   state.globalEvents.sort(byTimeline);
   if (state.tab === "trace") renderTrace();
 }
@@ -559,6 +652,7 @@ document.querySelectorAll(".tab").forEach((t) => t.onclick = () => {
   document.querySelectorAll(".tab").forEach((x) => x.classList.remove("on"));
   t.classList.add("on"); state.tab = t.dataset.tab;
   if (state.tab === "metrics") api("/api/metrics").then((d) => { state.status.metrics = d.metrics; });
+  if (state.tab === "maf") loadMaf().catch((e) => toast(`✗ MAF 加载失败: ${e.message}`));
   renderPanel();
 });
 document.querySelectorAll(".wb-scope button").forEach((b) => b.onclick = () => {

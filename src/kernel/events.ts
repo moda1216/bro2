@@ -38,6 +38,8 @@ export const EventType = {
   SubAgentStart: "subagent.start",
   SubAgentEnd: "subagent.end",
   Automation: "automation",
+  MafTask: "maf.task",
+  MafEvolution: "maf.evolution",
   Metrics: "metrics",
 } as const;
 export type EventType = (typeof EventType)[keyof typeof EventType];
@@ -85,6 +87,15 @@ export interface Event {
   type: EventType;
   payload: Record<string, unknown>;
   usage?: Usage;
+  runId?: string;
+  rootRunId?: string;
+  parentRunId?: string;
+  agentId?: string;
+  agentVersion?: string;
+  genomeHash?: string;
+  verifierVersion?: string;
+  causationId?: string;
+  correlationId?: string;
 }
 
 export type EventDraft = Omit<Event, "seq" | "ts">;

@@ -166,6 +166,44 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     return;
   }
 
+  if (path === "/api/maf" || path.startsWith("/api/maf/")) {
+    const b = method === "POST" ? await bodyJson(req) : {};
+    const str = (k: string): string => String(b[k] ?? "").trim();
+    if (path === "/api/maf" && method === "GET") { json(res, 200, os.maf.list()); return; }
+    if (path === "/api/maf/audit" && method === "GET") { json(res, 200, { audit: os.maf.auditTrail(), orchestration: os.orchestrator.audit() }); return; }
+    if (path === "/api/maf/events" && method === "GET") {
+      const cursor = Math.max(0, Number(url.searchParams.get("cursor") ?? 0) || 0), limit = Math.min(500, Math.max(1, Number(url.searchParams.get("limit") ?? 200) || 200));
+      const all = os.sessions.list().flatMap((m) => os.getSession(m.id)?.trajectory.events() ?? []);
+      const systemPath = join(os.root, "data", "system.jsonl");
+      if (existsSync(systemPath)) for (const line of readFileSync(systemPath, "utf8").split("\n")) { try { const e = JSON.parse(line) as Event; if (e.seq && e.ts) all.push(e); } catch { /* 残缺末行忽略 */ } }
+      all.sort((a, b) => String(a.ts).localeCompare(String(b.ts)) || a.seq - b.seq);
+      json(res, 200, { total: all.length, cursor, events: all.slice(cursor, cursor + limit), nextCursor: cursor + limit < all.length ? cursor + limit : null });
+      return;
+    }
+    if (path === "/api/maf/route" && method === "GET") { json(res, 200, { agent: os.maf.activeForDomain(url.searchParams.get("domain") ?? "") ?? null }); return; }
+    if (path.startsWith("/api/maf/reproduce/") && method === "GET") {
+      const [agentId, version] = path.slice("/api/maf/reproduce/".length).split("/");
+      const agent = os.maf.getAgent(agentId ?? "", version ?? "");
+      if (!agent) { json(res, 404, { error: "版本不存在" }); return; }
+      json(res, 200, { agent, scenario: os.maf.scenario(agent.scenarioId), evaluation: os.maf.getEvaluation(agent.agentId, agent.version), release: os.maf.release(agent.agentId), audit: os.maf.auditTrail().filter((a) => a.refs.agentId === agent.agentId) });
+      return;
+    }
+    if (path === "/api/maf/scenarios" && method === "POST") { json(res, 201, { scenario: os.maf.createScenario(b as never) }); return; }
+    if (path === "/api/maf/candidates" && method === "POST") { json(res, 201, { agent: os.maf.createAgent(b as never) }); return; }
+    if (path === "/api/maf/evaluate" && method === "POST") { json(res, 200, { report: os.maf.evaluate(str("agentId"), str("version")) }); return; }
+    if (path === "/api/maf/publish" && method === "POST") { json(res, 200, { agent: os.maf.publish(str("agentId"), str("version"), str("actor") || "web-user", b.allowLimitedEvidence === true) }); return; }
+    if (path === "/api/maf/rollback" && method === "POST") { json(res, 200, { agent: os.maf.rollback(str("agentId"), str("targetVersion"), str("actor") || "web-user") }); return; }
+    if (path === "/api/maf/revoke" && method === "POST") { os.maf.revoke(str("agentId"), str("actor") || "web-user"); json(res, 200, { ok: true }); return; }
+    if (path === "/api/maf/distill" && method === "POST") { json(res, 201, { block: os.maf.distill(str("agentId"), str("version"), str("actor") || "web-user") }); return; }
+    if (path === "/api/maf/promote-block" && method === "POST") { json(res, 200, { block: os.maf.promoteBlock(str("blockId"), str("transferReportId"), str("globalReportId"), str("actor") || "web-user") }); return; }
+    if (path === "/api/maf/tasks" && method === "GET") { json(res, 200, { tasks: os.orchestrator.list(), due: os.orchestrator.runDue().map((t) => t.id) }); return; }
+    if (path === "/api/maf/tasks" && method === "POST") { json(res, 201, { task: os.orchestrator.submit(b as never) }); return; }
+    const runMatch = path.match(/^\/api\/maf\/tasks\/([^/]+)\/run$/);
+    if (runMatch && method === "POST") { json(res, 200, { task: await os.orchestrator.run(decodeURIComponent(runMatch[1]!)) }); return; }
+    const cancelMatch = path.match(/^\/api\/maf\/tasks\/([^/]+)\/cancel$/);
+    if (cancelMatch && method === "POST") { json(res, 200, { task: os.orchestrator.cancel(decodeURIComponent(cancelMatch[1]!)) }); return; }
+    json(res, 404, { error: `未知 MAF 路由: ${method} ${path}` }); return;
+  }
   if (path === "/api/approvals" && method === "GET") {
     json(res, 200, { approvals: os.approvals.list() });
     return;

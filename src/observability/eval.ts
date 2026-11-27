@@ -1,15 +1,3 @@
-/**
- * L7 可观测性 · 能力评测框架（Evaluation Harness）
- *
- * 核心原则：**框架能力与模型能力必须分开测**。
- *  - deterministic：注入脚本化 Mock 固定模型输出，测的是「给定模型行为，
- *    框架的调度 / 治理 / 恢复 / 协议正确性」——可重复，用作回归门禁。
- *  - live：不注入脚本，接真实 provider 且开启 strict（禁止降级到 Mock），
- *    测的是「模型 + 框架的端到端任务能力」——这是真正的能力水平。
- *
- * 所有指标都从 Trajectory 只增日志抽取，不引入第二套状态来源。
- * 因此每一条轨迹既是评测证据，也是可回放的回归用例。
- */
 import { mkdtempSync, rmSync, mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -64,10 +52,6 @@ export interface EvalTask {
   expectedPolicy?: Record<string, string>;
   /** 通过配置/监听注入的故障 */
   fault?: "malformed-args" | "unknown-tool" | "approval-deny" | "step-limit" | "deny-path";
-  /**
-   * provider 故障注入（deterministic / live 均生效）：前 times 次调用注入限流/5xx/畸形参数。
-   * deterministic 下包装的是脚本化 Mock，用于离线复算恢复力对照（fault:check，第 18 道门禁）。
-   */
   faults?: { provider?: {
     kind: "rate-limit" | "server-error" | "malformed-args" | "timeout" | "retry-after" | "empty-response";
     times: number;
@@ -81,13 +65,6 @@ export interface EvalTask {
   deterministicOnly?: boolean;
   /** 依赖真实模型能力（无脚本），deterministic 模式跳过 */
   liveOnly?: boolean;
-  /**
-   * 外部真值 oracle（v2.20.0）：独立于 harness 行为的正确性判分。
-   * grading 只看 agent 的实际产出（终答 / 工作区文件）与 reference 是否一致，
-   * 绝不读 harness 内部行为指标——把「自指评分」变成「外部可证伪评分」。
-   * 仅当提供 oracle 时生效，与既有 expected* 断言正交；用于让 RSI 闭环的
-   * 「能力提升」是相对独立真值的提升，而非框架自我确认。
-   */
   oracle?: {
     /** 注册的 oracle 名（如 "answer-matches-reference" / "file-contains-reference"）。 */
     id: string;
