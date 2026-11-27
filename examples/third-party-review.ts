@@ -66,10 +66,12 @@ function binomial(n: number, k: number): number {
 }
 
 // ---- 1) 读真实评测数据 ----
-const rows = readFileSync(RESULTS, "utf8").split("\n").filter((l) => l.trim())
+const allRows = readFileSync(RESULTS, "utf8").split("\n").filter((l) => l.trim())
   .map((l) => JSON.parse(l) as {
     task: string; repeat: number; status: string; reward: number; verifyNote: string;
   });
+// 只数 status=ok 的有效完成样本；error/prepare-fail 不计入统计口径，防止把失败当样本误报功效足够
+const rows = allRows.filter((r) => r.status === "ok");
 const n = rows.length;
 
 // 评分器 A：verifier 判定（verifyNote 的 rc=0 → 通过=1）
@@ -112,7 +114,9 @@ const report = {
   purpose: "P5 统计骨架：inter-rater kappa + McNemar + 功效审计（可证伪，如实声明 partial）",
   data: {
     source: "data/bench/external/tb21-full-results.jsonl",
+    totalRows: allRows.length, excludedNonOk: allRows.length - n,
     actualRows: n, plannedRows: 267, coverage: Number((n / 267).toFixed(4)),
+    counting: "只数 status=ok；error/prepare-fail 不计入样本，防止误报功效足够",
   },
   interRater: {
     raterA: "verifier 判定（verifyNote rc=0→通过）",
@@ -137,7 +141,7 @@ const report = {
   honest: {
     scope: "统计原语正确性 + 真实 partial 数据的功效审计；kappa/p 值均为可复算数字，不是能力结论",
     noThirdParty: "无独立第三方标注；verifier 与 reward 非真正独立评分者，kappa 仅作一致性体检",
-    coverage: `真实完成 ${n}/267（partial），任何榜单分数/显著性均不成立`,
+    coverage: `有效完成 ${n}/267（总行 ${allRows.length}，剔除 ${allRows.length - n} 条非 ok；partial），任何榜单分数/显著性均不成立`,
     notProven: ["独立第三方复核一致", "统计显著性", "89×3 全量完成", "能力领先或 L4"],
     verdictBoundary: "not-proven", l4: "not-achieved",
   },
@@ -146,5 +150,5 @@ mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(report, null, 2));
 console.log(`统计骨架：${report.summary.passed}/${report.summary.total} 通过 → ${report.summary.verdict}`);
 for (const c of checks) console.log(`  ${c.pass ? "✓" : "✗"} ${c.name}`);
-console.log(`  真实样本 ${n}/267，kappa=${report.interRater.kappa}，功效=${sufficient ? "足够" : "不足"}`);
+console.log(`  有效样本 ${n}/267（总行 ${allRows.length}，剔除 ${allRows.length - n} 条非 ok），kappa=${report.interRater.kappa}，功效=${sufficient ? "足够" : "不足"}`);
 process.exit(pass ? 0 : 1);
