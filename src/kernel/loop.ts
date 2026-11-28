@@ -65,6 +65,8 @@ export interface RunOptions {
   depth?: number;
   /** 额外上下文注入（子 Agent / Hook 使用）。 */
   extraInject?: string;
+  /** 基因组工具白名单：非白名单工具调用直接回报失败，不交给 ToolRuntime。 */
+  allowedTools?: string[];
 }
 
 export interface RunResult {
@@ -315,6 +317,10 @@ export class AgentLoop {
           const def = this.deps.registry.get(call.name);
           if (!def) {
             permitted.push(call); // 交给 ToolRuntime 回报"未知工具"
+            continue;
+          }
+          if (opts.allowedTools && !opts.allowedTools.includes(call.name)) {
+            this.recordToolResult(opts, turn, step, { callId: call.id, name: call.name, ok: false, elapsedMs: 0, error: "基因组未授权此工具" });
             continue;
           }
           const check = this.deps.permissions.check(def, call.arguments);

@@ -30,6 +30,7 @@ interface Flags {
   model?: string;
   port?: number;
   host?: string;
+  token?: string;
   mode: string;
   evalMode?: string;
   k: number;
@@ -70,6 +71,7 @@ function parse(argv: string[]): Flags {
     else if (a === "--provider" && next) { flags.model = next; i += 1; }
     else if (a === "--port" && next) { flags.port = Number(next); i += 1; }
     else if (a === "--host" && next) { flags.host = next; i += 1; }
+    else if (a === "--token" && next) { flags.token = next; i += 1; }
     else if (a === "--mode" && next) { flags.evalMode = next; i += 1; }
     else if (a === "--k" && next) { flags.k = Math.max(1, Number(next)); i += 1; }
     else if (a === "--tasks" && next) { flags.tasks = next; i += 1; }
@@ -300,6 +302,8 @@ else if (flags.mode === "web") {
   const server = await startServer(os, {
     host: flags.host ?? os.config.server.host,
     port: flags.port ?? os.config.server.port,
+    authToken: flags.token ?? process.env.AGENTOS_API_TOKEN,
+    dataDir: os.config.storage.dir,
   });
   const addr = server.address();
   const port = typeof addr === "object" && addr ? addr.port : (flags.port ?? os.config.server.port);

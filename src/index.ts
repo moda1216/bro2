@@ -397,8 +397,15 @@ export function createAgentOS(options: AgentOSOptions = {}): AgentOS {
     },
     record,
   });
-  const maf = new Foundry(root);
-  const orchestrator = new Orchestrator(root, async (node, ctx) => {
+  const maf = new Foundry(storageDir, async ({ genome, blocks, scenario, input, signal }) => {
+    if (!loopRef) throw new Error("AgentLoop 尚未初始化");
+    const prompt = [genome.prompt, ...blocks.map((b) => b.prompt).filter((p): p is string => !!p)].join("\n");
+    const tools = [...new Set([...genome.tools, ...blocks.flatMap((b) => b.tools ?? [])])];
+    const s = sessions.create("standard", `MAF 评测: ${input.slice(0, 24)}`); activeSessions.set(s.id, s);
+    const r = await loopRef.run({ session: s, text: input, presetName: "standard", signal, extraInject: `你是被评测的候选 Agent（场景域 ${scenario.domain}）。${prompt}`, ...(tools.length ? { allowedTools: tools } : {}) });
+    return r.answer;
+  });
+  const orchestrator = new Orchestrator(storageDir, async (node, ctx) => {
     if (!loopRef) throw new Error("AgentLoop 尚未初始化");
     if (node.agentId) {
       const a = maf.getAgent(node.agentId, node.agentVersion);

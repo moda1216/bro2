@@ -39,6 +39,8 @@ bro2 不是聊天机器人，也不是固定功能的助手。它把**模型、�
 | **有界可验证自我改进** | 能力面 RSI 用 train/holdout 双门禁迭代真实代码行为；meta RSI 用冻结 fitness 改进「如何找改进」。验证器写保护、单调晋升、只增账本、防 reward hacking。 |
 | **复利式自我改进** | `ExperienceBank` 按失败模式沉淀已验证的有效解，Propose 阶段直接命中，收敛所需探测次数随使用递减；`VelocityLedger` 用冻结尺子度量改进速度，样本不足不宣称加速。经验只裁剪探测集、绝不绕过行为判定。 |
 | **可证伪的能力基准** | 5 级证据阶梯、7 变体 ablation、冻结评分面、外部证据校验；领先度结论如实标注而非自评。 |
+| **MAF 生成与进化平台** | 场景 → 垂直 Agent（Block 组合/拓扑/提示片段/工具白名单）；真实 Agent Loop 判分 + 配对 bootstrap + 冻结预算；原子发布、完整回滚、共享能力双门禁、只增审计。见 [MAF-FOUNDRY-DESIGN.md](./docs/MAF-FOUNDRY-DESIGN.md)。 |
+| **多实例编排 + 全局白盒** | 只增账本 + 原子锁 + 乐观并发 + fencing 的同主机多进程 worker 池；SSE 全局事件流、全量历史时间线、跨实例运行态、REST + Web 工作台。见 [DISTRIBUTED-ORCHESTRATION.md](./docs/DISTRIBUTED-ORCHESTRATION.md)。 |
 
 ---
 
@@ -233,8 +235,10 @@ bro2 对自身能力保持可证伪的诚实标注：
 - 自我改进是**有界的 harness-only 改进**：不改模型权重、不自动重写核心源码、不用模型自评作为晋升信号。
 - 沙箱是**应用层路径白名单**（含逃逸与符号链接校验、高危命令拦截），**不是** OS 级隔离。
 - 离线确定性演示用于验证 Harness 正确性，不等于真实模型智能水平。
+- MAF 的 `exact-output-v1` 是**确定性 DSL 判分**（毫秒级），只验证统计与治理机器，**不产生能力结论**；`agent-output-v1` 才走真实 Agent Loop，MockProvider 仅用于测试。详见 [MAF-REAL-AGENT-AND-HARDENING.md](./docs/MAF-REAL-AGENT-AND-HARDENING.md)。
+- 多实例编排限于**同主机共享磁盘**；无跨机共识/分区容错。REST 默认只监听回环；非回环监听必须配置 API token。
 
-判定逻辑与边界详见 [BENCHMARK.md](./BENCHMARK.md) · [RSI.md](./RSI.md) · [META-RSI.md](./META-RSI.md)。
+判定逻辑与边界详见 [BENCHMARK.md](./BENCHMARK.md) · [RSI.md](./RSI.md) · [META-RSI.md](./META-RSI.md) · [MAF-REAL-AGENT-AND-HARDENING.md](./docs/MAF-REAL-AGENT-AND-HARDENING.md)。
 
 ---
 

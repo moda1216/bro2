@@ -222,7 +222,14 @@ const SRC_NAME = { live:"LIVE 真实流", ledger:"LEDGER 账本回放", replay:"
 const SRC_LABEL = { live:"LIVE", ledger:"LEDGER", replay:"REPLAY" };
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, opts);
+  const token = localStorage.getItem("agentos_token");
+  const headers = { ...(opts.headers || {}), ...(token ? { authorization: "Bearer " + token } : {}) };
+  const res = await fetch(path, { ...opts, headers });
+  if (res.status === 401) {
+    const t = prompt("此实例需要访问令牌");
+    if (t) { localStorage.setItem("agentos_token", t); location.reload(); }
+    throw new Error("未授权");
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
@@ -580,7 +587,7 @@ async function loadGlobalHistory() {
   if (state.tab === "trace") renderTrace();
 }
 function connectGlobalStream() {
-  const es = new EventSource("/api/events/stream");
+  const es = new EventSource("/api/events/stream" + (localStorage.getItem("agentos_token") ? "?token=" + encodeURIComponent(localStorage.getItem("agentos_token")) : ""));
   es.addEventListener("snapshot", (m) => { applyRunning(JSON.parse(m.data).active || []); });
   es.addEventListener("running-snapshot", (m) => { applyRunning(JSON.parse(m.data).active || []); });
   es.addEventListener("event", (m) => {

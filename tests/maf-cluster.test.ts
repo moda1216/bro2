@@ -19,7 +19,7 @@ import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 const root = process.env.MAF_ROOT, taskId = process.env.MAF_TASK, tag = process.env.MAF_TAG;
 const o = new Orchestrator(root, async (n) => {
-  appendFileSync(join(root, "data", "maf", "calls.jsonl"), JSON.stringify({ tag, node: n.id, at: Date.now() }) + "\\n");
+  appendFileSync(join(root, "maf", "calls.jsonl"), JSON.stringify({ tag, node: n.id, at: Date.now() }) + "\\n");
   if (process.env.MAF_BLOCK === "1") {
     const end = Date.now() + Number(process.env.MAF_BLOCK_MS || 300);
     while (Date.now() < end) {}
@@ -42,12 +42,12 @@ function worker(root: string, taskId: string, tag: string, extra: Record<string,
     p.on("close", (code) => resolve({ code: code ?? -1, out, err }));
   });
 }
-const callsOf = (root: string): Array<{ tag: string; node: string; at: number }> => readFileSync(join(root, "data", "maf", "calls.jsonl"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as { tag: string; node: string; at: number });
+const callsOf = (root: string): Array<{ tag: string; node: string; at: number }> => readFileSync(join(root, "maf", "calls.jsonl"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as { tag: string; node: string; at: number });
 /** CI 慢机器上进程启动时间不可假设：轮询共享账本直到观察到 claim，而不是固定 sleep。 */
 const waitForClaim = async (root: string, taskId: string, timeoutMs = 15000): Promise<void> => {
   const until = Date.now() + timeoutMs;
   while (Date.now() < until) {
-    const hit = readFileSync(join(root, "data", "maf", "cluster.jsonl"), "utf8").split("\n").filter(Boolean).some((l) => {
+    const hit = readFileSync(join(root, "maf", "cluster.jsonl"), "utf8").split("\n").filter(Boolean).some((l) => {
       try { const r = JSON.parse(l) as { op: string; taskId?: string }; return r.op === "claim" && r.taskId === taskId; } catch { return false; }
     });
     if (hit) return;
@@ -110,7 +110,7 @@ test("跨进程取消在提交点生效，已取消任务不再接受提交", as
 test("账本重放确定性、损坏行 fail-closed、陈旧锁可抢占", async () => {
   const root = mkdtempSync(join(tmpdir(), "maf-replay-"));
   const one = new Orchestrator(root, async () => "x"), t = one.submit({ name: "重放", nodes: [{ id: "a", task: "A" }] });
-  const ledger = join(root, "data", "maf", "cluster.jsonl");
+  const ledger = join(root, "maf", "cluster.jsonl");
   const lines = readFileSync(ledger, "utf8").trim().split("\n");
   const submitSeq = (lines.map((l) => JSON.parse(l) as { seq: number; op: string })).find((r) => r.op === "task.submit")!.seq;
   const expired = { seq: lines.length, ts: new Date(Date.now() - 5000).toISOString(), by: "dead-worker", op: "claim", taskId: t.id, nodeId: "a", token: "dead-token", leaseUntil: new Date(Date.now() - 4000).toISOString(), baseSeq: submitSeq };
@@ -123,7 +123,7 @@ test("账本重放确定性、损坏行 fail-closed、陈旧锁可抢占", async
   appendFileSync(ledger, "{ 这不是合法 JSON\n");
   assert.throws(() => new Orchestrator(root, async () => "y"), /损坏/, "账本损坏必须 fail-closed，禁止静默重建");
   writeFileSync(ledger, `${lines.join("\n")}\n${JSON.stringify(expired)}\n`);
-  const lockDir = join(root, "data", "maf", "cluster.lock");
+  const lockDir = join(root, "maf", "cluster.lock");
   rmSync(lockDir, { recursive: true, force: true }); mkdirSync(lockDir); writeFileSync(join(lockDir, "owner"), "dead:0");
   const old = new Date(Date.now() - 10000); utimesSync(lockDir, old, old);
   const four = new Orchestrator(root, async () => "z");

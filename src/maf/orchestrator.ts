@@ -23,6 +23,21 @@ interface State { tasks: MafTask[]; commits: Record<string, string>; audit: Audi
 
 const LOCK_STALE_MS = 3000;
 const pause = (ms: number): void => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); };
+/** 同一共享文件系统上的原子互斥：mkdir 是 POSIX 原子操作；解锁前校验 owner，绝不误删他人锁；等待超时 fail-closed。 */
+export function withLock<T>(lockDir: string, fn: () => T): T {
+  const tag = `${process.pid}:${randomUUID().slice(0, 8)}`;
+  for (let i = 0; i < 300; i++) {
+    try { mkdirSync(lockDir); break; } catch {
+      try { if (Date.now() - statSync(lockDir).mtimeMs > LOCK_STALE_MS) rmSync(lockDir, { recursive: true, force: true }); } catch { /* 已被其他实例清理 */ }
+      if (i === 299) throw new Error(`锁等待超时（${lockDir}）：fail-closed，拒绝无锁写入`);
+      pause(2);
+    }
+  }
+  writeFileSync(join(lockDir, "owner"), tag);
+  try { return fn(); } finally {
+    try { if (readFileSync(join(lockDir, "owner"), "utf8") === tag) rmSync(lockDir, { recursive: true, force: true }); } catch { /* 锁已被抢占，不删除他人锁 */ }
+  }
+}
 
 export class Orchestrator {
   readonly path: string;
@@ -40,7 +55,7 @@ export class Orchestrator {
 
   constructor(root: string, executor: (node: TaskNode, ctx: ExecuteContext) => Promise<string>, leaseMs = 30000, record?: (draft: EventDraft) => unknown) {
     this.executor = executor; this.leaseMs = leaseMs; this.record = record;
-    const dir = join(root, "data", "maf"); mkdirSync(dir, { recursive: true });
+    const dir = join(root, "maf"); mkdirSync(dir, { recursive: true });
     this.ledger = join(dir, "cluster.jsonl"); this.path = this.ledger; this.lockDir = join(dir, "cluster.lock");
     this.lock((recs) => { this.append(recs, { op: "worker.join", payload: { pid: process.pid, role: "worker" } }); });
     this.state = this.sync();
@@ -56,21 +71,7 @@ export class Orchestrator {
     const rec: Rec = { seq: recs.length, ts: new Date().toISOString(), by: this.instanceId, ...r };
     appendFileSync(this.ledger, `${JSON.stringify(rec)}\n`); recs.push(rec); return rec;
   }
-  /** mkdir 是 POSIX 原子操作：同一文件系统上跨进程互斥。解锁前校验 owner，绝不误删他人锁。 */
-  private lock<T>(fn: (recs: Rec[]) => T): T {
-    const tag = `${this.instanceId}:${process.pid}`;
-    for (let i = 0; i < 300; i++) {
-      try { mkdirSync(this.lockDir); break; } catch {
-        try { if (Date.now() - statSync(this.lockDir).mtimeMs > LOCK_STALE_MS) rmSync(this.lockDir, { recursive: true, force: true }); } catch { /* 已被其他实例清理 */ }
-        if (i === 299) throw new Error("集群锁等待超时：fail-closed，拒绝无锁写入");
-        pause(2);
-      }
-    }
-    writeFileSync(join(this.lockDir, "owner"), tag);
-    try { return fn(this.readRecs()); } finally {
-      try { if (readFileSync(join(this.lockDir, "owner"), "utf8") === tag) rmSync(this.lockDir, { recursive: true, force: true }); } catch { /* 锁已被抢占，不删除他人锁 */ }
-    }
-  }
+  private lock<T>(fn: (recs: Rec[]) => T): T { return withLock(this.lockDir, () => fn(this.readRecs())); }
   /** 确定性状态机投影：只认「记录自身时间戳」，不用 Date.now()，保证任何进程重放结果一致。 */
   private fold(recs: Rec[]): State {
     const s: State = { tasks: [], commits: {}, audit: [], workers: [], rejects: [], events: [], seq: recs.length };

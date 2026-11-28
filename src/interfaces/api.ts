@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import type { Server, IncomingMessage, ServerResponse } from "node:http";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { EventType } from "../kernel/events.ts";
@@ -11,11 +12,33 @@ import { loadMetaState } from "../rsi/shadow.ts";
 import type { AgentOS } from "../index.ts";
 
 const WEB_DIR = join(dirname(fileURLToPath(import.meta.url)), "web");
-const activeRuns = new Set<string>(); // 进程内此刻正在执行的会话，供全局任务总览读取
+const activeRuns = new Set<string>(); // 本进程此刻正在执行的会话
+const runtimeId = `${process.pid}-${randomUUID().slice(0, 6)}`;
+let runtimeDir = "";
+let authToken: string | undefined;
+/** 跨实例运行态：每个实例只写自己的心跳文件；读时合并所有未过期心跳。 */
+function clusterActive(): { active: string[]; byInstance: Record<string, number> } {
+  const active = new Set<string>(), byInstance: Record<string, number> = {};
+  if (!runtimeDir || !existsSync(runtimeDir)) return { active: [], byInstance };
+  for (const f of readdirSync(runtimeDir).filter((x) => x.startsWith("active-") && x.endsWith(".json"))) {
+    try {
+      const row = JSON.parse(readFileSync(join(runtimeDir, f), "utf8")) as { instanceId: string; runs: string[]; ts: number };
+      if (Date.now() - row.ts > 6000) continue;
+      byInstance[row.instanceId] = row.runs.length;
+      for (const r of row.runs) active.add(r);
+    } catch { /* 半写入心跳忽略，下个周期覆盖 */ }
+  }
+  return { active: [...active], byInstance };
+}
+const authorized = (req: IncomingMessage, url: URL): boolean => !authToken || req.headers.authorization === `Bearer ${authToken}` || url.searchParams.get("token") === authToken;
+/** 问责主体来自鉴权上下文，不接受请求体自报身份。 */
+const principal = (): string => authToken ? "token-owner" : "local-user";
 
 export interface ServerOptions {
   host: string;
   port: number;
+  authToken?: string;
+  dataDir?: string;
 }
 
 function json(res: ServerResponse, status: number, body: unknown): void {
@@ -24,7 +47,7 @@ function json(res: ServerResponse, status: number, body: unknown): void {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(data),
     "access-control-allow-origin": "*",
-    "access-control-allow-headers": "content-type",
+    "access-control-allow-headers": "content-type, authorization",
     "access-control-allow-methods": "GET,POST,OPTIONS",
   });
   res.end(data);
@@ -46,6 +69,7 @@ function sseInit(res: ServerResponse): void {
     connection: "keep-alive",
     "x-accel-buffering": "no",
     "access-control-allow-origin": "*",
+    "access-control-allow-headers": "content-type, authorization",
   });
   res.write(": connected\n\n");
 }
@@ -56,6 +80,15 @@ function sseSend(res: ServerResponse, event: string, data: unknown): void {
 }
 
 export async function startServer(os: AgentOS, options: ServerOptions): Promise<Server> {
+  const loopback = options.host === "localhost" || options.host === "::1" || /^127\./.test(options.host);
+  if (!loopback && !options.authToken) throw new Error(`监听 ${options.host || "所有接口"} 非回环地址：必须配置 API token（--token 或 AGENTOS_API_TOKEN），拒绝无鉴权暴露`);
+  authToken = options.authToken;
+  if (options.dataDir) {
+    runtimeDir = join(options.dataDir, "runtime"); mkdirSync(runtimeDir, { recursive: true });
+    const hb = setInterval(() => { try { writeFileSync(join(runtimeDir, `active-${runtimeId}.json`), JSON.stringify({ instanceId: runtimeId, runs: [...activeRuns], ts: Date.now() })); } catch { /* 心跳失败不影响主流程 */ } }, 1500);
+    hb.unref?.();
+    process.once("exit", () => { try { rmSync(join(runtimeDir, `active-${runtimeId}.json`)); } catch { /* 已退出 */ } });
+  }
   const server = createServer((req, res) => {
     void handle(os, req, res).catch((err) => {
       if (!res.headersSent) json(res, 500, { error: err instanceof Error ? err.message : String(err) });
@@ -73,8 +106,8 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
   const path = url.pathname;
   const method = req.method ?? "GET";
-
   if (method === "OPTIONS") { json(res, 204, {}); return; }
+  if (path.startsWith("/api/") && !authorized(req, url)) { json(res, 401, { error: "需要访问令牌：Bearer <token> 或 ?token=<token>" }); return; }
 
   if (path === "/" || path === "/index.html") {
     const p = join(WEB_DIR, "index.html");
@@ -113,16 +146,17 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
   }
 
   if (path === "/api/sessions" && method === "GET") {
-    const sessions = os.sessions.list().slice(0, 60).map((m) => ({ ...m, running: activeRuns.has(m.id) }));
-    json(res, 200, { sessions, runningCount: activeRuns.size });
+    const c = clusterActive();
+    const sessions = os.sessions.list().slice(0, 60).map((m) => ({ ...m, running: c.active.includes(m.id) }));
+    json(res, 200, { sessions, runningCount: c.active.length, instances: c.byInstance });
     return;
   }
   if (path === "/api/events/stream" && method === "GET") {
     sseInit(res);
-    sseSend(res, "snapshot", { active: [...activeRuns], clusterSeq: os.orchestrator.seq() });
+    sseSend(res, "snapshot", { active: clusterActive().active, clusterSeq: os.orchestrator.seq() });
     const off = os.runtime.bus.on("*", (e: Event) => sseSend(res, "event", e));
     let cursor = os.orchestrator.seq();
-    const hb = setInterval(() => { sseSend(res, "running-snapshot", { active: [...activeRuns] }); }, 2000);
+    const hb = setInterval(() => { const c = clusterActive(); sseSend(res, "running-snapshot", { active: c.active, instances: c.byInstance }); }, 2000);
     const tail = setInterval(() => {
       for (const e of os.orchestrator.eventsSince(cursor)) { cursor = Math.max(cursor, e.seq ?? 0); sseSend(res, "event", e); }
     }, 1000);
@@ -196,12 +230,12 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     }
     if (path === "/api/maf/scenarios" && method === "POST") { json(res, 201, { scenario: os.maf.createScenario(b as never) }); return; }
     if (path === "/api/maf/candidates" && method === "POST") { json(res, 201, { agent: os.maf.createAgent(b as never) }); return; }
-    if (path === "/api/maf/evaluate" && method === "POST") { json(res, 200, { report: os.maf.evaluate(str("agentId"), str("version")) }); return; }
-    if (path === "/api/maf/publish" && method === "POST") { json(res, 200, { agent: os.maf.publish(str("agentId"), str("version"), str("actor") || "web-user", b.allowLimitedEvidence === true) }); return; }
-    if (path === "/api/maf/rollback" && method === "POST") { json(res, 200, { agent: os.maf.rollback(str("agentId"), str("targetVersion"), str("actor") || "web-user") }); return; }
-    if (path === "/api/maf/revoke" && method === "POST") { os.maf.revoke(str("agentId"), str("actor") || "web-user"); json(res, 200, { ok: true }); return; }
-    if (path === "/api/maf/distill" && method === "POST") { json(res, 201, { block: os.maf.distill(str("agentId"), str("version"), str("actor") || "web-user") }); return; }
-    if (path === "/api/maf/promote-block" && method === "POST") { json(res, 200, { block: os.maf.promoteBlock(str("blockId"), str("transferReportId"), str("globalReportId"), str("actor") || "web-user") }); return; }
+    if (path === "/api/maf/evaluate" && method === "POST") { json(res, 200, { report: await os.maf.evaluate(str("agentId"), str("version")) }); return; }
+    if (path === "/api/maf/publish" && method === "POST") { json(res, 200, { agent: os.maf.publish(str("agentId"), str("version"), principal(), b.allowLimitedEvidence === true) }); return; }
+    if (path === "/api/maf/rollback" && method === "POST") { json(res, 200, { agent: os.maf.rollback(str("agentId"), str("targetVersion"), principal()) }); return; }
+    if (path === "/api/maf/revoke" && method === "POST") { os.maf.revoke(str("agentId"), principal()); json(res, 200, { ok: true }); return; }
+    if (path === "/api/maf/distill" && method === "POST") { json(res, 201, { block: os.maf.distill(str("agentId"), str("version"), principal()) }); return; }
+    if (path === "/api/maf/promote-block" && method === "POST") { json(res, 200, { block: os.maf.promoteBlock(str("blockId"), str("transferReportId"), str("globalReportId"), principal()) }); return; }
     if (path === "/api/maf/tasks" && method === "GET") { json(res, 200, { tasks: os.orchestrator.list(), due: os.orchestrator.runDue().map((t) => t.id) }); return; }
     if (path === "/api/maf/tasks" && method === "POST") { json(res, 201, { task: os.orchestrator.submit(b as never) }); return; }
     const runMatch = path.match(/^\/api\/maf\/tasks\/([^/]+)\/run$/);

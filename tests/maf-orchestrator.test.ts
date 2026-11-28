@@ -17,7 +17,7 @@ test("进程崩溃后过期租约恢复，已提交副作用不重复", async ()
   const root = mkdtempSync(join(tmpdir(), "maf-recover-")); let executions = 0;
   const executor = async (n: { id: string }): Promise<string> => { executions += 1; return `done:${n.id}`; };
   const one = new Orchestrator(root, executor, 500), t = one.submit({ name: "故障恢复", nodes: [{ id: "a", task: "A" }, { id: "b", task: "B", deps: ["a"] }] });
-  const ledger = join(root, "data", "maf", "cluster.jsonl");
+  const ledger = join(root, "maf", "cluster.jsonl");
   const recs = readFileSync(ledger, "utf8").trim().split("\n").map((l) => JSON.parse(l) as { seq: number; op: string; ts: string; by: string });
   const submitSeq = recs.find((r) => r.op === "task.submit")!.seq;
   const at = (deltaMs: number): string => new Date(Date.now() + deltaMs).toISOString();

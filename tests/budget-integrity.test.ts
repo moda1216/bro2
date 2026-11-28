@@ -39,10 +39,11 @@ function loadBudget(): Budget {
   return JSON.parse(readFileSync(join(ROOT, "data", "plan", "budget.json"), "utf8")) as Budget;
 }
 
-// 冻结下限：v2.25.0 发布时的 limits。上调任一数值都必须同步改这里并写明理由。
+// 冻结下限：v2.35.0 显式上调 sourceLines 至 16750（MAF 接真实 Agent Loop；理由见 docs/BENCH-v2.md §8）。
+// 其余阈值仍为 v2.25.0 发布值。上调任一数值都必须同步改这里并写明理由。
 const FLOOR = {
   sourceFiles: 90,
-  sourceLines: 16500,
+  sourceLines: 16750,
   maxFileLines: 700,
   minTestToSourceRatio: 0.15,
 } as const;

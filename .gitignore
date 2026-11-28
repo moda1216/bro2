@@ -54,3 +54,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# 多实例运行态心跳（跨实例 SSE 可见性用，运行时数据不入库）
+data/runtime/
