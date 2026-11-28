@@ -21,7 +21,7 @@
 | POST | `/api/plugins` | 热插拔插件 `{ "name": "tool-audit" }`（可逆副作用） |
 | POST | `/api/connectors/http` | 挂载 HTTP MCP 连接器 `{ "name", "url" }` |
 | POST | `/api/model` | 切换默认 provider `{ "name": "ollama" }` |
-| POST | `/api/chat` | **SSE 流式对话** `{ "sessionId"?, "text", "preset"? }` |
+| POST | `/api/chat` | **SSE 流式对话** `{ "sessionId"?, "text"?, "preset"?, "images"? }`；`images` 为 `{url,mimeType?,name?}[]`，url 支持 `data:image/*;base64` 或 http(s)，≤4 张 / 单张 ≤5MB，`text` 与 `images` 不可同时为空 |
 | OPTIONS | `*` | 预检，204 |
 
 未知路由返回 `404 { "error": "未知路由: METHOD PATH" }`。
@@ -77,6 +77,8 @@
 | `error` | `{ error }` | 运行异常 |
 
 保活心跳每 15s 发 `: ping`。连接随 `done` / `error` 关闭，事件订阅自动 dispose。
+
+**多模态**：`message.user` 事件的 payload 在有图片时带 `images: ImagePart[]`，与文本一样落进只增 Trajectory，可经 `/api/trace` 回放。图片在 OpenAI 兼容适配器边界转成 `content: [{type:"text",...},{type:"image_url",image_url:{url}}]`，非 OpenAI 端点由各自适配器处理。`normalizeImages()` 校验 MIME（仅 image/*）、数量与大小，非法输入 400；token 估算对每张图固定计 768（低精度档量级），不按 base64 字符数计费。**诚实边界**：bro2 只负责透传图片，能否理解图像内容取决于所接模型是否 vision-capable，离线 Mock 不产生视觉能力结论。
 
 新增的可观测事件类型（策略层）：`tool.repair`、`grounding.reject`、`guard.advisory`；
 `context.compaction` 的 payload 额外带 `strategy` 与 `evidenceKept`。

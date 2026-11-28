@@ -40,6 +40,7 @@ bro2 不是聊天机器人，也不是固定功能的助手。它把**模型、�
 | **复利式自我改进** | `ExperienceBank` 按失败模式沉淀已验证的有效解，Propose 阶段直接命中，收敛所需探测次数随使用递减；`VelocityLedger` 用冻结尺子度量改进速度，样本不足不宣称加速。经验只裁剪探测集、绝不绕过行为判定。 |
 | **可证伪的能力基准** | 5 级证据阶梯、7 变体 ablation、冻结评分面、外部证据校验；领先度结论如实标注而非自评。 |
 | **MAF 生成与进化平台** | 场景 → 垂直 Agent（Block 组合/拓扑/提示片段/工具白名单）；真实 Agent Loop 判分 + 配对 bootstrap + 冻结预算；原子发布、完整回滚、共享能力双门禁、只增审计。见 [MAF-FOUNDRY-DESIGN.md](./docs/MAF-FOUNDRY-DESIGN.md)。 |
+| **多模态问答** | 用户消息可带图片（粘贴/上传，≤4 张 / 单张 ≤5MB），随只增事件流落盘、可白盒回放；在 OpenAI 兼容边界转 `image_url` 交给模型。是否"看懂"取决于所接模型是否 vision-capable，不虚假宣称。 |
 | **多实例编排 + 全局白盒** | 只增账本 + 原子锁 + 乐观并发 + fencing 的同主机多进程 worker 池；SSE 全局事件流、全量历史时间线、跨实例运行态、REST + Web 工作台。见 [DISTRIBUTED-ORCHESTRATION.md](./docs/DISTRIBUTED-ORCHESTRATION.md)。 |
 
 ---

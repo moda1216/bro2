@@ -6,7 +6,7 @@
  * → ToolRuntime → 回喂，全部事件写入只增不改的 Trajectory。
  */
 import { EventType, Role } from "./events.ts";
-import type { Event, EventDraft, Message, ToolCall, ToolResult, Usage } from "./events.ts";
+import type { Event, EventDraft, ImagePart, Message, ToolCall, ToolResult, Usage } from "./events.ts";
 import { HookPoint, HookAction } from "./hooks.ts";
 import type { HookManager } from "./hooks.ts";
 import type { Runtime } from "./runtime.ts";
@@ -58,6 +58,7 @@ export interface LoopDeps {
 export interface RunOptions {
   session: Session;
   text: string;
+  images?: ImagePart[];
   signal?: AbortSignal;
   onChunk?: (chunk: StreamChunk) => void;
   onEvent?: (event: Event) => void;
@@ -124,7 +125,7 @@ export class AgentLoop {
     });
     this.record(opts, {
       sessionId: session.id, turn, step: 0, type: EventType.UserMessage,
-      payload: { content: opts.text },
+      payload: { content: opts.text, ...(opts.images?.length ? { images: opts.images } : {}) },
     });
 
     const preRun = await this.deps.hooks.fire({

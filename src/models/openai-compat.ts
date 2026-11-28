@@ -71,7 +71,7 @@ const parseToolArgs = (raw: string): Record<string, unknown> => {
   } catch { return {}; }
 };
 
-function toApiMessages(messages: readonly Message[]): Array<Record<string, unknown>> {
+export function toApiMessages(messages: readonly Message[]): Array<Record<string, unknown>> {
   return messages.map((m) => {
     if (m.role === "tool") {
       return { role: "tool", tool_call_id: m.toolCallId ?? "", content: m.content };
@@ -86,6 +86,12 @@ function toApiMessages(messages: readonly Message[]): Array<Record<string, unkno
           function: { name: c.name, arguments: JSON.stringify(c.arguments) },
         })),
       };
+    }
+    if (m.images?.length) {
+      return { role: m.role, content: [
+        { type: "text", text: m.content },
+        ...m.images.map((img) => ({ type: "image_url", image_url: { url: img.url, ...(img.mimeType ? { media_type: img.mimeType } : {}) } })),
+      ] };
     }
     return { role: m.role, content: m.content };
   });

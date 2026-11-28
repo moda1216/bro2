@@ -68,9 +68,30 @@ export interface ToolResult {
   truncated?: boolean;
 }
 
+/** 多模态输入：data URL（data:image/png;base64,...）或 http(s) URL。content 仍是纯文本，图片走独立字段，不破坏只增事件流。 */
+export interface ImagePart { url: string; mimeType?: string; name?: string }
+export const MAX_IMAGES = 4;
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+/** 多模态载荷校验：拒绝非图片 MIME、超量、超大、非 data/http URL，防止借图片通道注入任意内容。 */
+export function normalizeImages(raw: unknown): ImagePart[] {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) throw new Error("images 必须是数组");
+  if (raw.length > MAX_IMAGES) throw new Error(`图片数量超过上限 ${MAX_IMAGES}`);
+  return raw.map((x) => {
+    if (!x || typeof x !== "object") throw new Error("图片项格式非法");
+    const u = (x as { url?: unknown }).url;
+    if (typeof u !== "string") throw new Error("图片 url 必须是字符串");
+    if (!/^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(u) && !/^https?:\/\//i.test(u)) throw new Error("图片仅支持 data:image/*;base64 或 http(s) URL");
+    if (u.length > MAX_IMAGE_BYTES * 4 / 3) throw new Error(`图片超过大小上限 ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)}MB`);
+    const mimeType = typeof (x as { mimeType?: unknown }).mimeType === "string" ? (x as { mimeType: string }).mimeType : undefined;
+    const name = typeof (x as { name?: unknown }).name === "string" ? (x as { name: string }).name : undefined;
+    return { url: u, ...(mimeType ? { mimeType } : {}), ...(name ? { name } : {}) };
+  });
+}
 export interface Message {
   role: Role;
   content: string;
+  images?: ImagePart[];
   toolCalls?: ToolCall[];
   toolCallId?: string;
   name?: string;
@@ -165,7 +186,7 @@ export function eventsToMessages(events: readonly Event[]): Message[] {
     const p = e.payload;
     switch (e.type) {
       case EventType.UserMessage:
-        out.push({ role: Role.User, content: String(p.content ?? "") });
+        out.push({ role: Role.User, content: String(p.content ?? ""), ...(Array.isArray(p.images) ? { images: p.images as ImagePart[] } : {}) });
         break;
       case EventType.AssistantMessage: {
         const calls = (p.toolCalls as ToolCall[] | undefined) ?? undefined;

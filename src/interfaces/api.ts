@@ -4,8 +4,8 @@ import { readFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync
 import { randomUUID } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { EventType } from "../kernel/events.ts";
-import type { Event } from "../kernel/events.ts";
+import { EventType, normalizeImages } from "../kernel/events.ts";
+import type { Event, ImagePart } from "../kernel/events.ts";
 import { mountConnector, HttpConnector } from "../tools/mcp.ts";
 import { policySnapshot } from "../runtime/policy.ts";
 import { loadMetaState } from "../rsi/shadow.ts";
@@ -293,7 +293,10 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
   if (path === "/api/chat" && method === "POST") {
     const b = await bodyJson(req);
     const text = String(b.text ?? "").trim();
-    if (!text) { json(res, 400, { error: "text 不能为空" }); return; }
+    if (!text && !Array.isArray(b.images)) { json(res, 400, { error: "text 与 images 不能同时为空" }); return; }
+    let images: ImagePart[] = [];
+    try { images = normalizeImages(b.images); }
+    catch (err) { json(res, 400, { error: err instanceof Error ? err.message : String(err) }); return; }
     let sessionId = String(b.sessionId ?? "");
     if (!sessionId || !os.getSession(sessionId)) {
       const s = os.createSession(String(b.preset ?? "standard"));
@@ -308,6 +311,7 @@ async function handle(os: AgentOS, req: IncomingMessage, res: ServerResponse): P
     activeRuns.add(sessionId);
     sseSend(res, "running", { sessionId, running: true });
     os.run(sessionId, text, {
+      ...(images.length ? { images } : {}),
       onChunk: (c) => sseSend(res, "chunk", c),
     })
       .then((r) => sseSend(res, "done", r))

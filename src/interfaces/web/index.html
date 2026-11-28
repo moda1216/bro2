@@ -159,10 +159,13 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
     <div id="stream"><div class="empty">选择一个会话，或直接输入任务开始。<br/>这是通用 Agent 运行时：工具调用、审批与执行轨迹都会实时显示在这里。</div></div>
     <div class="composer">
       <div class="composer-row">
-        <textarea id="input" placeholder="描述你的任务…（Enter 发送，Shift+Enter 换行）"></textarea>
+        <textarea id="input" placeholder="描述你的任务…（可粘贴/上传图片，Enter 发送，Shift+Enter 换行）"></textarea>
+        <button class="btn" id="imgBtn" title="上传图片（最多4张，单张≤5MB）" style="height:62px;padding:0 12px">🖼 图片</button>
         <button class="btn primary" id="sendBtn" style="height:62px;padding:0 20px">发送</button>
       </div>
-      <div class="hint">可用 <code>/help</code> 类能力通过工具调用；高危操作会弹出审批。离线 Mock 模型即可跑通完整闭环。</div>
+      <input type="file" id="imgFile" accept="image/*" multiple hidden/>
+      <div id="imgPreview" style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"></div>
+      <div class="hint">支持图片问答：粘贴截图或点「图片」上传（≤4 张 / 单张 ≤5MB）。能否看懂图取决于所接模型是否支持视觉；当前端点不支持视觉时会如实说明。高危操作会弹出审批。</div>
     </div>
   </main>
 
@@ -204,7 +207,10 @@ pre.code{background:var(--code);border-radius:7px;padding:10px;font-size:10.5px;
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [], replayEvents: [], globalEvents: [], running: new Set(), scope: "all", sessionTitles: {}, ledgerMaxSeq: {}, maf: null, mafTasks: [], mafAudit: [], mafCluster: null };
+const state = { sessionId: null, status: {}, tab: "trace", sending: false, assistantEl: null, calls: {}, approvalId: null, traceEvents: [], replayEvents: [], globalEvents: [], running: new Set(), scope: "all", sessionTitles: {}, ledgerMaxSeq: {}, maf: null, mafTasks: [], mafAudit: [], mafCluster: null, images: [] };
+const fileToImage = (file) => new Promise((res, rej) => { if (!file.type.startsWith("image/")) return rej(new Error("仅支持图片文件")); if (file.size > 5 * 1024 * 1024) return rej(new Error("单张图片 ≤5MB")); const r = new FileReader(); r.onload = () => res({ url: r.result, mimeType: file.type, name: file.name }); r.onerror = () => rej(new Error("读取图片失败")); r.readAsDataURL(file); });
+async function addImages(files) { for (const f of files) { if (state.images.length >= 4) { toast("图片最多 4 张"); break; } try { state.images.push(await fileToImage(f)); } catch (e) { toast(e.message); } } renderImages(); }
+function renderImages() { $("#imgPreview").innerHTML = state.images.map((im, i) => `<span style="display:inline-flex;align-items:center;gap:3px;border:1px solid var(--border);border-radius:7px;padding:3px 5px;background:var(--panel-2)"><img src="${im.url}" style="width:38px;height:38px;object-fit:cover;border-radius:4px"/><span style="font-size:9px;color:var(--muted);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(im.name || "粘贴图片")}</span><b style="cursor:pointer;color:var(--muted)" data-rmimg="${i}">×</b></span>`).join(""); $("#imgPreview").querySelectorAll("[data-rmimg]").forEach((b) => b.onclick = () => { state.images.splice(Number(b.dataset.rmimg), 1); renderImages(); }); }
 const toast = (m) => { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("on"), 2200); };
 // 事件类型 → 四条 lane 的映射；来源由注入方式决定，不由事件自报
 const LANE_OF = {
@@ -221,10 +227,14 @@ const LANE_COLOR = { exec:"var(--accent)", fly:"var(--ok)", model:"var(--warn)",
 const SRC_NAME = { live:"LIVE 真实流", ledger:"LEDGER 账本回放", replay:"REPLAY evidence 回放" };
 const SRC_LABEL = { live:"LIVE", ledger:"LEDGER", replay:"REPLAY" };
 
+// 分享链接可带 ?token= 直接授权（发布为网站时用）；存入 localStorage 后从地址栏移除，避免令牌残留在历史/截图
+try { const q = new URLSearchParams(location.search), t = q.get("token"); if (t) { localStorage.setItem("agentos_token", t); q.delete("token"); history.replaceState({}, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash); } } catch {}
 async function api(path, opts = {}) {
   const token = localStorage.getItem("agentos_token");
   const headers = { ...(opts.headers || {}), ...(token ? { authorization: "Bearer " + token } : {}) };
-  const res = await fetch(path, { ...opts, headers });
+  // 同时把 token 放进查询参数：部分反向代理不透传 Authorization header（如发布为在线站点时）
+  const url = token && !path.includes("token=") ? path + (path.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(token) : path;
+  const res = await fetch(url, { ...opts, headers });
   if (res.status === 401) {
     const t = prompt("此实例需要访问令牌");
     if (t) { localStorage.setItem("agentos_token", t); location.reload(); }
@@ -303,17 +313,21 @@ function onEvent(e) {
 async function send() {
   if (state.sending) return;
   const text = $("#input").value.trim();
-  if (!text) return;
+  const images = [...state.images];
+  if (!text && !images.length) return;
   $("#input").value = "";
+  state.images = []; renderImages();
   state.sending = true;
   $("#sendBtn").textContent = "运行中…";
   $("#sendBtn").disabled = true;
-  addMsg("user", text);
+  addMsg("user", (text || "（图片）") + (images.length ? ` 🖼×${images.length}` : ""));
   state.assistantEl = addMsg("assistant", "");
   const bodyEl = state.assistantEl.querySelector(".body");
   state.calls = {};
   try {
-    const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId: state.sessionId, text }) });
+    const chatToken = localStorage.getItem("agentos_token");
+    const chatUrl = "/api/chat" + (chatToken ? "?token=" + encodeURIComponent(chatToken) : "");
+    const res = await fetch(chatUrl, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId: state.sessionId, text, ...(images.length ? { images } : {}) }) });
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
     const reader = res.body.getReader();
     const dec = new TextDecoder();
@@ -656,6 +670,9 @@ async function newSession() {
 
 $("#sendBtn").onclick = send;
 $("#input").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
+$("#input").onpaste = (e) => { const files = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith("image/")); if (files.length) { e.preventDefault(); addImages(files); } };
+$("#imgBtn").onclick = () => $("#imgFile").click();
+$("#imgFile").onchange = (e) => { addImages([...e.target.files]); e.target.value = ""; };
 $("#newBtn").onclick = newSession;
 $("#forkBtn").onclick = async () => {
   if (!state.sessionId) return;

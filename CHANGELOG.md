@@ -10,6 +10,16 @@
 
 ---
 
+## [2.37.0] — 2026-11-28 · 多模态问答 + 白盒工作台在线发布（MINOR）
+
+> 用户要求「补齐多模态问答能力」并「把白盒化界面做成可直观体验与反馈的网站」。两项均完成，能力结论不变。
+
+- **多模态**：`Message` 增可选 `images`（data URL / http(s)），`normalizeImages()` 校验 MIME/数量≤4/单张≤5MB；`message.user` 事件随只增 Trajectory 落盘可回放；OpenAI 兼容边界转 `image_url`，token 估算每张计 768；`/api/chat` 接受 `images`；Web 支持粘贴/上传图片与缩略图预览。5 个新测试含真实 AgentOS+MockProvider 与 HTTP 级 SSE 验证。诚实边界：能否"看懂"图取决于所接模型是否 vision-capable，不虚假宣称。
+- **在线网站**：Web 工作台发布为可分享站点；前端从 URL `?token=` 自动初始化鉴权并清理地址栏，API/SSE 同时用查询参数携带 token（兼容不透传 Authorization 的反向代理）；`bin/agentos.ts` 支持 `PORT`/`HOST` 环境变量。
+- **验证**：`npm test` 336/336、预算 16,658/16,750；线上站点 HTTP 200、API/SSE/多模态校验链路实测通过。
+
+---
+
 ## [2.36.0] — 2026-11-28 · MAF 接入真实 Agent Loop + 治理红线加固（MINOR）
 
 > 用户要求「审视明显缺陷，先做 1（核心价值），再做 2 和 3（治理）」。审视发现的三个 P0 全部修复并有实测证据，未改变能力结论。

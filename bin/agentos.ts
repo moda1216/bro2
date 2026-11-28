@@ -300,8 +300,8 @@ else if (flags.mode === "benchmark") {
 // ---------------------------------------------------------------- web / run / cli
 else if (flags.mode === "web") {
   const server = await startServer(os, {
-    host: flags.host ?? os.config.server.host,
-    port: flags.port ?? os.config.server.port,
+    host: flags.host ?? process.env.HOST ?? os.config.server.host,
+    port: flags.port ?? (process.env.PORT ? Number(process.env.PORT) : os.config.server.port),
     authToken: flags.token ?? process.env.AGENTOS_API_TOKEN,
     dataDir: os.config.storage.dir,
   });

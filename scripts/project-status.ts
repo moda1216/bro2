@@ -12,7 +12,8 @@ interface Gate {
 }
 
 const GATES: Gate[] = [
-  { id: "test", label: "单元测试 + e2e + 故障注入", cmd: "npm test", timeoutMs: 180_000, gate: true },
+  // 测试集已增至 336 用例，其中 RSI/eval 端到端用例在负载波动机器上可达 60s+；300s 仅放宽墙钟超时，不放宽任何断言
+  { id: "test", label: "单元测试 + e2e + 故障注入", cmd: "npm test", timeoutMs: 300_000, gate: true },
   { id: "verify", label: "能力矩阵结构自检", cmd: "npm run verify", timeoutMs: 60_000, gate: true },
   { id: "policy", label: "行为策略代码分支实证", cmd: "npm run policy:check", timeoutMs: 60_000, gate: true },
   { id: "rsi", label: "RSI 端到端 + 恶意候选注入", cmd: "npm run rsi:check", timeoutMs: 60_000, gate: true },
@@ -96,7 +97,7 @@ function run(g: Gate): { ok: boolean; summary: string; code: number } {
   }
   const out = (r.stdout ?? "") + (r.stderr ?? "");
   const code = r.status ?? (r.error ? 1 : 0);
-  const timedOut = r.error?.message?.includes("timeout");
+  const timedOut = r.error?.message?.includes("timeout") || (r.status === null && r.signal === "SIGTERM");
   const failed = out.split("\n").filter((l) => /^not ok \d+/.test(l.trim())).map((l) => l.trim().slice(0, 160));
   return {
     ok: code === 0 && !timedOut,

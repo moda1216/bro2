@@ -42,6 +42,8 @@ export function estimateMessagesTokens(messages: readonly Message[], tools?: rea
   let n = 4;
   for (const m of messages) {
     n += estimateTokens(m.content) + 4;
+    /** 图片按每张固定 768 token 估算（与 OpenAI vision 低精度档同量级），data URL 不按字符数计费。 */
+    if (m.images) n += m.images.length * 768;
     if (m.toolCalls) n += estimateTokens(JSON.stringify(m.toolCalls)) + 2;
     if (m.reasoning) n += estimateTokens(m.reasoning);
   }
