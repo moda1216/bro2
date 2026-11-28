@@ -173,12 +173,15 @@ export class Foundry {
     };
     await Promise.all(Array.from({ length: Math.min(s.budget.concurrency, jobs.length) }, worker));
     const pairs = Array.from({ length: jobs.length }, (_, i) => results[i] ?? { suite: jobs[i]!.suite, caseId: jobs[i]!.c.id, baseline: 0, candidate: 0, status: "error" as const, error: "超出时间预算，未执行" });
+    const valid = pairs.filter((p) => p.status === "ok"), failed = pairs.length - valid.length;
     const suites = Object.fromEntries(SUITES.map((suite) => { const p = pairs.filter((x) => x.suite === suite); return [suite, { n: p.length, baseline: p.reduce((n, x) => n + x.baseline, 0) / p.length, candidate: p.reduce((n, x) => n + x.candidate, 0) / p.length, regressions: p.filter((x) => x.baseline === 1 && x.candidate === 0).length }]; }));
     const delta = pairs.reduce((n, p) => n + p.candidate - p.baseline, 0) / pairs.length, interval = ci95(pairs), reasons: string[] = [];
     for (const [name, r] of Object.entries(suites)) if (r.regressions) reasons.push(`${name} 新增回归 ${r.regressions}`);
     if (delta < 0.05) reasons.push("效应量低于 0.05"); if (interval[0] <= 0) reasons.push("95% 配对 bootstrap 下界未超过 0");
-    const power = pairs.length < 64 ? "insufficient" : "sufficient"; if (power === "insufficient") reasons.push("有效配对样本不足 64，不得宣称显著");
-    const decision = reasons.some((r) => r.includes("回归") || r.includes("效应量") || r.includes("下界")) ? "rejected" : power === "sufficient" ? "active-eligible" : "shadow-eligible";
+    /** power 只认真正跑通的配对：失败/未执行不得凑有效样本，否则全失败也会判 sufficient。 */
+    const power = valid.length < 64 ? "insufficient" : "sufficient"; if (power === "insufficient") reasons.push(`有效配对 ${valid.length}/${pairs.length} 不足 64，不得宣称显著`);
+    if (failed) reasons.push(`${failed} 条配对执行失败或未执行，不得据残缺样本晋升`);
+    const decision = reasons.some((r) => r.includes("回归") || r.includes("效应量") || r.includes("下界") || r.includes("残缺")) ? "rejected" : power === "sufficient" ? "active-eligible" : "shadow-eligible";
     const report: EvalReport = { id: newId("eval"), agentId, version, baselineVersion: baseline.version, verifier: s.verifier, runnerCalls, pairs, suites, delta, ci95: interval, effect: delta, power, decision, reasons, elapsedMs: Date.now() - started, createdAt: new Date().toISOString() };
     if (report.elapsedMs > s.budget.maxMs || budgetBlown) { report.decision = "rejected"; report.reasons.push("超出单候选时间预算"); }
     this.mutate(() => {

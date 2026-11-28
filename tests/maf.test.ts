@@ -130,3 +130,17 @@ test("agent Block 蒸馏保留提示片段与工具白名单；多实例审计 s
   writeFileSync(join(f.dir, "blocks.json"), "{half-written");
   assert.throws(() => new Foundry(root), /损坏/);
 });
+
+test("评测统计口径：全部执行失败/未执行的配对不得凑成 sufficient，也不得晋升", async () => {
+  const fail = new Foundry(mkdtempSync(join(tmpdir(), "maf-allfail-")), async () => { throw new Error("provider down"); });
+  const mk = (x: string): MafCase[] => Array.from({ length: 16 }, (_, i) => ({ id: `${x}-${i}`, input: `q${i}`, expected: "A" }));
+  const s = fail.createScenario({ name: "全失败", domain: "x", verifier: "agent-output-v1", cases: { visible: mk("v"), hidden: mk("h"), replay: mk("r"), shadow: mk("s") } });
+  const a = fail.createAgent({ scenarioId: s.id, blocks: ["agent-concise"], reason: "基线" });
+  const b = fail.createAgent({ scenarioId: s.id, agentId: a.agentId, parentVersion: a.version, blocks: ["agent-verify"], reason: "变异" });
+  const r = await fail.evaluate(a.agentId, b.version);
+  assert.equal(r.pairs.filter((p) => p.status === "error").length, 64, "64 条全部失败");
+  assert.equal(r.power, "insufficient", "有效配对为 0，不得判 sufficient");
+  assert.equal(r.decision, "rejected", "残缺样本必须拒绝，不得晋升");
+  assert.ok(r.reasons.some((x) => x.includes("残缺")), "拒绝理由须点明残缺样本");
+  assert.throws(() => fail.publish(a.agentId, b.version, "owner"), /门禁/);
+});

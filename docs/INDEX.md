@@ -28,6 +28,10 @@
 | [docs/EXTERNAL-MEASUREMENT.md](./EXTERNAL-MEASUREMENT.md) | **走出去测量硬化（v2.28.0）+ P0 接入口收口（v2.29.0）**：k=3 通过率 + 跨模型 holdout 尝试；公开任务 + 公开评分器双向反证、同模型同预算对照 kilo 上 bro2 6/9 vs minimal 2/9（Δ=+4）、ovhcloud 限流致 0/3 无效对照、Harbor 装载与跨 agent 可复核对照框架、诚实边界与复现命令 | 想把「外部未测量」变成可辩护的真实测量 |
 | [docs/TRAJECTORY-ANALYSIS.md](./TRAJECTORY-ANALYSIS.md) | **轨迹层面能力画像（v2.30.0，策略 B）**：bro2 步数/工具调用/停止行为 vs 公开轨迹统计（SWE-bench `Avg. $ Trajs`、2025 研究每题 5–20 轨迹），HF 不可达故只用聚合参照轴。**§4.1（v2.31.0，只增修正）**：原「失败题工具调用更多=空转不肯停」的结论已被逐轨迹诊断证伪 | 想从轨迹效率/停止行为轴看 bro2 与公开 agent 的差异，以及结论如何被证据修正 |
 | [docs/BUDGET-ADVISORY-EXPERIMENT.md](./BUDGET-ADVISORY-EXPERIMENT.md) | **从测量发现到 harness 改进的可证伪实验（v2.31.0）**：逐轨迹诊断定位真实失败机理（token 静默熔断 / 模型推理错）→ 任务无关、不加预算的预算软预警 → 预注册 A/B（判据含行为对比 + holdout + 反证锚点，K=2/16 次）→ **判据未全成立、如实发布负结果、机制默认关闭**；附带发现「v2.30.0 的 2/4 是预算配置失真读数」 | 想知道「用已有信息能不能优化 bro2」以及为什么答案是否定的 |
+| [docs/BENCH-v2.md](./BENCH-v2.md) | **基准与预算台账**：评测口径、证据阶梯、预算阈值与上调记录（含 §8 MAF 接真实 Agent Loop 的 16,500→16,750 上调理由） | 要跑评测 / 核对预算阈值为何变化 |
+| [docs/MAF-FOUNDRY-DESIGN.md](./MAF-FOUNDRY-DESIGN.md) | **MAF 完整设计**：`MAF = Agent 生成与进化引擎 + 自动化编排平台 + 白盒观测与治理中心`；三层目标、冻结/可进化层、loop、fitness、安全红线、保留数据字段 | 想理解 MAF 的产品定位与设计约束 |
+| [docs/MAF-REAL-AGENT-AND-HARDENING.md](./MAF-REAL-AGENT-AND-HARDENING.md) | **MAF 真实 Agent Loop 与治理加固（v2.36.0）**：三个 P0 的修复（DSL 冒充 Agent / 回滚门禁 / 多实例 seq）、统计口径修正、诚实边界 | 想核对 MAF 从 DSL 到真跑 Agent 的转变与仍不成立的能力结论 |
+| [docs/DISTRIBUTED-ORCHESTRATION.md](./DISTRIBUTED-ORCHESTRATION.md) | **多实例分布式编排**：只增账本 + 原子锁 + 乐观并发 + fencing 的同主机多进程实现、验证证据与明确不宣称的边界（非跨机集群） | 想跑多实例 / 判断分布式靠谱到哪一层 |
 | [docs/INDEX.md](./INDEX.md) | 本文件 | 找文档 |
 
 运行产物（非文档，但常被引用，均在 `data/`）：

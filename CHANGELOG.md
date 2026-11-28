@@ -17,7 +17,8 @@
 - **核心价值**：`agent-output-v1` 判分改走真实 `AgentLoop`（宿主注入 `AgentRunner`）；Block 可携带提示片段与工具白名单，经 `RunOptions.allowedTools` 在真实工具分派处拦截；未注入 runner fail-closed；超时/执行失败记为 error 不冒充通过。此前 `Foundry.evaluate()` 只跑 1ms 字符串 DSL，是"严谨地衡量玩具"。
 - **治理红线**：`rollback` 改结构化审计判定（实测未发布草稿不可回滚）；Foundry 写路径统一 `withLock` + 锁内重读，审计 `seq` = 行号（实测两实例 seq 唯一）；状态文件损坏 fail-closed；发布时旧 active 版本落盘；MAF 目录锚定 `storage.dir`，测试不再污染仓库账本。
 - **白盒与安全**：跨实例运行态心跳合并进 `/api/sessions` 与 SSE；非回环监听强制 API token（`--token` / `AGENTOS_API_TOKEN`），`/api/*` 校验 Bearer 或 `?token=`；问责主体来自鉴权上下文，拒绝请求体自报 actor。
-- **统计修正**：空槽数组改 `Array.from` 显式补齐未执行用例，避免 `.reduce/.filter` 跳过导致超预算口径被悄悄扭曲。
+- **统计修正**：空槽数组改 `Array.from` 显式补齐未执行用例，避免 `.reduce/.filter` 跳过导致超预算口径被悄悄扭曲；同轮仓库整理又发现 `power` 用 `pairs.length`（恒等于用例数）判定，导致全部执行失败仍判 `sufficient`——改为只数 `status==="ok"` 的有效配对，失败/未执行配对强制 `rejected` 并点明「残缺样本」（新增回归用例覆盖）。
+- **仓库整理**：清理 5 个零引用过程产物（4 份一次性 HTML 进度/修复报告 + `same-model-anchor-full.out` 原始转储，结论均已收敛进 `CORE-REPORT.html` / 结构化 JSON）；`docs/INDEX.md` 补齐 BENCH-v2、MAF 设计/加固、分布式编排四份遗漏文档。
 - **预算**：按 `budget.json` 规则在 `docs/BENCH-v2.md` 记录理由后 `sourceLines` 16,500 → 16,750（不再删注释换空间）；源文件数 90/90、运行时依赖 0 不变。
 - **验证**：`npm test` 330/330（新增 5 用例，含真实 AgentLoop + 鉴权 HTTP 级）；门禁与 CI 见当次 workflow。诚实边界：`verdict=not-proven`、L4=`not-achieved` 不变。
 
